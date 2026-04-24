@@ -1,31 +1,52 @@
 # Полная архитектура AshybulakStroy MCP 1C Bridge
 
-## Слои
+## Текущие слои
 
 ```text
-MCP Server
-├── Tools: операции
-├── Resources: состояние и справочники
-├── Prompts: роли и режимы работы
-└── BUH layer
-    ├── OData: чтение
-    └── RPC: действия
+MCP runtime
+├── Tools
+├── Resources
+├── Prompts
+└── Application core
+    ├── OData client
+    ├── Inventory discovery heuristics
+    ├── Validation and reconciliation
+    ├── Recipes / SQLite memory
+    └── Normalization and guardrails
 ```
 
-## Agent-based слой
+## Runtime vs future extension
+
+Текущее состояние:
+- основной transport: stdio;
+- основной источник данных: OData;
+- бизнес-сценарий production-ready: read-only inspection и inventory workflows;
+- нормализация и валидация документов встроены;
+- фактическая запись в 1С по умолчанию выключена.
+
+Будущее расширение:
+- отдельный RPC adapter для create/post операций;
+- отдельный HTTP-service contract на стороне 1С;
+- включение write-сценариев только после validate-before-post.
+
+## Модули
 
 ```text
-capabilities/
-project_knowledge/
-docs/rules/
-prompts/
-templates/
-validation/
-normalization/
+capabilities/       # business capability registry
+docs/rules/         # operational rules for assistants and developers
+normalization/      # free-text to draft payload normalization
+prompts/            # reusable prompt assets
+templates/          # payload templates
+validation_rules/   # guardrails before write/post
 ```
 
-## Safe write pipeline
+## Безопасный pipeline документов
 
 ```text
-parse -> normalize -> validate -> review -> create -> validate_document -> post
+parse_sales_invoice_text
+-> normalize_sales_invoice
+-> validate_sales_invoice
+-> post_document_validated
 ```
+
+Последний шаг в текущей сборке не проводит документ, а только блокирует небезопасный вызов без успешной валидации.

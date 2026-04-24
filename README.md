@@ -1,25 +1,59 @@
 # AshybulakStroy MCP 1C Bridge
 
-**AshybulakStroy MCP 1C Bridge** — MCP-сервер для безопасного AI-доступа к данным 1С:Бухгалтерия для Казахстана 3.0 через OData.
+AshybulakStroy MCP 1C Bridge — MCP-сервер для безопасного AI-доступа к данным 1С:Бухгалтерия для Казахстана 3.0 через OData.
 
-Сервер позволяет AI-клиенту работать с 1С обычным языком: искать опубликованные сущности, получать остатки, находить товары с низким остатком, сверять данные с отчётом 1С и сохранять проверенные рецепты запросов.
+Текущий фокус проекта:
+- read-only доступ к опубликованным OData-сущностям 1С;
+- поиск и объяснение источников остатков;
+- получение остатков и низких остатков;
+- сверка MCP-данных с отчётом 1С, вставленным обычным текстом;
+- guardrail-пайплайн для нормализации и валидации документов без фактической записи в 1С.
 
-## Возможности
+## Что умеет сервер
 
-- Подключение к 1С через OData в режиме чтения.
-- Мастер первичной настройки `setup_wizard`.
-- Паспорт базы `generate_1c_database_profile`.
-- Поиск источников остатков `discover_inventory_sources`.
-- Авто-получение остатков `get_inventory_auto`.
-- Контроль низких остатков `get_low_stock_items`.
-- Сверка с отчётом 1С через вставленный текст `validate_inventory_report_text`.
-- Сохранение и повторный запуск рецептов.
-- Человеческий интерфейс `ask_1c`, чтобы пользователь не писал JSON вручную.
+Основные MCP tools:
+- `get_server_status`
+- `setup_wizard`
+- `generate_1c_database_profile`
+- `ask_1c`
+- `list_entities`
+- `describe_entity`
+- `sample_entity`
+- `query_entity`
+- `search_metadata`
+- `explore_live_entities`
+- `discover_inventory_sources`
+- `get_inventory_auto`
+- `get_low_stock_items`
+- `parse_inventory_report_text`
+- `validate_inventory_report_text`
+- `save_recipe`
+- `list_recipes`
+- `run_recipe`
+- `list_capabilities`
+- `get_capability`
+- `buh_inspect`
+- `parse_sales_invoice_text`
+- `find_buh_entity`
+- `normalize_sales_invoice`
+- `validate_sales_invoice`
+- `post_document_validated`
+
+MCP resources:
+- `buh://health`
+- `buh://capabilities`
+- `buh://entities`
+- `buh://normalization/sales-invoice-template`
+
+MCP prompts:
+- `buh_reviewer`
+- `buh_tester`
+- `buh_analyst`
 
 ## Установка
 
 ```bash
-git clone https://github.com/AshybulakStroy/ashybulakstroy-mcp-1c-bridge.git
+git clone https://github.com/ashybulakstroy/ashybulakstroy-mcp-1c-bridge.git
 cd ashybulakstroy-mcp-1c-bridge
 python -m venv .venv
 source .venv/bin/activate
@@ -27,33 +61,43 @@ pip install -e .
 cp .env.example .env
 ```
 
-На Windows:
+На Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e .
-copy .env.example .env
+Copy-Item .env.example .env
 ```
+
+Рекомендуемая версия Python:
+- оптимально: `3.11.x`
+- поддерживается: `3.10+`
+- `3.12` тоже подходит и используется в текущем локальном окружении
 
 ## Настройка `.env`
 
 ```env
-ONEC_ODATA_URL=http://server/base/odata/standard.odata/
-ONEC_USERNAME=readonly_user
-ONEC_PASSWORD=password
-ONEC_TIMEOUT=30
-ONEC_MAX_TOP=100
-BRIDGE_DB_PATH=.data/ashybulakstroy_bridge.sqlite3
+ONEC_ODATA_URL=http://localhost/AccountingKazakhstan/odata/standard.odata
+ONEC_USERNAME=odata_user
+ONEC_PASSWORD=secret
+ONEC_TIMEOUT_SECONDS=60
+ONEC_VERIFY_SSL=true
+BRIDGE_DB_PATH=./bridge_knowledge.sqlite3
+BRIDGE_MAX_TOP=500
 ```
 
-Пользователь 1С должен иметь права только на чтение. Сервер не проводит документы и не изменяет данные 1С.
+Пользователь 1С для OData должен быть отдельным и read-only.
 
 ## Запуск
+
+Пакет публикует один script-entrypoint:
 
 ```bash
 ashybulak-1c-bridge
 ```
+
+Это stdio MCP server. Отдельных CLI-подкоманд вроде `start`, `inspect` или `init-project` в текущей сборке нет.
 
 ## Подключение к MCP-клиенту
 
@@ -63,36 +107,46 @@ ashybulak-1c-bridge
     "ashybulakstroy-1c": {
       "command": "ashybulak-1c-bridge",
       "env": {
-        "ONEC_ODATA_URL": "http://server/base/odata/standard.odata/",
+        "ONEC_ODATA_URL": "http://localhost/AccountingKazakhstan/odata/standard.odata",
         "ONEC_USERNAME": "readonly_user",
-        "ONEC_PASSWORD": "password"
+        "ONEC_PASSWORD": "password",
+        "ONEC_TIMEOUT_SECONDS": "60",
+        "ONEC_VERIFY_SSL": "true",
+        "BRIDGE_MAX_TOP": "500"
       }
     }
   }
 }
 ```
 
-## Как пользоваться без JSON
+## Типовой первый сценарий
 
-Пользователь пишет обычным языком:
+Пользователь может работать обычным текстом через `ask_1c`:
 
 ```text
 Проверь подключение к 1С.
 Сделай паспорт базы 1С.
+Найди источники остатков.
 Покажи остатки товаров.
 Где заканчивается товар?
-Покажи товары меньше 5 по складу Основной.
 Объясни последний ответ.
 ```
 
-Для этого используется tool `ask_1c`. AI-клиент сам формирует параметры вызова tools.
+Для более точной диагностики можно вызывать tools напрямую:
+- `setup_wizard`
+- `generate_1c_database_profile`
+- `discover_inventory_sources`
+- `get_inventory_auto`
+- `get_low_stock_items`
 
 ## Сверка с отчётом 1С
 
-1. В 1С сформируйте отчёт, например «Материальная ведомость».
-2. Поставьте тот же склад, период и номенклатуру.
+1. В 1С сформируйте официальный отчёт, например «Материальная ведомость».
+2. Поставьте те же фильтры, что и в MCP-запросе.
 3. Скопируйте табличную часть отчёта.
-4. Вставьте в чат:
+4. Передайте текст в `validate_inventory_report_text`.
+
+Пример:
 
 ```text
 Сверь остатки с этим отчётом:
@@ -101,58 +155,47 @@ ashybulak-1c-bridge
 Песок           Основной склад  50            30000
 ```
 
-Сервер распарсит таблицу и сравнит её с результатом MCP.
+## Ограничения и безопасность
 
-## Рекомендуемый первый сценарий
-
-```text
-Проверь подключение к 1С и запусти мастер настройки.
-Сделай паспорт базы 1С.
-Найди источники остатков.
-Покажи остатки товаров.
-Где заканчивается товар?
-Объясни последний ответ.
-```
-
-## Безопасность
-
-- Сервер работает в read-only режиме.
-- Сервер не изменяет данные 1С.
-- Сервер не проводит документы.
-- Доступ к OData нужно выдавать отдельному пользователю с минимальными правами.
+- сервер ориентирован на чтение данных через OData;
+- сервер не создаёт и не проводит документы в текущем runtime;
+- `post_document_validated` является guardrail-заглушкой и возвращает статус `validated_but_not_posted`;
+- результаты `get_inventory_auto` и `get_low_stock_items` эвристические и должны подтверждаться отчётом 1С;
+- внутренние имена объектов 1С нельзя жёстко зашивать без проверки через `$metadata`.
 
 ## Структура проекта
 
 ```text
 src/ashybulakstroy_mcp_1c_bridge/
-  core_server.py  # MCP tools and entrypoint
-  odata.py        # OData client and discovery logic
-  knowledge.py    # SQLite recipe storage
-  validation.py   # report parsing and reconciliation
-  config.py       # environment settings
+  core_server.py     # основная реализация MCP tools/resources/prompts
+  mcp/server.py      # стабильный facade entrypoint
+  odata.py           # OData client, metadata discovery, inventory heuristics
+  knowledge.py       # SQLite recipe storage
+  validation.py      # parsing and reconciliation
+  normalization/     # document draft normalization helpers
+  validation_rules/  # document/business guardrails
 ```
 
-## Статус
-
-Текущая версия — MVP/early product. Главный сценарий: безопасный AI-доступ к данным 1С, остатки, низкие остатки и сверка с отчётом 1С.
-
-## Лицензия
-
-MIT.
-
-## 🧪 Тестирование
-
-В v0.8 добавлен тестовый контур без подключения к реальной 1С:
+## Тестирование
 
 ```bash
 pip install -e .[dev]
-pytest -q
+python -m pytest -q
 ```
 
-Тесты проверяют парсинг отчётов, сверку, fake OData `$metadata`, поиск источника остатков и `get_low_stock_items`. Подробнее: `docs/testing.md`.
+GitHub Actions прогоняет тесты на `Python 3.10`, `3.11` и `3.12`.
 
-## Restoration note
+Подробнее:
+- `docs/testing.md`
+- `docs/architecture.md`
+- `docs/MCP_RESOURCES_PROMPTS_HTTP.md`
 
-This build preserves the v0.8 smart OData/inventory logic and adds the later platform layers: capabilities, resources/prompts, rules, templates, validation guardrails and AI normalization.
+## Статус проекта
 
-See `MERGE_MAP.md` for the exact migration map.
+Проект находится в рабочем состоянии как MCP read-only bridge для OData-инспекции, остатков и сверки.
+
+Слой нормализации и валидации документов уже встроен, но реальная запись и проведение в 1С требуют отдельного RPC-адаптера и явного расширения текущего runtime.
+
+## Лицензия
+
+MIT

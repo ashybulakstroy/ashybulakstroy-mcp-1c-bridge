@@ -1,6 +1,6 @@
 # Testing
 
-Проект v0.8 содержит тестовый контур, чтобы проверять жизнеспособность кода без реальной базы 1С.
+Проект содержит тестовый контур, который проверяет ключевую логику без подключения к реальной базе 1С.
 
 ## Что проверяется
 
@@ -17,7 +17,7 @@
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev]
-pytest -q
+python -m pytest -q
 ```
 
 На Windows PowerShell:
@@ -26,7 +26,7 @@ pytest -q
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e .[dev]
-pytest -q
+python -m pytest -q
 ```
 
 ## Fake OData
@@ -53,4 +53,9 @@ Workflow находится здесь:
 .github/workflows/tests.yml
 ```
 
-После правильной загрузки файлов в GitHub тесты будут запускаться автоматически при `push` и `pull_request`.
+CI запускается автоматически при `push` и `pull_request`.
+
+Матрица Python:
+- `3.10`
+- `3.11`
+- `3.12`

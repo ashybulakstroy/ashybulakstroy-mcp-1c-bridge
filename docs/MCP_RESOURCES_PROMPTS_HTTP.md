@@ -1,37 +1,49 @@
 # MCP Resources, Prompts and HTTP transport
 
-This package exposes three MCP capability groups:
+This package currently exposes three MCP capability groups through one stdio MCP server entrypoint: `ashybulak-1c-bridge`.
 
 ## Tools
 
 Tools execute actions and queries:
 
-- `buh_ping`
-- `get_balance`
-- `get_counterparties`
-- `get_catalog`
-- `get_document_list`
-- `get_stock_balance`
-- `check_stock_before_sale`
-- `get_cash_balance`
-- `get_bank_balance`
-- `get_counterparty_debt`
-- `get_unpaid_invoices`
-- `find_payments`
-- `create_sales_invoice`
-- `create_purchase_invoice`
-- `post_document`
-- `unpost_document`
+- `get_server_status`
+- `setup_wizard`
+- `generate_1c_database_profile`
+- `explain_last_answer`
+- `ask_1c`
+- `list_entities`
+- `describe_entity`
+- `sample_entity`
+- `query_entity`
+- `search_metadata`
+- `explore_live_entities`
+- `discover_inventory_sources`
+- `get_inventory_auto`
+- `get_low_stock_items`
+- `parse_inventory_report_text`
+- `validate_inventory_report_text`
+- `validate_inventory_against_1c_report`
+- `compare_inventory_rows`
+- `save_recipe`
+- `list_recipes`
+- `run_recipe`
+- `list_capabilities`
+- `get_capability`
+- `buh_inspect`
+- `parse_sales_invoice_text`
+- `find_buh_entity`
+- `normalize_sales_invoice`
+- `validate_sales_invoice`
+- `post_document_validated`
 
 ## Resources
 
 Resources expose read-only context:
 
 - `buh://health`
-- `buh://metadata`
+- `buh://capabilities`
 - `buh://entities`
-- `buh://catalogs`
-- `buh://documents`
+- `buh://normalization/sales-invoice-template`
 
 Use resources for inspection and grounding. Mutations must remain tools.
 
@@ -39,27 +51,18 @@ Use resources for inspection and grounding. Mutations must remain tools.
 
 Reusable workflow prompts:
 
-- `inspect_buh_database`
-- `create_sales_invoice`
-- `check_stock`
-- `analyze_debt`
+- `buh_reviewer`
+- `buh_tester`
+- `buh_analyst`
 
 ## Transports
 
-Local MCP clients normally use stdio:
+Current implementation:
 
 ```bash
-ashybulak-1c-bridge start --transport stdio
+ashybulak-1c-bridge
 ```
 
-For service mode use Streamable HTTP when the installed MCP SDK supports it:
+There are no public CLI subcommands like `start --transport stdio`, `streamable-http` or `sse` in the current package build.
 
-```bash
-ashybulak-1c-bridge start --transport streamable-http
-```
-
-SSE is kept only for compatibility with older MCP clients:
-
-```bash
-ashybulak-1c-bridge start --transport sse
-```
+If HTTP transport is needed later, it should be added explicitly as a new runtime entrypoint instead of being implied by documentation.

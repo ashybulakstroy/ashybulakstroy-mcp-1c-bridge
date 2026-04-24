@@ -16,7 +16,7 @@ normalize_sales_invoice
   ↓
 validate + optional stock check
   ↓
-create_sales_invoice_normalized
+post_document_validated
 ```
 
 ## MCP tools
@@ -24,14 +24,15 @@ create_sales_invoice_normalized
 - `parse_sales_invoice_text` — разбирает свободный текст в черновой payload.
 - `find_buh_entity` — ищет кандидатов в справочниках: `counterparty`, `item`, `warehouse`.
 - `normalize_sales_invoice` — подставляет реальные ссылки 1С и возвращает `issues`.
-- `create_sales_invoice_normalized` — создаёт документ только если нормализация успешна.
+- `validate_sales_invoice` — проверяет структуру и обязательные поля.
+- `post_document_validated` — guardrail, который не даёт вызывать post без успешной валидации.
 
 ## Safety rules
 
 - Если есть `not_found`, `ambiguous_match`, `missing_value`, `missing_items` — документ не создаётся.
 - Если найдено несколько похожих кандидатов — пользователь должен выбрать вариант.
 - Для записи в 1С используется RPC. OData используется только для поиска и чтения.
-- Для проведения документа сначала используйте validate-before-post.
+- В текущем runtime фактическая запись и проведение не выполняются.
 
 ## Example payload
 

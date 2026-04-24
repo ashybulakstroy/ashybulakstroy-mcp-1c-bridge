@@ -1,77 +1,56 @@
-# Business modules: warehouse, money, documents
+# Business modules: current runtime view
 
-This package now has three business domains on top of the unified 1C client.
+The repository contains several domain-oriented modules, but the public MCP runtime is currently centered around OData inspection, inventory workflows and document guardrails.
 
-## 1. Warehouse / stock
+## 1. Metadata and OData exploration
 
-MCP tools:
+Primary tools:
+- `setup_wizard`
+- `generate_1c_database_profile`
+- `list_entities`
+- `describe_entity`
+- `sample_entity`
+- `search_metadata`
+- `explore_live_entities`
 
-| Tool | Channel | Purpose |
-|---|---|---|
-| `get_warehouses` | OData | List/search warehouses (`Catalog_Склады`) |
-| `find_item` | OData | Search items/nomenclature (`Catalog_Номенклатура`) |
-| `get_stock_balance` | RPC by default, optional OData register | Stock balances |
-| `check_stock_before_sale` | RPC | Validate available stock before sale |
+Purpose:
+- inspect published OData objects;
+- understand real entity names and fields before building recipes or integrations;
+- avoid hardcoded assumptions about specific 1C metadata names.
 
-RPC methods expected on 1C side:
+## 2. Inventory and warehouse workflows
 
-```text
-warehouse.get_stock_balance
-warehouse.check_stock_before_sale
-```
+Primary tools:
+- `discover_inventory_sources`
+- `get_inventory_auto`
+- `get_low_stock_items`
+- `validate_inventory_report_text`
+- `compare_inventory_rows`
 
-`get_stock_balance` can also read an OData register directly if you pass `register_entity`, for example after running `ashybulak-1c-bridge inspect` and finding the real accumulation register name.
+Purpose:
+- detect likely inventory sources from `$metadata`;
+- normalize rows to a stable `item / warehouse / quantity / amount` shape;
+- reconcile MCP data against a copied official 1C report.
 
-## 2. Money
+Important constraint:
+- `get_inventory_auto` is heuristic;
+- official 1C reporting remains the source of truth.
 
-MCP tools:
+## 3. Document normalization and validation
 
-| Tool | Channel | Purpose |
-|---|---|---|
-| `get_cash_balance` | RPC | Cash balance |
-| `get_bank_balance` | RPC | Bank account balance |
-| `get_counterparty_debt` | RPC | Receivables/payables |
-| `get_unpaid_invoices` | RPC | Unpaid invoices/sales documents |
-| `find_payments` | RPC | Search payments |
+Primary tools:
+- `parse_sales_invoice_text`
+- `find_buh_entity`
+- `normalize_sales_invoice`
+- `validate_sales_invoice`
+- `post_document_validated`
 
-RPC methods expected on 1C side:
+Purpose:
+- transform free text into a draft payload;
+- resolve candidate entities in 1C;
+- validate the payload before any future write path;
+- block unsafe posting when validation is missing.
 
-```text
-money.get_cash_balance
-money.get_bank_balance
-money.get_counterparty_debt
-money.get_unpaid_invoices
-money.find_payments
-```
-
-## 3. Documents
-
-MCP tools:
-
-| Tool | Channel | Purpose |
-|---|---|---|
-| `find_documents` | OData | Search/list documents |
-| `create_sales_invoice` | RPC | Create `РеализацияТоваровУслуг` |
-| `create_purchase_invoice` | RPC | Create `ПоступлениеТоваровУслуг` |
-| `post_document` | RPC | Post a document |
-| `unpost_document` | RPC | Unpost a document |
-| `get_document_status` | RPC | Get document status |
-
-RPC methods expected on 1C side:
-
-```text
-documents.create
-documents.post
-documents.unpost
-documents.get_status
-```
-
-## Discovery first
-
-Before hardcoding document/register names, run:
-
-```bash
-ashybulak-1c-bridge inspect
-```
-
-The command checks RPC/OData and lists published OData documents, catalogs and registers from `$metadata`.
+Current limitation:
+- the runtime does not create or post documents in 1C by default;
+- `post_document_validated` is a guardrail, not a write operation.

@@ -1,6 +1,6 @@
 # Agent-oriented development layer
 
-This project now has a lightweight agent-development layer inspired by capability-based 1C automation practices.
+This project has a lightweight agent-development layer around the current read-only MCP runtime.
 
 ## Capability registry
 
@@ -24,56 +24,20 @@ Resource:
 
 - `buh://capabilities`
 
-## Project knowledge
+## Project scaffolding status
 
-Run:
+The module `init_project.py` exists as internal scaffolding logic, but it is not exposed as a public CLI command in the current package build.
 
-```bash
-ashybulak-1c-bridge init-project
-```
-
-It creates:
-
-```text
-project_knowledge/
-├── 1c_kazakhstan.md
-├── business_rules.md
-├── roles_and_permissions.md
-├── document_mapping.md
-└── odata_entities.md
-```
-
-These files are meant to be committed to the project repository and filled after running `inspect` against the real 1C base.
-
-## Contract tests
-
-`init-project` also creates:
-
-```text
-docs/specs/create_sales_invoice.md
-tests/contracts/test_validate_before_post.py
-```
-
-These are skeletons for making dangerous write/post operations testable before touching production 1C.
+So the current contract is:
+- use MCP tools for inspection and validation;
+- treat `init_project.py` as internal code unless a dedicated CLI/API is added later.
 
 ## Validate-before-post
 
 High-risk posting operations must use validation before posting:
 
 ```text
-validate_sales_invoice → create_sales_invoice → post_document_validated
+parse_sales_invoice_text → normalize_sales_invoice → validate_sales_invoice → post_document_validated
 ```
 
-For a direct post of an existing document, use:
-
-```text
-post_document_validated
-```
-
-This calls the expected RPC method:
-
-```text
-documents.validate_before_post
-```
-
-and only then calls the actual posting method.
+In the current runtime, `post_document_validated` is a guardrail only. It rejects unvalidated calls and returns `validated_but_not_posted` instead of performing a real write to 1C.
