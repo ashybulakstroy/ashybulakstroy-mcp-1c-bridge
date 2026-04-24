@@ -1,0 +1,15 @@
+{
+  "type": "sales_invoice",
+  "counterparty": "",
+  "warehouse": "",
+  "date": "",
+  "items": [
+    {
+      "name": "",
+      "quantity": 1,
+      "unit": "",
+      "price": 0
+    }
+  ],
+  "post_after_create": false
+}

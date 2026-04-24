@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="1.0" xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx">
+  <edmx:DataServices>
+    <Schema Namespace="Fake1C" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+      <EntityType Name="AccumulationRegister_ТоварыНаСкладахType">
+        <Key><PropertyRef Name="Recorder_Key" /></Key>
+        <Property Name="Номенклатура" Type="Edm.String" />
+        <Property Name="Склад" Type="Edm.String" />
+        <Property Name="КоличествоОстаток" Type="Edm.Decimal" />
+        <Property Name="СуммаОстаток" Type="Edm.Decimal" />
+        <Property Name="Период" Type="Edm.DateTime" />
+      </EntityType>
+      <EntityType Name="Catalog_НоменклатураType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Description" Type="Edm.String" />
+      </EntityType>
+      <EntityContainer Name="FakeContainer">
+        <EntitySet Name="AccumulationRegister_ТоварыНаСкладах" EntityType="Fake1C.AccumulationRegister_ТоварыНаСкладахType" />
+        <EntitySet Name="Catalog_Номенклатура" EntityType="Fake1C.Catalog_НоменклатураType" />
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

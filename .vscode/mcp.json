@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "ashybulakstroy-1c-bridge": {
+      "type": "stdio",
+      "command": "1c-bridge",
+      "args": [],
+      "env": {
+        "ONEC_ODATA_URL": "http://localhost/AccountingKazakhstan/odata/standard.odata",
+        "ONEC_USERNAME": "odata_user",
+        "ONEC_PASSWORD": "secret",
+        "BRIDGE_DB_PATH": "${workspaceFolder}/bridge_knowledge.sqlite3"
+      }
+    }
+  }
+}

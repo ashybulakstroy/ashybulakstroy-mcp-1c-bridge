@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "ashybulakstroy-1c-bridge": {
+      "command": "1c-bridge",
+      "env": {
+        "ONEC_ODATA_URL": "http://localhost/AccountingKazakhstan/odata/standard.odata",
+        "ONEC_USERNAME": "odata_user",
+        "ONEC_PASSWORD": "secret",
+        "BRIDGE_DB_PATH": "C:/data/bridge_knowledge.sqlite3",
+        "BRIDGE_MAX_TOP": "500"
+      }
+    }
+  }
+}
