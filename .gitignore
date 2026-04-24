@@ -9,3 +9,7 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+.codex/
+.cursor/
+.vscode/
+*.zip
