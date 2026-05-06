@@ -15,9 +15,36 @@
         <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
         <Property Name="Description" Type="Edm.String" />
       </EntityType>
+      <EntityType Name="Document_СписаниеСБанковскогоСчетаType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Дата" Type="Edm.DateTime" />
+        <Property Name="Контрагент" Type="Edm.String" />
+        <Property Name="СуммаДокумента" Type="Edm.Decimal" />
+        <Property Name="Номер" Type="Edm.String" />
+      </EntityType>
+      <EntityType Name="Document_ПоступлениеНаБанковскийСчетType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Дата" Type="Edm.DateTime" />
+        <Property Name="Контрагент" Type="Edm.String" />
+        <Property Name="СуммаДокумента" Type="Edm.Decimal" />
+        <Property Name="Номер" Type="Edm.String" />
+      </EntityType>
+      <EntityType Name="Document_РеализацияТоваровУслугType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Дата" Type="Edm.DateTime" />
+        <Property Name="Контрагент" Type="Edm.String" />
+        <Property Name="СуммаДокумента" Type="Edm.Decimal" />
+        <Property Name="Номер" Type="Edm.String" />
+      </EntityType>
       <EntityContainer Name="FakeContainer">
         <EntitySet Name="AccumulationRegister_ТоварыНаСкладах" EntityType="Fake1C.AccumulationRegister_ТоварыНаСкладахType" />
         <EntitySet Name="Catalog_Номенклатура" EntityType="Fake1C.Catalog_НоменклатураType" />
+        <EntitySet Name="Document_СписаниеСБанковскогоСчета" EntityType="Fake1C.Document_СписаниеСБанковскогоСчетаType" />
+        <EntitySet Name="Document_ПоступлениеНаБанковскийСчет" EntityType="Fake1C.Document_ПоступлениеНаБанковскийСчетType" />
+        <EntitySet Name="Document_РеализацияТоваровУслуг" EntityType="Fake1C.Document_РеализацияТоваровУслугType" />
       </EntityContainer>
     </Schema>
   </edmx:DataServices>

@@ -6,6 +6,7 @@ AshybulakStroy MCP 1C Bridge — MCP-сервер для безопасного 
 - read-only доступ к опубликованным OData-сущностям 1С;
 - поиск и объяснение источников остатков;
 - получение остатков и низких остатков;
+- управленческие денежные отчёты по оплатам, топ-клиентам и должникам;
 - сверка MCP-данных с отчётом 1С, вставленным обычным текстом;
 - guardrail-пайплайн для нормализации и валидации документов без фактической записи в 1С.
 
@@ -23,8 +24,15 @@ AshybulakStroy MCP 1C Bridge — MCP-сервер для безопасного 
 - `search_metadata`
 - `explore_live_entities`
 - `discover_inventory_sources`
+- `discover_payment_sources`
 - `get_inventory_auto`
 - `get_low_stock_items`
+- `get_outgoing_payments`
+- `get_incoming_payments`
+- `payment_summary_by_counterparty`
+- `get_unpaid_customers_summary`
+- `get_overdue_unpaid_customers`
+- `get_customer_payment_behavior_summary`
 - `parse_inventory_report_text`
 - `validate_inventory_report_text`
 - `save_recipe`
@@ -139,6 +147,36 @@ ashybulak-1c-bridge
 - `get_inventory_auto`
 - `get_low_stock_items`
 
+## Денежные сценарии для бизнеса
+
+Сервер теперь поддерживает несколько read-only сценариев по оплатам и дебиторке:
+- `кому мы заплатили` на дату или за период;
+- `от кого мы получили деньги` на дату или за период;
+- `топ клиенты` по входящим оплатам;
+- `топ поставщики` по исходящим оплатам;
+- `кто не оплатил` и `кому выставили счета, а они не оплатили`;
+- `должники старше 3 дней`;
+- `typical_payment_days` — сколько дней клиент обычно оплачивает счет.
+
+Примеры фраз для `ask_1c`:
+
+```text
+Кому мы заплатили за период 2026-04-01 2026-04-30
+От кого получили деньги на дату 2026-04-24
+Топ клиенты за период 2026-04-01 2026-04-30
+Кто не оплатил в течение 3 календарных дней
+Сколько дней обычно платит клиент
+```
+
+Новые tools для этих сценариев:
+- `discover_payment_sources`
+- `get_outgoing_payments`
+- `get_incoming_payments`
+- `payment_summary_by_counterparty`
+- `get_unpaid_customers_summary`
+- `get_overdue_unpaid_customers`
+- `get_customer_payment_behavior_summary`
+
 ## Сверка с отчётом 1С
 
 1. В 1С сформируйте официальный отчёт, например «Материальная ведомость».
@@ -161,6 +199,8 @@ ashybulak-1c-bridge
 - сервер не создаёт и не проводит документы в текущем runtime;
 - `post_document_validated` является guardrail-заглушкой и возвращает статус `validated_but_not_posted`;
 - результаты `get_inventory_auto` и `get_low_stock_items` эвристические и должны подтверждаться отчётом 1С;
+- денежные отчёты по оплатам и дебиторке строятся по OData-эвристике и должны сверяться с отчётами 1С по взаиморасчётам;
+- просрочка и `typical_payment_days` считаются FIFO-методом по контрагенту, это управленческий расчёт, а не официальный бухгалтерский регистр;
 - внутренние имена объектов 1С нельзя жёстко зашивать без проверки через `$metadata`.
 
 ## Структура проекта
@@ -192,7 +232,7 @@ GitHub Actions прогоняет тесты на `Python 3.10`, `3.11` и `3.12
 
 ## Статус проекта
 
-Проект находится в рабочем состоянии как MCP read-only bridge для OData-инспекции, остатков и сверки.
+Проект находится в рабочем состоянии как MCP read-only bridge для OData-инспекции, остатков, денежных отчётов и сверки.
 
 Слой нормализации и валидации документов уже встроен, но реальная запись и проведение в 1С требуют отдельного RPC-адаптера и явного расширения текущего runtime.
 

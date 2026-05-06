@@ -36,7 +36,30 @@ Important constraint:
 - `get_inventory_auto` is heuristic;
 - official 1C reporting remains the source of truth.
 
-## 3. Document normalization and validation
+## 3. Money, payments and receivables
+
+Primary tools:
+- `discover_payment_sources`
+- `get_outgoing_payments`
+- `get_incoming_payments`
+- `payment_summary_by_counterparty`
+- `get_unpaid_customers_summary`
+- `get_overdue_unpaid_customers`
+- `get_customer_payment_behavior_summary`
+
+Purpose:
+- find likely OData entities for payments and sales documents;
+- show who was paid and who paid us on a date or period;
+- build top-clients and top-suppliers summaries;
+- estimate unpaid customers from sales minus incoming payments;
+- identify debtors overdue for more than N calendar days;
+- estimate how many days each customer usually takes to pay.
+
+Important constraint:
+- these are management-style OData reports, not a replacement for official 1C mutual-settlement accounting;
+- overdue and `typical_payment_days` are calculated with FIFO logic at counterparty level.
+
+## 4. Document normalization and validation
 
 Primary tools:
 - `parse_sales_invoice_text`

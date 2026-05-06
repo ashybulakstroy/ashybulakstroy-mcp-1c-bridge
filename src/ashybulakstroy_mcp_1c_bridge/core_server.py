@@ -68,6 +68,28 @@ def _extract_warehouse(text: str) -> str | None:
     return match.group(1).strip(" :—-.,")[:120] if match else None
 
 
+def _extract_date_range(text: str) -> tuple[str | None, str | None]:
+    matches = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", text)
+    if "сегодня" in text.lower():
+        return ("today", "today")
+    if len(matches) >= 2:
+        return (matches[0], matches[1])
+    if len(matches) == 1:
+        return (matches[0], matches[0])
+    return (None, None)
+
+
+def _normalize_relative_date(value: str | None) -> str | None:
+    if value != "today":
+        return value
+    from datetime import datetime
+    return datetime.now().date().isoformat()
+
+
+def _extract_counterparty_hint(text: str) -> str | None:
+    return _extract_after_keywords(text, ["контрагент", "клиент", "поставщик", "от", "кому"])
+
+
 @mcp.tool()
 def get_server_status() -> dict[str, Any]:
     """Проверить настройки сервера и доступность базовой конфигурации без чтения бизнес-данных."""
@@ -155,6 +177,10 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Остатки получены адаптивно: найден кандидат источника, строки прочитаны через OData и нормализованы в item/warehouse/quantity/amount.")
     elif tool == "get_low_stock_items":
         explanation["summary"].append("Низкие остатки рассчитаны детерминированно: сервер взял авто-остатки и отфильтровал позиции, где quantity меньше или равно заданному порогу.")
+    elif tool in {"get_outgoing_payments", "get_incoming_payments"}:
+        explanation["summary"].append("Платежи получены адаптивно: сервер нашел платежную сущность по metadata, прочитал строки OData и нормализовал дату, контрагента и сумму.")
+    elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty"}:
+        explanation["summary"].append("Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.")
     elif tool == "validate_inventory_report_text":
         explanation["summary"].append("Сверка сравнила нормализованные строки MCP и строки отчета 1С по ключам item+warehouse с учетом допусков.")
     if not explanation["warnings"]:
@@ -200,6 +226,137 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
                 "message": "Для сверки вставьте скопированные строки отчета 1С в tool validate_inventory_report_text. Пример: Сверь остатки по складу Основной с этим отчетом: и ниже вставьте таблицу из 1С/Excel.",
                 "next_tool": "validate_inventory_report_text"
             })
+
+        if any(phrase in ql for phrase in ["кому мы заплатили", "кому заплатили", "исходящие оплаты", "исходящие платежи", "кому оплатили"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            result = odata.get_payments(
+                direction="outgoing",
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty=counterparty,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_outgoing_payments",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty": counterparty, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_outgoing_payments",
+            )
+
+        if any(phrase in ql for phrase in ["от кого получили деньги", "входящие оплаты", "входящие платежи", "кто нам заплатил", "от кого поступили деньги"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            result = odata.get_payments(
+                direction="incoming",
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty=counterparty,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_incoming_payments",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty": counterparty, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_incoming_payments",
+            )
+
+        if any(phrase in ql for phrase in ["топ клиенты", "лучшие клиенты", "кто больше всего нам заплатил", "от кого больше всего получили денег"]):
+            date_from, date_to = _extract_date_range(q)
+            result = odata.get_payment_summary_by_counterparty(
+                direction="incoming",
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "payment_summary_by_counterparty",
+                    "view": "top_clients",
+                    "parsed": {"direction": "incoming", "date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "limit": effective_limit},
+                    "result": result,
+                },
+                tool="payment_summary_by_counterparty",
+            )
+
+        if any(phrase in ql for phrase in ["топ поставщики", "кому больше всего заплатили", "кто съедает больше всего денег"]):
+            date_from, date_to = _extract_date_range(q)
+            result = odata.get_payment_summary_by_counterparty(
+                direction="outgoing",
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "payment_summary_by_counterparty",
+                    "view": "top_suppliers",
+                    "parsed": {"direction": "outgoing", "date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "limit": effective_limit},
+                    "result": result,
+                },
+                tool="payment_summary_by_counterparty",
+            )
+
+        if any(phrase in ql for phrase in ["кто не оплатил", "неоплаченные счета", "клиенты не оплатили", "кому выставили счета а они не оплатили", "кто должен за счета"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            result = odata.get_unpaid_customers_summary(
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty=counterparty,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_unpaid_customers_summary",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty": counterparty, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_unpaid_customers_summary",
+            )
+
+        if any(phrase in ql for phrase in ["не оплатил в течение 3", "не оплатил за 3 дня", "должники 3 дня", "должники старше 3 дней", "кто не оплатил в течение 3 календарных дней"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            threshold_match = re.search(r"(\d{1,3})\s*(?:календарн\w*\s+)?дн", ql)
+            threshold_days = int(threshold_match.group(1)) if threshold_match else 3
+            result = odata.get_overdue_unpaid_customers(
+                as_of_date=_normalize_relative_date(date_to),
+                date_from=_normalize_relative_date(date_from),
+                counterparty=counterparty,
+                threshold_days=threshold_days,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_overdue_unpaid_customers",
+                    "parsed": {"as_of_date": _normalize_relative_date(date_to), "date_from": _normalize_relative_date(date_from), "counterparty": counterparty, "threshold_days": threshold_days, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_overdue_unpaid_customers",
+            )
+
+        if any(phrase in ql for phrase in ["сколько дней обычно платит", "средний срок оплаты", "как быстро платят клиенты", "типичный срок оплаты"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            result = odata.get_customer_payment_behavior_summary(
+                as_of_date=_normalize_relative_date(date_to),
+                date_from=_normalize_relative_date(date_from),
+                counterparty=counterparty,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_customer_payment_behavior_summary",
+                    "parsed": {"as_of_date": _normalize_relative_date(date_to), "date_from": _normalize_relative_date(date_from), "counterparty": counterparty, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_customer_payment_behavior_summary",
+            )
 
 
 
@@ -357,6 +514,19 @@ def discover_inventory_sources(limit: int = 10, check_data: bool = True) -> dict
 
 
 @mcp.tool()
+def discover_payment_sources(direction: str | None = None, limit: int = 10, check_data: bool = True) -> dict[str, Any]:
+    """Найти вероятные OData-источники платежей: входящих и исходящих.
+
+    Используйте, когда нужно понять, в каких документах/сущностях 1С лежат оплаты и поступления денег.
+    direction: incoming | outgoing | null.
+    """
+    try:
+        return _ok(odata.discover_payment_sources(direction=direction, limit=limit, check_data=check_data), tool="discover_payment_sources")
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
 def get_inventory_auto(
     warehouse: str | None = None,
     item: str | None = None,
@@ -424,6 +594,178 @@ def get_low_stock_items(
             include_zero=include_zero,
         )
         return _ok(result, tool="get_low_stock_items")
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def get_outgoing_payments(
+    date: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty: str | None = None,
+    limit: int = 50,
+    entity_name: str | None = None,
+) -> dict[str, Any]:
+    """Показать, кому мы заплатили на дату или за период.
+
+    Возвращает список платежей, сумму и агрегирование по контрагентам.
+    Это read-only чтение через OData с автоопределением платежной сущности.
+    """
+    try:
+        result = odata.get_payments(
+            direction="outgoing",
+            date=date,
+            date_from=date_from,
+            date_to=date_to,
+            counterparty=counterparty,
+            limit=limit,
+            entity_name=entity_name,
+        )
+        return _ok(result, tool="get_outgoing_payments")
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def get_incoming_payments(
+    date: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty: str | None = None,
+    limit: int = 50,
+    entity_name: str | None = None,
+) -> dict[str, Any]:
+    """Показать, от кого мы получили деньги на дату или за период.
+
+    Возвращает список поступлений, сумму и агрегирование по контрагентам.
+    Это read-only чтение через OData с автоопределением платежной сущности.
+    """
+    try:
+        result = odata.get_payments(
+            direction="incoming",
+            date=date,
+            date_from=date_from,
+            date_to=date_to,
+            counterparty=counterparty,
+            limit=limit,
+            entity_name=entity_name,
+        )
+        return _ok(result, tool="get_incoming_payments")
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def payment_summary_by_counterparty(
+    direction: str,
+    date: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty: str | None = None,
+    limit: int = 20,
+    entity_name: str | None = None,
+) -> dict[str, Any]:
+    """Показать агрегированную сводку платежей по контрагентам.
+
+    direction=incoming подходит для сценария «топ клиенты».
+    direction=outgoing подходит для сценария «кому мы заплатили больше всего».
+    """
+    try:
+        result = odata.get_payment_summary_by_counterparty(
+            direction=direction,
+            date=date,
+            date_from=date_from,
+            date_to=date_to,
+            counterparty=counterparty,
+            limit=limit,
+            entity_name=entity_name,
+        )
+        return _ok(result, tool="payment_summary_by_counterparty")
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def get_unpaid_customers_summary(
+    date_to: str | None = None,
+    date_from: str | None = None,
+    counterparty: str | None = None,
+    limit: int = 20,
+    sales_entity_name: str | None = None,
+    payment_entity_name: str | None = None,
+) -> dict[str, Any]:
+    """Показать клиентов, которым выставили счета/реализации, но входящие оплаты их не покрыли.
+
+    Это управленческая OData-оценка по контрагентам: сумма реализаций минус сумма поступивших оплат.
+    Для бухгалтерской точности сверяйте с отчетом 1С по дебиторской задолженности.
+    """
+    try:
+        result = odata.get_unpaid_customers_summary(
+            date_to=date_to,
+            date_from=date_from,
+            counterparty=counterparty,
+            limit=limit,
+            sales_entity_name=sales_entity_name,
+            payment_entity_name=payment_entity_name,
+        )
+        return _ok(result, tool="get_unpaid_customers_summary")
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def get_overdue_unpaid_customers(
+    as_of_date: str | None = None,
+    threshold_days: int = 3,
+    date_from: str | None = None,
+    counterparty: str | None = None,
+    limit: int = 20,
+    sales_entity_name: str | None = None,
+    payment_entity_name: str | None = None,
+) -> dict[str, Any]:
+    """Показать должников, которые не оплатили в течение N календарных дней.
+
+    Использует FIFO-логику: входящие оплаты гасят самые ранние счета/реализации клиента.
+    """
+    try:
+        result = odata.get_overdue_unpaid_customers(
+            as_of_date=as_of_date,
+            threshold_days=threshold_days,
+            date_from=date_from,
+            counterparty=counterparty,
+            limit=limit,
+            sales_entity_name=sales_entity_name,
+            payment_entity_name=payment_entity_name,
+        )
+        return _ok(result, tool="get_overdue_unpaid_customers")
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def get_customer_payment_behavior_summary(
+    as_of_date: str | None = None,
+    date_from: str | None = None,
+    counterparty: str | None = None,
+    limit: int = 20,
+    sales_entity_name: str | None = None,
+    payment_entity_name: str | None = None,
+) -> dict[str, Any]:
+    """Показать, сколько дней клиент обычно оплачивает счет.
+
+    typical_payment_days считается по полностью закрытым реализациям/счетам.
+    """
+    try:
+        result = odata.get_customer_payment_behavior_summary(
+            as_of_date=as_of_date,
+            date_from=date_from,
+            counterparty=counterparty,
+            limit=limit,
+            sales_entity_name=sales_entity_name,
+            payment_entity_name=payment_entity_name,
+        )
+        return _ok(result, tool="get_customer_payment_behavior_summary")
     except Exception as exc:
         return _err(exc)
 
@@ -766,6 +1108,19 @@ except Exception as exc:
 
 def main() -> None:
     # FastMCP.run uses stdio by default. Do not print to stdout.
+    log.info(
+        "Starting AshybulakStroy 1C Bridge MCP server",
+    )
+    log.info(
+        "Transport=stdio odata_url_configured=%s odata_url=%s db_path=%s max_top=%s mode=%s",
+        bool(settings.odata_url),
+        settings.odata_url or "<not configured>",
+        settings.db_path,
+        settings.max_top,
+        "read-only-with-guardrails",
+    )
+    if not settings.odata_url:
+        log.warning("ONEC_ODATA_URL is not configured. Metadata and OData tools will fail until .env is filled.")
     mcp.run()
 
 

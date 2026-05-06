@@ -18,8 +18,15 @@ Tools execute actions and queries:
 - `search_metadata`
 - `explore_live_entities`
 - `discover_inventory_sources`
+- `discover_payment_sources`
 - `get_inventory_auto`
 - `get_low_stock_items`
+- `get_outgoing_payments`
+- `get_incoming_payments`
+- `payment_summary_by_counterparty`
+- `get_unpaid_customers_summary`
+- `get_overdue_unpaid_customers`
+- `get_customer_payment_behavior_summary`
 - `parse_inventory_report_text`
 - `validate_inventory_report_text`
 - `validate_inventory_against_1c_report`
