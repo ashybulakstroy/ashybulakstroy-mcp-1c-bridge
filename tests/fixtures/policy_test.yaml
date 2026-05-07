@@ -1,0 +1,36 @@
+version: "1.0.0"
+mode: read_only
+
+forbidden:
+  - forbidden_tool
+
+tools:
+  allowed_tool:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  report_tool:
+    risk: L1
+    capabilities:
+      - create_local_report
+    auto_approval: true
+
+  write_tool:
+    risk: L2
+    capabilities:
+      - write_documents
+    auto_approval: false
+
+  sensitive_tool:
+    risk: L3
+    capabilities:
+      - read_sensitive
+    auto_approval: false
+
+  destructive_tool:
+    risk: L4
+    capabilities:
+      - delete_objects
+    auto_approval: false

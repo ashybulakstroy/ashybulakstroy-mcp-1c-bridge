@@ -10,6 +10,185 @@ AshybulakStroy MCP 1C Bridge — MCP-сервер для безопасного 
 - сверка MCP-данных с отчётом 1С, вставленным обычным текстом;
 - guardrail-пайплайн для нормализации и валидации документов без фактической записи в 1С.
 
+## Secure Mode
+
+Сервер работает в режиме `Secure Mode`:
+- каждый MCP tool проходит policy decision перед исполнением;
+- unknown tools запрещаются;
+- forbidden tools блокируются;
+- `L3` и `L4` операции блокируются всегда;
+- каждый вызов записывается в append-only audit log;
+- результат проходит output filter перед возвратом клиенту.
+
+Основной принцип:
+
+```text
+AI может читать и объяснять данные 1С, но не должен иметь возможности сам себе выдать опасные разрешения или обойти policy.
+```
+
+## Read-only MVP
+
+Текущая реализация соответствует Phase 1 Secure MVP:
+- сервер ориентирован на read-only OData доступ;
+- нет raw OData tool для агента;
+- нет execute_1c_code;
+- нет direct SQL;
+- нет posting/delete операций;
+- `post_document_validated` не проводит документ и в policy считается forbidden tool.
+
+## Risk Levels
+
+Phase 1 использует модель риска:
+- `L0` — безопасное чтение и metadata inspection
+- `L1` — локальная аналитика, explain/report/normalization без записи в 1С
+- `L2` — потенциально чувствительные операции, в `read_only` режиме запрещены
+- `L3` — критичные операции, всегда блокируются
+- `L4` — явно опасные операции, всегда блокируются
+
+Типичная интерпретация:
+- `L0`: `list_entities`, `get_inventory_auto`, `get_incoming_payments`
+- `L1`: `payment_summary_by_counterparty`, `get_unpaid_customers_summary`, `explain_last_answer`
+- `L2+`: write/post/delete/direct access scenarios
+
+## Capabilities
+
+Security policy использует capabilities как уровень выше конкретных tool names.
+
+Примеры текущих capabilities:
+- `read_metadata`
+- `read_inventory`
+- `read_payments`
+- `read_receivables`
+- `read_documents`
+- `create_local_report`
+- `normalize_input`
+- `manage_local_knowledge`
+- `route_read_only_requests`
+
+Tool без declared capabilities в policy не должен исполняться.
+
+## Policy File
+
+Политика лежит здесь:
+
+```text
+config/policy.yaml
+```
+
+Файл задаёт:
+- `mode`
+- `tools` allowlist
+- `risk` per tool
+- `capabilities` per tool
+- `forbidden` denylist
+- `output` settings
+
+Основное поведение:
+- default mode: `read_only`
+- unknown tool: `deny`
+- forbidden tool: `block`
+- `L3`/`L4`: `block`
+- `L2`: `deny` в `read_only`
+
+## Audit Log
+
+Audit log append-only с точки зрения агента.
+
+Путь по умолчанию:
+
+```text
+audit/audit.jsonl
+```
+
+Каждая запись содержит:
+- `timestamp`
+- `actor`
+- `tool`
+- `risk`
+- `capabilities`
+- `decision`
+- `policy_version`
+- `duration_ms`
+- `error`
+
+Audit создаётся как для allowed, так и для denied/blocked вызовов.
+
+## Output Filter
+
+Перед возвратом результата MCP-клиенту сервер применяет output filter.
+
+Phase 1 фильтр поддерживает:
+- `max_rows`
+- optional IIN/BIN masking
+- optional bank account masking
+- credential redaction
+- blocking external URLs in payload-like output fields
+
+Настройки фильтра также задаются в `config/policy.yaml`.
+
+## Forbidden Operations
+
+Phase 1 явно запрещает такие операции:
+- `raw_odata`
+- `query_entity`
+- `execute_1c_code`
+- `direct_sql`
+- `delete_object`
+- `post_document`
+- `unpost_document`
+- `change_posted_document`
+- `change_closed_period`
+- `external_http`
+- `send_email`
+- `upload_file`
+- `disable_audit`
+- `modify_policy`
+- `post_document_validated`
+
+Это ограничение policy-level и предназначено именно для Secure MVP.
+
+## Architecture Flow
+
+Текущий security flow:
+
+```text
+MCP client
+  -> MCP tool call
+  -> policy load
+  -> allowlist / denylist check
+  -> risk check
+  -> capability check
+  -> tool execution only if allowed
+  -> output filter
+  -> append-only audit log
+  -> final MCP response
+```
+
+Высокоуровневая архитектура:
+
+```text
+User / MCP Client
+        |
+        v
+FastMCP tools in core_server.py
+        |
+        v
+SecureToolRunner
+  -> policy_loader
+  -> decision_engine
+  -> output_filter
+  -> audit_logger
+        |
+        v
+Business read logic
+  -> odata.py
+  -> validation.py
+  -> knowledge.py
+        |
+        v
+1C OData
+```
+
 ## Что умеет сервер
 
 Основные MCP tools:
@@ -235,6 +414,11 @@ GitHub Actions прогоняет тесты на `Python 3.10`, `3.11` и `3.12
 Проект находится в рабочем состоянии как MCP read-only bridge для OData-инспекции, остатков, денежных отчётов и сверки.
 
 Слой нормализации и валидации документов уже встроен, но реальная запись и проведение в 1С требуют отдельного RPC-адаптера и явного расширения текущего runtime.
+
+## Roadmap
+
+See [Secure AI Bridge Roadmap](docs/ROADMAP_SECURE_AI_BRIDGE.md).
+
 
 ## Лицензия
 

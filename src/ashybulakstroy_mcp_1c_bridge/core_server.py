@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import sys
+from functools import wraps
 from decimal import Decimal
 from typing import Any
 
@@ -11,6 +12,7 @@ from mcp.server.fastmcp import FastMCP
 from .config import load_settings
 from .knowledge import KnowledgeStore, Recipe
 from .odata import OneCODataClient, ODataError
+from .security import AuditLogger, SecureToolRunner, load_policy
 from .validation import InventoryValidationConfig, parse_inventory_report_text as parse_inventory_report_text_impl, validate_inventory_rows
 
 logging.basicConfig(
@@ -24,7 +26,28 @@ settings = load_settings()
 odata = OneCODataClient(settings)
 store = KnowledgeStore(settings.db_path)
 mcp = FastMCP("AshybulakStroy 1C Bridge")
+POLICY = load_policy(settings.policy_path)
+AUDIT_LOGGER = AuditLogger(settings.audit_log_path)
+SECURE_TOOL_RUNNER = SecureToolRunner(settings.policy_path, AUDIT_LOGGER)
 LAST_ANSWER_TRACE: dict[str, Any] = {}
+
+_original_mcp_tool = mcp.tool
+
+
+def _secure_tool_decorator(*decorator_args: Any, **decorator_kwargs: Any):
+    base_decorator = _original_mcp_tool(*decorator_args, **decorator_kwargs)
+
+    def register(func):
+        @wraps(func)
+        def wrapped(*args: Any, **kwargs: Any):
+            return SECURE_TOOL_RUNNER.run(func.__name__, func, *args, **kwargs)
+
+        return base_decorator(wrapped)
+
+    return register
+
+
+mcp.tool = _secure_tool_decorator
 
 
 def _remember(tool: str, data: Any) -> None:
@@ -1112,12 +1135,15 @@ def main() -> None:
         "Starting AshybulakStroy 1C Bridge MCP server",
     )
     log.info(
-        "Transport=stdio odata_url_configured=%s odata_url=%s db_path=%s max_top=%s mode=%s",
+        "Transport=stdio odata_url_configured=%s odata_url=%s db_path=%s max_top=%s mode=%s policy_mode=%s policy_version=%s audit_log_path=%s",
         bool(settings.odata_url),
         settings.odata_url or "<not configured>",
         settings.db_path,
         settings.max_top,
         "read-only-with-guardrails",
+        POLICY.mode,
+        POLICY.version,
+        settings.audit_log_path,
     )
     if not settings.odata_url:
         log.warning("ONEC_ODATA_URL is not configured. Metadata and OData tools will fail until .env is filled.")

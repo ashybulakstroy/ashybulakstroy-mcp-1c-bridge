@@ -15,6 +15,8 @@ class Settings:
     verify_ssl: bool
     db_path: Path
     max_top: int
+    policy_path: Path = Path("./config/policy.yaml")
+    audit_log_path: Path = Path("./audit/audit.jsonl")
 
 
 def _bool(value: str | None, default: bool) -> bool:
@@ -38,4 +40,6 @@ def load_settings() -> Settings:
         verify_ssl=_bool(os.getenv("ONEC_VERIFY_SSL"), True),
         db_path=Path(os.getenv("BRIDGE_DB_PATH", "./bridge_knowledge.sqlite3")),
         max_top=max(1, int(os.getenv("BRIDGE_MAX_TOP", "500"))),
+        policy_path=Path(os.getenv("BRIDGE_POLICY_PATH", "./config/policy.yaml")),
+        audit_log_path=Path(os.getenv("BRIDGE_AUDIT_LOG_PATH", "./audit/audit.jsonl")),
     )

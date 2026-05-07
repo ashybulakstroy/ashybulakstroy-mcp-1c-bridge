@@ -1,0 +1,238 @@
+version: "1.0.0"
+mode: read_only
+
+output:
+  max_rows: 100
+  mask_iin_bin: false
+  mask_bank_accounts: false
+  block_external_urls: true
+  redact_credentials: true
+
+forbidden:
+  - raw_odata
+  - query_entity
+  - execute_1c_code
+  - direct_sql
+  - delete_object
+  - post_document
+  - unpost_document
+  - change_posted_document
+  - change_closed_period
+  - external_http
+  - send_email
+  - upload_file
+  - disable_audit
+  - modify_policy
+  - post_document_validated
+
+tools:
+  get_server_status:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  setup_wizard:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  generate_1c_database_profile:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  explain_last_answer:
+    risk: L1
+    capabilities:
+      - explain_results
+    auto_approval: true
+
+  ask_1c:
+    risk: L1
+    capabilities:
+      - route_read_only_requests
+    auto_approval: true
+
+  list_entities:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  describe_entity:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  sample_entity:
+    risk: L0
+    capabilities:
+      - read_documents
+    auto_approval: true
+
+  search_metadata:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  explore_live_entities:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  discover_inventory_sources:
+    risk: L0
+    capabilities:
+      - read_inventory
+    auto_approval: true
+
+  discover_payment_sources:
+    risk: L0
+    capabilities:
+      - read_payments
+    auto_approval: true
+
+  get_inventory_auto:
+    risk: L0
+    capabilities:
+      - read_inventory
+    auto_approval: true
+
+  get_low_stock_items:
+    risk: L0
+    capabilities:
+      - read_inventory
+    auto_approval: true
+
+  get_outgoing_payments:
+    risk: L0
+    capabilities:
+      - read_payments
+    auto_approval: true
+
+  get_incoming_payments:
+    risk: L0
+    capabilities:
+      - read_payments
+    auto_approval: true
+
+  payment_summary_by_counterparty:
+    risk: L1
+    capabilities:
+      - create_local_report
+      - read_payments
+    auto_approval: true
+
+  get_unpaid_customers_summary:
+    risk: L1
+    capabilities:
+      - read_receivables
+      - create_local_report
+    auto_approval: true
+
+  get_overdue_unpaid_customers:
+    risk: L1
+    capabilities:
+      - read_receivables
+      - create_local_report
+    auto_approval: true
+
+  get_customer_payment_behavior_summary:
+    risk: L1
+    capabilities:
+      - read_receivables
+      - create_local_report
+    auto_approval: true
+
+  parse_inventory_report_text:
+    risk: L1
+    capabilities:
+      - create_local_report
+    auto_approval: true
+
+  validate_inventory_report_text:
+    risk: L1
+    capabilities:
+      - read_inventory
+      - create_local_report
+    auto_approval: true
+
+  validate_inventory_against_1c_report:
+    risk: L1
+    capabilities:
+      - read_inventory
+      - create_local_report
+    auto_approval: true
+
+  compare_inventory_rows:
+    risk: L1
+    capabilities:
+      - create_local_report
+    auto_approval: true
+
+  save_recipe:
+    risk: L1
+    capabilities:
+      - manage_local_knowledge
+    auto_approval: true
+
+  list_recipes:
+    risk: L1
+    capabilities:
+      - manage_local_knowledge
+    auto_approval: true
+
+  run_recipe:
+    risk: L1
+    capabilities:
+      - manage_local_knowledge
+      - read_documents
+    auto_approval: true
+
+  list_capabilities:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  get_capability:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  buh_inspect:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  parse_sales_invoice_text:
+    risk: L1
+    capabilities:
+      - normalize_input
+    auto_approval: true
+
+  find_buh_entity:
+    risk: L0
+    capabilities:
+      - read_metadata
+    auto_approval: true
+
+  normalize_sales_invoice:
+    risk: L1
+    capabilities:
+      - normalize_input
+    auto_approval: true
+
+  validate_sales_invoice:
+    risk: L1
+    capabilities:
+      - normalize_input
+    auto_approval: true
