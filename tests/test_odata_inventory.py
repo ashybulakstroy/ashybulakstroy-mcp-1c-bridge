@@ -333,3 +333,93 @@ def test_search_document_by_number_returns_empty_when_nothing_found():
     assert result["count_returned"] == 0
     assert result["data"] == []
     assert len(client.captured_queries) == 1
+
+
+def test_get_customer_settlements_summary_returns_safe_receivables_rows():
+    client = FakeOneCODataClient()
+
+    result = client.get_customer_settlements_summary(date_to="2026-04-30", limit=10)
+
+    assert result["count_returned"] == 2
+    assert result["data"][0]["counterparty"] == "ТОО Альфа Строй"
+    assert result["data"][0]["debt_amount"] == "80000"
+    assert result["data"][0]["last_payment_date"] == "2026-04-24"
+    assert result["data"][0]["overdue_days"] == 7
+    assert result["data"][0]["source_document_count"] == 2
+    assert result["data"][0]["source_entity"] == "Document_РеализацияТоваровУслуг"
+    assert result["data"][0]["bin_or_iin"] is None
+    assert result["data"][0]["currency"] is None
+    assert "raw" not in result["data"][0]
+    assert "http://" not in str(result)
+    assert result["source_explanation"]["sales_documents_used"] == "Document_РеализацияТоваровУслуг"
+    assert result["source_explanation"]["incoming_payments_used"] == "Document_ПоступлениеНаБанковскийСчет"
+    assert "официальным бухгалтерским актом сверки" in result["note"]
+
+
+def test_get_customer_settlements_summary_caps_limit_and_min_debt():
+    client = FakeOneCODataClient()
+
+    result = client.get_customer_settlements_summary(date_to="2026-04-30", min_debt="50000", limit=100)
+
+    assert result["count_returned"] == 1
+    assert result["filters_applied_in_python"]["limit"] == 50
+    assert result["data"][0]["counterparty"] == "ТОО Альфа Строй"
+    sales_query = [query for query in client.captured_queries if query["entity_name"] == "Document_РеализацияТоваровУслуг"][-1]
+    incoming_query = [query for query in client.captured_queries if query["entity_name"] == "Document_ПоступлениеНаБанковскийСчет"][-1]
+    assert sales_query["top"] <= 500
+    assert incoming_query["top"] <= 500
+
+
+def test_get_customer_settlements_summary_returns_empty_when_no_debt_matches():
+    client = FakeOneCODataClient()
+
+    result = client.get_customer_settlements_summary(date_to="2026-04-30", min_debt="1000000", limit=10)
+
+    assert result["count_returned"] == 0
+    assert result["data"] == []
+    assert result["warnings"]
+
+
+def test_get_customer_settlements_summary_handles_missing_sources_gracefully():
+    client = FakeOneCODataClient()
+    client.discover_sales_sources = lambda limit=1, check_data=True: []
+
+    result = client.get_customer_settlements_summary(date_to="2026-04-30", limit=10)
+
+    assert result["count_returned"] == 0
+    assert result["data"] == []
+    assert "sales_documents" in result["missing_sources"]
+    assert result["warnings"]
+    assert result["source_explanation"]["basis"] == "summary_not_built"
+
+
+def test_get_customer_settlements_summary_rejects_invalid_date_range():
+    client = FakeOneCODataClient()
+
+    try:
+        client.get_customer_settlements_summary(date_from="2026-05-01", date_to="2026-04-01")
+        assert False, "Expected ODataError for invalid date range"
+    except Exception as exc:
+        assert "date_from" in str(exc)
+
+
+def test_get_customer_settlements_summary_escapes_counterparty_name_in_filters():
+    client = FakeOneCODataClient()
+
+    result = client.get_customer_settlements_summary(date_to="2026-04-30", counterparty_name="Альфа'Строй", limit=10)
+
+    assert result["count_returned"] == 0
+    sales_query = [query for query in client.captured_queries if query["entity_name"] == "Document_РеализацияТоваровУслуг"][-1]
+    incoming_query = [query for query in client.captured_queries if query["entity_name"] == "Document_ПоступлениеНаБанковскийСчет"][-1]
+    assert "substringof('Альфа''Строй', Контрагент) eq true" in str(sales_query["filter_expr"])
+    assert "substringof('Альфа''Строй', Контрагент) eq true" in str(incoming_query["filter_expr"])
+
+
+def test_get_customer_settlements_summary_rejects_invalid_min_debt():
+    client = FakeOneCODataClient()
+
+    try:
+        client.get_customer_settlements_summary(date_to="2026-04-30", min_debt="not-a-number")
+        assert False, "Expected ODataError for invalid min_debt"
+    except Exception as exc:
+        assert "min_debt" in str(exc)

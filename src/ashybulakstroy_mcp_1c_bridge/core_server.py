@@ -275,7 +275,7 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Низкие остатки рассчитаны детерминированно: сервер взял авто-остатки и отфильтровал позиции, где quantity меньше или равно заданному порогу.")
     elif tool in {"get_outgoing_payments", "get_incoming_payments"}:
         explanation["summary"].append("Платежи получены адаптивно: сервер нашел платежную сущность по metadata, прочитал строки OData и нормализовал дату, контрагента и сумму.")
-    elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty"}:
+    elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty", "get_customer_settlements_summary"}:
         explanation["summary"].append("Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.")
     elif tool == "search_document_by_number":
         explanation["summary"].append("Поиск документа выполняется через безопасный wrapper: сервер выбирает document-like OData сущности, ищет совпадение по номеру и возвращает только нормализованные поля документа.")
@@ -891,6 +891,32 @@ def get_customer_payment_behavior_summary(
             payment_entity_name=payment_entity_name,
         )
         return _ok(result, tool="get_customer_payment_behavior_summary")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_customer_settlements_summary(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    min_debt: str | None = None,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Показать read-only сводку по взаиморасчетам с покупателями.
+
+    Возвращает безопасную управленческую оценку дебиторки на основе реализаций/счетов и входящих оплат,
+    без raw OData и без записи в 1С.
+    """
+    try:
+        result = odata.get_customer_settlements_summary(
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            min_debt=min_debt,
+            limit=limit,
+        )
+        return _ok(result, tool="get_customer_settlements_summary")
     except Exception as exc:
         return _err(exc)
 

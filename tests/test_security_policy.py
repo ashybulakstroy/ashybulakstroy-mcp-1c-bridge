@@ -66,3 +66,21 @@ def test_decision_engine_blocks_l3_and_l4():
     assert l3.risk is RiskLevel.L3
     assert l4.action is DecisionAction.BLOCK
     assert l4.risk is RiskLevel.L4
+
+
+def test_main_policy_covers_customer_settlements_summary():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_customer_settlements_summary"]
+
+    assert tool.risk is RiskLevel.L0
+    assert [cap.name for cap in tool.capabilities] == ["read_customer_settlements"]
+
+
+def test_demo_docs_mark_customer_settlements_as_management_estimate():
+    demo_readme = Path("docs/DEMO_READONLY_SECURE_MODE.md").read_text(encoding="utf-8")
+    demo_prompts = Path("docs/DEMO_PROMPTS.md").read_text(encoding="utf-8")
+
+    assert "не официальный бухгалтерский акт сверки" in demo_readme
+    assert "не официальный бухгалтерский акт сверки" in demo_prompts
+    assert "официальный бухгалтерский баланс взаиморасчетов" not in demo_readme

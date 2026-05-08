@@ -111,6 +111,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 | `get_unpaid_customers_summary` | Неоплаченные клиенты | L1 | `read_receivables`, `create_local_report` | yes | no | yes |
 | `get_overdue_unpaid_customers` | Просроченные должники | L1 | `read_receivables`, `create_local_report` | yes | no | yes |
 | `get_customer_payment_behavior_summary` | Typical payment days | L1 | `read_receivables`, `create_local_report` | yes | no | yes |
+| `get_customer_settlements_summary` | Read-only сводка по взаиморасчетам покупателей | L0 | `read_customer_settlements` | yes | no | yes |
 | `explain_last_answer` | Объясняет источник и логику последнего ответа | L1 | `explain_results` | yes | no | yes |
 | `parse_inventory_report_text` | Парсит текстовый отчёт 1С | L1 | `create_local_report` | yes | no | yes |
 | `validate_inventory_report_text` | Сверяет результат MCP с отчётом 1С | L1 | `read_inventory`, `create_local_report` | yes | no | yes |
@@ -135,6 +136,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 - `Какие товары заканчиваются`
 - `Кому мы заплатили за период 2026-05-01 2026-05-07`
 - `От кого получили деньги за период 2026-05-01 2026-05-07`
+- `Покажи взаиморасчеты с покупателями`
 - `Топ клиенты за этот месяц`
 - `Кто не оплатил`
 - `Кто не оплатил в течение 3 дней`
@@ -213,6 +215,7 @@ Blocked tool call example:
 - он не вызывает LLM Proxy Hub напрямую;
 - он принимает `trace_id/project_id/agent_id/policy_id/session_id`, если upstream их передаёт;
 - если `trace_id` не пришёл, он генерируется локально;
+- `get_customer_settlements_summary` — это read-only управленческая оценка по OData, а не официальный бухгалтерский акт сверки и не баланс взаиморасчетов;
 - blocked operations являются feature, а не limitation.
 
 ## Gaps Before Commercial Pilot
@@ -225,6 +228,5 @@ Blocked tool call example:
 - audit/security demonstration
 
 Но перед коммерческим пилотом желательно добрать:
-- dedicated safe tool для более явных взаиморасчётов покупателей
 - dedicated safe tool для движений по банку/кассе в привычной для бухгалтера формулировке
 - простой audit viewer поверх `audit.jsonl`

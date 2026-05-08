@@ -86,6 +86,25 @@
 Текущий safe path:
 - `get_unpaid_customers_summary`
 
+### Взаиморасчеты с покупателями
+
+```text
+Покажи взаиморасчеты с покупателями
+```
+
+Текущий safe path:
+- `get_customer_settlements_summary`
+- это управленческая read-only оценка по OData, а не официальный бухгалтерский акт сверки
+
+С уточнением:
+
+```text
+Покажи взаиморасчеты с покупателями за период 2026-04-01 2026-04-30, долг больше 50000
+```
+
+Текущий safe path:
+- `get_customer_settlements_summary(date_from="2026-04-01", date_to="2026-04-30", min_debt="50000")`
+
 ### Просроченные должники
 
 ```text
@@ -126,21 +145,6 @@
 - `validate_inventory_report_text`
 
 ## Partially Covered in Current MVP
-
-### Взаиморасчеты с покупателями
-
-Пользовательский prompt:
-
-```text
-Покажи взаиморасчеты с покупателями
-```
-
-Статус:
-- частично покрывается через:
-  - `get_unpaid_customers_summary`
-  - `get_overdue_unpaid_customers`
-  - `get_customer_payment_behavior_summary`
-- это управленческий read-only слой, а не официальный бухгалтерский отчет по регистру взаиморасчетов
 
 ### Движения по банку/кассе
 

@@ -505,12 +505,24 @@ class OneCODataClient:
 
         mapped = source.get("mapped_fields") or {}
         select = self._build_sales_select(mapped)
-        raw = self.query_entity(source["entity"], top=min(limit * 5, self.settings.max_top), select=select or None)
+        effective_from = date or date_from
+        effective_to = date or date_to
+        filter_expr = self._build_common_text_date_filter(
+            mapped,
+            date_from=effective_from,
+            date_to=effective_to,
+            text_field_key="counterparty",
+            text_value=counterparty,
+        )
+        raw = self.query_entity(
+            source["entity"],
+            top=min(max(limit, 50), self.settings.max_top),
+            select=select or None,
+            filter_expr=filter_expr or None,
+        )
         rows = raw.get("data") or []
         normalized = [self._normalize_sales_row(r, mapped) for r in rows]
 
-        effective_from = date or date_from
-        effective_to = date or date_to
         warnings: list[str] = []
         if effective_from or effective_to:
             normalized = [r for r in normalized if self._date_in_range(r.get("date"), effective_from, effective_to)]
@@ -843,6 +855,139 @@ class OneCODataClient:
             "warnings": warnings,
         }
 
+    def get_customer_settlements_summary(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        min_debt: Any = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Return a safe receivables-style summary from sales and incoming payments."""
+        effective_limit = min(max(int(limit), 1), 50)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        as_of = self._parse_date_like(validated_to) or date.today()
+        min_debt_amount = self._parse_decimal_input(min_debt, field_name="min_debt", default=Decimal("0"))
+        fetch_limit = min(max(effective_limit * 10, 200), self.settings.max_top)
+
+        sales: dict[str, Any] | None = None
+        incoming: dict[str, Any] | None = None
+        missing_sources: list[str] = []
+        warnings: list[str] = []
+
+        try:
+            sales = self.get_sales_documents(
+                date_from=validated_from,
+                date_to=validated_to,
+                counterparty=counterparty_name,
+                limit=fetch_limit,
+            )
+        except ODataError:
+            missing_sources.append("sales_documents")
+            warnings.append(
+                "Не найден безопасный источник реализаций/счетов для расчета взаиморасчетов. "
+                "Источник не опубликован в OData, недоступен по правам или не распознан по metadata."
+            )
+
+        try:
+            incoming = self.get_payments(
+                direction="incoming",
+                date_from=validated_from,
+                date_to=validated_to,
+                counterparty=counterparty_name,
+                limit=fetch_limit,
+            )
+        except ODataError:
+            missing_sources.append("incoming_payments")
+            warnings.append(
+                "Не найден безопасный источник входящих оплат для расчета взаиморасчетов. "
+                "Источник не опубликован в OData, недоступен по правам или не распознан по metadata."
+            )
+
+        if sales is None or incoming is None:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "min_debt": str(min_debt_amount),
+                    "limit": effective_limit,
+                },
+                "missing_sources": missing_sources,
+                "source_explanation": {
+                    "sales_documents_used": None,
+                    "incoming_payments_used": None,
+                    "missing_sources": missing_sources,
+                    "basis": "summary_not_built",
+                },
+                "warnings": warnings,
+                "note": "Сводка не построена, потому что в OData не найден один из обязательных read-only источников: реализации/счета и входящие оплаты. Это не официальный бухгалтерский акт сверки и не баланс взаиморасчетов.",
+            }
+
+        settlement = self._build_customer_settlement(sales.get("data") or [], incoming.get("data") or [], as_of)
+        last_payment_dates = self._last_payment_dates_by_customer(incoming.get("data") or [])
+        sales_source = sales.get("source") or {}
+        incoming_source = incoming.get("source") or {}
+
+        rows: list[dict[str, Any]] = []
+        for customer, info in settlement.items():
+            debt_amount = info["open_amount_total"]
+            if debt_amount <= 0 or debt_amount < min_debt_amount:
+                continue
+            overdue_days = self._calculate_overdue_days(info.get("open_invoices") or [], as_of)
+            rows.append(
+                {
+                    "counterparty": customer,
+                    "bin_or_iin": None,
+                    "debt_amount": str(debt_amount),
+                    "currency": None,
+                    "last_payment_date": last_payment_dates.get(customer),
+                    "overdue_days": overdue_days,
+                    "source_document_count": len(info.get("open_invoices") or []),
+                    "source_entity": sales_source.get("entity"),
+                }
+            )
+
+        rows.sort(
+            key=lambda row: (
+                self._to_decimal(row.get("debt_amount"), default=Decimal("0")) or Decimal("0"),
+                Decimal(str(row.get("overdue_days") or 0)),
+            ),
+            reverse=True,
+        )
+
+        warnings.extend(sales.get("warnings") or [])
+        warnings.extend(incoming.get("warnings") or [])
+        warnings.append(
+            "Это управленческая read-only оценка взаиморасчетов по OData: реализации/счета минус входящие оплаты по контрагенту. "
+            "Это не официальный бухгалтерский акт сверки и не баланс взаиморасчетов. Для бухгалтерской точности сверяйте с официальным отчетом 1С по взаиморасчетам."
+        )
+
+        return {
+            "count_returned": min(len(rows), effective_limit),
+            "data": rows[:effective_limit],
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "min_debt": str(min_debt_amount),
+                "limit": effective_limit,
+            },
+            "sales_source": sales_source,
+            "incoming_payments_source": incoming_source,
+            "missing_sources": missing_sources,
+            "source_explanation": {
+                "sales_documents_used": sales_source.get("entity"),
+                "incoming_payments_used": incoming_source.get("entity"),
+                "missing_sources": missing_sources,
+                "basis": "sales_documents_minus_incoming_payments_by_counterparty",
+            },
+            "warnings": warnings,
+            "note": "Read-only management estimate only. Не является официальным бухгалтерским актом сверки или балансом взаиморасчетов.",
+        }
+
     def get_payments(
         self,
         direction: str,
@@ -883,12 +1028,24 @@ class OneCODataClient:
 
         mapped = source.get("mapped_fields") or {}
         select = self._build_payment_select(mapped)
-        raw = self.query_entity(source["entity"], top=min(limit * 5, self.settings.max_top), select=select or None)
+        effective_from = date or date_from
+        effective_to = date or date_to
+        filter_expr = self._build_common_text_date_filter(
+            mapped,
+            date_from=effective_from,
+            date_to=effective_to,
+            text_field_key="counterparty",
+            text_value=counterparty,
+        )
+        raw = self.query_entity(
+            source["entity"],
+            top=min(max(limit, 50), self.settings.max_top),
+            select=select or None,
+            filter_expr=filter_expr or None,
+        )
         rows = raw.get("data") or []
         normalized = [self._normalize_payment_row(r, mapped, source.get("direction")) for r in rows]
 
-        effective_from = date or date_from
-        effective_to = date or date_to
         warnings: list[str] = []
         if effective_from or effective_to:
             normalized = [
@@ -1580,6 +1737,32 @@ class OneCODataClient:
                 parts.append(f"{date_field} le {to_literal}")
         return " and ".join(parts)
 
+    def _build_common_text_date_filter(
+        self,
+        mapped: dict[str, str | None],
+        *,
+        date_from: str | None,
+        date_to: str | None,
+        text_field_key: str,
+        text_value: str | None,
+    ) -> str:
+        parts: list[str] = []
+        date_field = mapped.get("date")
+        if date_field and date_from:
+            from_literal = self._to_odata_datetime_literal(date_from, end_of_day=False)
+            if from_literal:
+                parts.append(f"{date_field} ge {from_literal}")
+        if date_field and date_to:
+            to_literal = self._to_odata_datetime_literal(date_to, end_of_day=True)
+            if to_literal:
+                parts.append(f"{date_field} le {to_literal}")
+        text_field = mapped.get(text_field_key)
+        if text_field and text_value:
+            escaped = self._escape_odata_string_literal(text_value.strip())
+            if escaped:
+                parts.append(f"substringof('{escaped}', {text_field}) eq true")
+        return " and ".join(parts)
+
     @staticmethod
     def _escape_odata_string_literal(value: str) -> str:
         return str(value).replace("'", "''")
@@ -1694,6 +1877,29 @@ class OneCODataClient:
             }
         return settlement
 
+    def _last_payment_dates_by_customer(self, payment_rows: list[dict[str, Any]]) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for row in payment_rows:
+            customer = str(row.get("counterparty") or "<unknown>")
+            row_date = self._parse_date_like(row.get("date"))
+            if row_date is None:
+                continue
+            iso = row_date.isoformat()
+            if customer not in out or iso > out[customer]:
+                out[customer] = iso
+        return out
+
+    @staticmethod
+    def _calculate_overdue_days(open_invoices: list[dict[str, Any]], as_of: date) -> int | None:
+        open_dates = [
+            invoice["invoice_date"]
+            for invoice in open_invoices
+            if invoice.get("outstanding_amount", Decimal("0")) > 0 and invoice.get("invoice_date") is not None
+        ]
+        if not open_dates:
+            return None
+        return (as_of - min(open_dates)).days
+
     @staticmethod
     def _to_decimal(value: Any, default: Decimal | None = Decimal("0")) -> Decimal | None:
         if value is None:
@@ -1732,6 +1938,25 @@ class OneCODataClient:
         if text in {"false", "0", "no", "n", "нет"}:
             return False
         return None
+
+    def _parse_decimal_input(self, value: Any, *, field_name: str, default: Decimal | None = None) -> Decimal:
+        if value is None or str(value).strip() == "":
+            return default or Decimal("0")
+        parsed = self._to_decimal(value, default=None)
+        if parsed is None:
+            raise ODataError(f"Некорректное числовое значение {field_name}: {value!r}.")
+        return parsed
+
+    def _validate_date_range(self, date_from: str | None, date_to: str | None) -> tuple[str | None, str | None]:
+        parsed_from = self._parse_date_like(date_from) if date_from else None
+        parsed_to = self._parse_date_like(date_to) if date_to else None
+        if date_from and parsed_from is None:
+            raise ODataError(f"Некорректная дата date_from: {date_from!r}. Используйте YYYY-MM-DD.")
+        if date_to and parsed_to is None:
+            raise ODataError(f"Некорректная дата date_to: {date_to!r}. Используйте YYYY-MM-DD.")
+        if parsed_from and parsed_to and parsed_from > parsed_to:
+            raise ODataError("date_from не может быть позже date_to.")
+        return parsed_from.isoformat() if parsed_from else None, parsed_to.isoformat() if parsed_to else None
 
     @staticmethod
     def _text_match(value: Any, needle: str) -> bool:
