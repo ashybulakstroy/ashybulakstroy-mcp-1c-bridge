@@ -273,7 +273,7 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Остатки получены адаптивно: найден кандидат источника, строки прочитаны через OData и нормализованы в item/warehouse/quantity/amount.")
     elif tool == "get_low_stock_items":
         explanation["summary"].append("Низкие остатки рассчитаны детерминированно: сервер взял авто-остатки и отфильтровал позиции, где quantity меньше или равно заданному порогу.")
-    elif tool in {"get_outgoing_payments", "get_incoming_payments"}:
+    elif tool in {"get_outgoing_payments", "get_incoming_payments", "get_cash_bank_movements"}:
         explanation["summary"].append("Платежи получены адаптивно: сервер нашел платежную сущность по metadata, прочитал строки OData и нормализовал дату, контрагента и сумму.")
     elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty", "get_customer_settlements_summary"}:
         explanation["summary"].append("Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.")
@@ -917,6 +917,36 @@ def get_customer_settlements_summary(
             limit=limit,
         )
         return _ok(result, tool="get_customer_settlements_summary")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_cash_bank_movements(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    movement_type: str | None = None,
+    account_type: str | None = None,
+    counterparty_name: str | None = None,
+    min_amount: str | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Показать read-only движения по банку и кассе.
+
+    Возвращает безопасный список входящих/исходящих движений по опубликованным OData-платежным документам,
+    без raw OData и без записи в 1С.
+    """
+    try:
+        result = odata.get_cash_bank_movements(
+            date_from=date_from,
+            date_to=date_to,
+            movement_type=movement_type,
+            account_type=account_type,
+            counterparty_name=counterparty_name,
+            min_amount=min_amount,
+            limit=limit,
+        )
+        return _ok(result, tool="get_cash_bank_movements")
     except Exception as exc:
         return _err(exc)
 

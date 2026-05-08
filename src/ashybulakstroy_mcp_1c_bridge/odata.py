@@ -413,6 +413,7 @@ class OneCODataClient:
                 "entity": entity.name,
                 "entity_type": entity.entity_type,
                 "direction": entity_direction,
+                "account_type": self._classify_payment_account_type(entity.name),
                 "score": score,
                 "confidence": self._confidence_from_score(score),
                 "reasons": reasons,
@@ -433,7 +434,15 @@ class OneCODataClient:
                     row["has_data"] = None
                     row["error"] = str(exc)[:300]
             candidates.append(row)
-        return sorted(candidates, key=lambda r: r["score"], reverse=True)[:limit]
+        return sorted(
+            candidates,
+            key=lambda r: (
+                1 if r.get("account_type") == "bank" else 0,
+                r["score"],
+                1 if r.get("has_data") is True else 0,
+            ),
+            reverse=True,
+        )[:limit]
 
     def discover_sales_sources(
         self,
@@ -988,6 +997,131 @@ class OneCODataClient:
             "note": "Read-only management estimate only. Не является официальным бухгалтерским актом сверки или балансом взаиморасчетов.",
         }
 
+    def get_cash_bank_movements(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        movement_type: str | None = None,
+        account_type: str | None = None,
+        counterparty_name: str | None = None,
+        min_amount: Any = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """Return a safe read-only list of incoming/outgoing cash and bank movements."""
+        effective_limit = min(max(int(limit), 1), 100)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        normalized_movement_type = self._validate_choice(
+            movement_type,
+            allowed={"incoming", "outgoing", "all"},
+            default="all",
+            field_name="movement_type",
+        )
+        normalized_account_type = self._validate_choice(
+            account_type,
+            allowed={"bank", "cash", "all"},
+            default="all",
+            field_name="account_type",
+        )
+        min_amount_value = self._parse_decimal_input(min_amount, field_name="min_amount", default=Decimal("0"))
+        fetch_limit = min(max(effective_limit, 50), self.settings.max_top)
+        directions = ["incoming", "outgoing"] if normalized_movement_type == "all" else [normalized_movement_type]
+
+        rows: list[dict[str, Any]] = []
+        missing_sources: list[str] = []
+        warnings: list[str] = []
+        incoming_sources_used: list[str] = []
+        outgoing_sources_used: list[str] = []
+        skipped_without_amount = 0
+
+        for direction in directions:
+            candidates = self.discover_payment_sources(direction=direction, limit=20, check_data=True)
+            filtered_candidates = [
+                source for source in candidates
+                if normalized_account_type == "all" or self._classify_payment_account_type(source.get("entity")) == normalized_account_type
+            ]
+            if not filtered_candidates:
+                missing_sources.append(f"{direction}:{normalized_account_type}")
+                continue
+
+            for source in filtered_candidates:
+                try:
+                    movements = self.get_payments(
+                        direction=direction,
+                        date_from=validated_from,
+                        date_to=validated_to,
+                        counterparty=counterparty_name,
+                        limit=fetch_limit,
+                        entity_name=source["entity"],
+                    )
+                except ODataError:
+                    warnings.append(
+                        f"Источник {source.get('entity')} пропущен: данные недоступны или не распознаны безопасным OData-слоем."
+                    )
+                    continue
+
+                account_kind = self._classify_payment_account_type(source.get("entity"))
+                if direction == "incoming":
+                    incoming_sources_used.append(str(source.get("entity")))
+                else:
+                    outgoing_sources_used.append(str(source.get("entity")))
+
+                for row in movements.get("data") or []:
+                    amount_value = self._to_decimal(row.get("amount"), default=None)
+                    if amount_value is None:
+                        skipped_without_amount += 1
+                        continue
+                    if amount_value < min_amount_value:
+                        continue
+                    rows.append(
+                        {
+                            "date": row.get("date"),
+                            "movement_type": direction,
+                            "account_type": account_kind,
+                            "counterparty": row.get("counterparty"),
+                            "amount": str(amount_value),
+                            "currency": row.get("currency"),
+                            "document_type": source.get("entity"),
+                            "document_number": row.get("number"),
+                            "purpose": row.get("purpose"),
+                            "source_entity": source.get("entity"),
+                        }
+                    )
+
+        rows.sort(
+            key=lambda row: (
+                self._parse_date_like(row.get("date")) or date.min,
+                self._to_decimal(row.get("amount"), default=Decimal("0")) or Decimal("0"),
+            ),
+            reverse=True,
+        )
+        if skipped_without_amount:
+            warnings.append(f"Пропущено движений без распознанной суммы: {skipped_without_amount}.")
+        if missing_sources:
+            warnings.append("Часть источников движений не найдена в OData. Проверьте публикацию документов банка/кассы.")
+
+        return {
+            "count_returned": min(len(rows), effective_limit),
+            "data": rows[:effective_limit],
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "movement_type": normalized_movement_type,
+                "account_type": normalized_account_type,
+                "counterparty_name": counterparty_name,
+                "min_amount": str(min_amount_value),
+                "limit": effective_limit,
+            },
+            "missing_sources": missing_sources,
+            "source_explanation": {
+                "incoming_sources_used": sorted(set(incoming_sources_used)),
+                "outgoing_sources_used": sorted(set(outgoing_sources_used)),
+                "missing_sources": missing_sources,
+                "basis": "payment_documents_classified_as_bank_or_cash",
+            },
+            "warnings": warnings,
+            "note": "Read-only movement view only. Не является официальной банковской выпиской или кассовой книгой 1С.",
+        }
+
     def get_payments(
         self,
         direction: str,
@@ -1437,6 +1571,13 @@ class OneCODataClient:
             score += incoming_score
             reasons.append("direction:incoming")
 
+        if any(term in haystack for term in ["списаниесбанковскогосчета", "списаниесрасчетногосчета", "поступлениенабанковскийсчет", "поступлениенарасчетныйсчет"]):
+            score += 8
+            reasons.append("account:bank_priority")
+        elif any(term in haystack for term in ["расходныйкассовыйордер", "приходныйкассовыйордер"]):
+            score += 3
+            reasons.append("account:cash_priority")
+
         mapped = self._map_payment_fields([f.name for f in (entity.fields or [])])
         for key, weight in {"counterparty": 14, "amount": 15, "date": 12, "number": 4}.items():
             if mapped.get(key):
@@ -1503,6 +1644,8 @@ class OneCODataClient:
             "number": ["номер", "number", "documentnumber"],
             "organization": ["организация", "organization", "company"],
             "bank_account": ["банковскийсчет", "bankaccount", "счеторганизации", "касса", "cashbox"],
+            "currency": ["валюта", "currency"],
+            "purpose": ["комментарий", "comment", "назначениеплатежа", "purpose", "description"],
         }
         mapped: dict[str, str | None] = {k: None for k in patterns}
         normalized = [(name, self._norm(name)) for name in field_names]
@@ -1570,7 +1713,7 @@ class OneCODataClient:
     @staticmethod
     def _build_payment_select(mapped: dict[str, str | None]) -> list[str]:
         out: list[str] = []
-        for key in ("counterparty", "amount", "date", "number", "organization", "bank_account"):
+        for key in ("counterparty", "amount", "date", "number", "organization", "bank_account", "currency", "purpose"):
             value = mapped.get(key)
             if value and value not in out:
                 out.append(value)
@@ -1623,6 +1766,8 @@ class OneCODataClient:
             "number": pick("number"),
             "organization": pick("organization"),
             "bank_account": pick("bank_account"),
+            "currency": pick("currency"),
+            "purpose": pick("purpose"),
             "raw": row,
         }
 
@@ -1762,6 +1907,14 @@ class OneCODataClient:
             if escaped:
                 parts.append(f"substringof('{escaped}', {text_field}) eq true")
         return " and ".join(parts)
+
+    def _classify_payment_account_type(self, entity_name: Any) -> str:
+        haystack = self._norm(str(entity_name or ""))
+        if any(term in haystack for term in ["касс", "cash", "кассовыйордер"]):
+            return "cash"
+        if any(term in haystack for term in ["банков", "bank", "расчетногосчета", "банковскогосчета"]):
+            return "bank"
+        return "unknown"
 
     @staticmethod
     def _escape_odata_string_literal(value: str) -> str:
@@ -1946,6 +2099,15 @@ class OneCODataClient:
         if parsed is None:
             raise ODataError(f"Некорректное числовое значение {field_name}: {value!r}.")
         return parsed
+
+    def _validate_choice(self, value: str | None, *, allowed: set[str], default: str, field_name: str) -> str:
+        if value is None or not str(value).strip():
+            return default
+        normalized = str(value).strip().lower()
+        if normalized not in allowed:
+            allowed_text = ", ".join(sorted(allowed))
+            raise ODataError(f"Недопустимое значение {field_name}: {value!r}. Используйте: {allowed_text}.")
+        return normalized
 
     def _validate_date_range(self, date_from: str | None, date_to: str | None) -> tuple[str | None, str | None]:
         parsed_from = self._parse_date_like(date_from) if date_from else None

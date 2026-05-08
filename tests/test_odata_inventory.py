@@ -61,6 +61,7 @@ class FakeOneCODataClient(OneCODataClient):
                     "Контрагент": "ТОО БетонПром",
                     "СуммаДокумента": "150000",
                     "Номер": "000001",
+                    "Комментарий": "Оплата поставщику",
                     "Posted": True,
                 },
                 {
@@ -69,6 +70,7 @@ class FakeOneCODataClient(OneCODataClient):
                     "Контрагент": "ТОО Cement Trade",
                     "СуммаДокумента": "50000",
                     "Номер": "000002",
+                    "Комментарий": "Аванс",
                     "Posted": False,
                 },
             ]
@@ -83,6 +85,8 @@ class FakeOneCODataClient(OneCODataClient):
                     "Контрагент": "ТОО Альфа Строй",
                     "СуммаДокумента": "100000",
                     "Номер": "000100",
+                    "Валюта": "KZT",
+                    "Комментарий": "Оплата по договору",
                     "Posted": True,
                 },
                 {
@@ -91,6 +95,8 @@ class FakeOneCODataClient(OneCODataClient):
                     "Контрагент": "ТОО Альфа Строй",
                     "СуммаДокумента": "220000",
                     "Номер": "000101",
+                    "Валюта": "KZT",
+                    "Комментарий": "Доплата",
                     "Posted": True,
                 },
                 {
@@ -99,8 +105,42 @@ class FakeOneCODataClient(OneCODataClient):
                     "Контрагент": "ТОО БетонПром",
                     "СуммаДокумента": "70000",
                     "Номер": "000102",
+                    "Валюта": "KZT",
+                    "Комментарий": "Частичная оплата",
                     "Posted": False,
                 },
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Document_ПриходныйКассовыйОрдер":
+            rows = [
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000020",
+                    "Дата": "2026-04-24T16:00:00",
+                    "Контрагент": "ТОО Ромашка",
+                    "СуммаДокумента": "30000",
+                    "Номер": "PKO-001",
+                    "Валюта": "KZT",
+                    "Комментарий": "Наличный платеж",
+                    "Posted": True,
+                }
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Document_РасходныйКассовыйОрдер":
+            rows = [
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000030",
+                    "Дата": "2026-04-25T09:00:00",
+                    "Контрагент": "ТОО Сервис",
+                    "СуммаДокумента": "20000",
+                    "Номер": "RKO-001",
+                    "Валюта": "KZT",
+                    "Комментарий": "Подотчет",
+                    "Posted": True,
+                }
             ]
             if select:
                 rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
@@ -423,3 +463,134 @@ def test_get_customer_settlements_summary_rejects_invalid_min_debt():
         assert False, "Expected ODataError for invalid min_debt"
     except Exception as exc:
         assert "min_debt" in str(exc)
+
+
+def test_get_cash_bank_movements_returns_safe_rows():
+    client = FakeOneCODataClient()
+
+    result = client.get_cash_bank_movements(date_from="2026-04-24", date_to="2026-04-25", limit=10)
+
+    assert result["count_returned"] >= 1
+    first = result["data"][0]
+    assert set(first.keys()) == {
+        "date",
+        "movement_type",
+        "account_type",
+        "counterparty",
+        "amount",
+        "currency",
+        "document_type",
+        "document_number",
+        "purpose",
+        "source_entity",
+    }
+    assert "http://" not in str(result)
+    assert result["source_explanation"]["basis"] == "payment_documents_classified_as_bank_or_cash"
+
+
+def test_get_cash_bank_movements_caps_limit():
+    client = FakeOneCODataClient()
+
+    result = client.get_cash_bank_movements(date_from="2026-04-20", date_to="2026-04-30", limit=1000)
+
+    assert result["filters_applied_in_python"]["limit"] == 100
+
+
+def test_get_cash_bank_movements_filters_incoming_outgoing():
+    client = FakeOneCODataClient()
+
+    incoming = client.get_cash_bank_movements(date_from="2026-04-20", date_to="2026-04-30", movement_type="incoming", limit=20)
+    outgoing = client.get_cash_bank_movements(date_from="2026-04-20", date_to="2026-04-30", movement_type="outgoing", limit=20)
+
+    assert incoming["data"]
+    assert outgoing["data"]
+    assert all(row["movement_type"] == "incoming" for row in incoming["data"])
+    assert all(row["movement_type"] == "outgoing" for row in outgoing["data"])
+
+
+def test_get_cash_bank_movements_filters_bank_cash():
+    client = FakeOneCODataClient()
+
+    bank = client.get_cash_bank_movements(date_from="2026-04-20", date_to="2026-04-30", account_type="bank", limit=20)
+    cash = client.get_cash_bank_movements(date_from="2026-04-20", date_to="2026-04-30", account_type="cash", limit=20)
+
+    assert bank["data"]
+    assert cash["data"]
+    assert all(row["account_type"] == "bank" for row in bank["data"])
+    assert all(row["account_type"] == "cash" for row in cash["data"])
+
+
+def test_get_cash_bank_movements_filters_min_amount():
+    client = FakeOneCODataClient()
+
+    result = client.get_cash_bank_movements(date_from="2026-04-20", date_to="2026-04-30", min_amount="100000", limit=20)
+
+    assert result["data"]
+    assert all(float(row["amount"]) >= 100000 for row in result["data"])
+
+
+def test_get_cash_bank_movements_rejects_invalid_date_range():
+    client = FakeOneCODataClient()
+
+    try:
+        client.get_cash_bank_movements(date_from="2026-05-01", date_to="2026-04-01")
+        assert False, "Expected ODataError for invalid date range"
+    except Exception as exc:
+        assert "date_from" in str(exc)
+
+
+def test_get_cash_bank_movements_rejects_invalid_movement_type():
+    client = FakeOneCODataClient()
+
+    try:
+        client.get_cash_bank_movements(movement_type="sideways")
+        assert False, "Expected ODataError for invalid movement_type"
+    except Exception as exc:
+        assert "movement_type" in str(exc)
+
+
+def test_get_cash_bank_movements_rejects_invalid_account_type():
+    client = FakeOneCODataClient()
+
+    try:
+        client.get_cash_bank_movements(account_type="crypto")
+        assert False, "Expected ODataError for invalid account_type"
+    except Exception as exc:
+        assert "account_type" in str(exc)
+
+
+def test_get_cash_bank_movements_escapes_counterparty_name():
+    client = FakeOneCODataClient()
+
+    result = client.get_cash_bank_movements(
+        date_from="2026-04-20",
+        date_to="2026-04-30",
+        counterparty_name="Альфа'Строй",
+        limit=20,
+    )
+
+    assert result["count_returned"] == 0
+    filtered_queries = [query for query in client.captured_queries if query["filter_expr"]]
+    assert filtered_queries
+    assert any("substringof('Альфа''Строй', Контрагент) eq true" in str(query["filter_expr"]) for query in filtered_queries)
+
+
+def test_get_cash_bank_movements_returns_empty_result():
+    client = FakeOneCODataClient()
+
+    result = client.get_cash_bank_movements(date_from="2026-04-20", date_to="2026-04-30", min_amount="999999999", limit=20)
+
+    assert result["count_returned"] == 0
+    assert result["data"] == []
+
+
+def test_get_cash_bank_movements_handles_missing_sources_gracefully():
+    client = FakeOneCODataClient()
+    client.discover_payment_sources = lambda direction=None, limit=10, check_data=True: []
+
+    result = client.get_cash_bank_movements(date_from="2026-04-20", date_to="2026-04-30", limit=20)
+
+    assert result["count_returned"] == 0
+    assert result["data"] == []
+    assert result["missing_sources"]
+    assert result["warnings"]

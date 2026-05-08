@@ -178,6 +178,12 @@ tools:
       - read_customer_settlements
     auto_approval: true
 
+  get_cash_bank_movements:
+    risk: L0
+    capabilities:
+      - read_cash_bank_movements
+    auto_approval: true
+
   parse_inventory_report_text:
     risk: L1
     capabilities:

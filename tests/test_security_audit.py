@@ -137,3 +137,43 @@ def test_get_customer_settlements_summary_allowed_call_is_audited(monkeypatch, t
     assert record["decision"] == "allow"
     assert record["project_id"] == "project-settlements"
     assert record["risk"] == "L0"
+
+
+def test_get_cash_bank_movements_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_cash_bank_movements",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [
+                {
+                    "date": "2026-04-24T10:00:00",
+                    "movement_type": "incoming",
+                    "account_type": "bank",
+                    "counterparty": "ТОО Альфа Строй",
+                    "amount": "100000",
+                    "currency": "KZT",
+                    "document_type": "Document_ПоступлениеНаБанковскийСчет",
+                    "document_number": "000100",
+                    "purpose": "Оплата по договору",
+                    "source_entity": "Document_ПоступлениеНаБанковскийСчет",
+                }
+            ],
+        },
+    )
+
+    result = core_server.get_cash_bank_movements(date_to="2026-04-30", project_id="project-movements")
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_cash_bank_movements"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-movements"
+    assert record["risk"] == "L0"

@@ -31,6 +31,30 @@
         <Property Name="Контрагент" Type="Edm.String" />
         <Property Name="СуммаДокумента" Type="Edm.Decimal" />
         <Property Name="Номер" Type="Edm.String" />
+        <Property Name="Валюта" Type="Edm.String" />
+        <Property Name="Комментарий" Type="Edm.String" />
+        <Property Name="Posted" Type="Edm.Boolean" />
+      </EntityType>
+      <EntityType Name="Document_ПриходныйКассовыйОрдерType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Дата" Type="Edm.DateTime" />
+        <Property Name="Контрагент" Type="Edm.String" />
+        <Property Name="СуммаДокумента" Type="Edm.Decimal" />
+        <Property Name="Номер" Type="Edm.String" />
+        <Property Name="Валюта" Type="Edm.String" />
+        <Property Name="Комментарий" Type="Edm.String" />
+        <Property Name="Posted" Type="Edm.Boolean" />
+      </EntityType>
+      <EntityType Name="Document_РасходныйКассовыйОрдерType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Дата" Type="Edm.DateTime" />
+        <Property Name="Контрагент" Type="Edm.String" />
+        <Property Name="СуммаДокумента" Type="Edm.Decimal" />
+        <Property Name="Номер" Type="Edm.String" />
+        <Property Name="Валюта" Type="Edm.String" />
+        <Property Name="Комментарий" Type="Edm.String" />
         <Property Name="Posted" Type="Edm.Boolean" />
       </EntityType>
       <EntityType Name="Document_РеализацияТоваровУслугType">
@@ -47,6 +71,8 @@
         <EntitySet Name="Catalog_Номенклатура" EntityType="Fake1C.Catalog_НоменклатураType" />
         <EntitySet Name="Document_СписаниеСБанковскогоСчета" EntityType="Fake1C.Document_СписаниеСБанковскогоСчетаType" />
         <EntitySet Name="Document_ПоступлениеНаБанковскийСчет" EntityType="Fake1C.Document_ПоступлениеНаБанковскийСчетType" />
+        <EntitySet Name="Document_ПриходныйКассовыйОрдер" EntityType="Fake1C.Document_ПриходныйКассовыйОрдерType" />
+        <EntitySet Name="Document_РасходныйКассовыйОрдер" EntityType="Fake1C.Document_РасходныйКассовыйОрдерType" />
         <EntitySet Name="Document_РеализацияТоваровУслуг" EntityType="Fake1C.Document_РеализацияТоваровУслугType" />
       </EntityContainer>
     </Schema>

@@ -68,6 +68,25 @@
 Текущий safe path:
 - `get_outgoing_payments`
 
+### Движения по банку/кассе
+
+```text
+Покажи движения по банку и кассе за неделю
+```
+
+Текущий safe path:
+- `get_cash_bank_movements`
+- это read-only operational view по OData, а не официальная банковская выписка, кассовая книга или бухгалтерский отчет 1С
+
+С уточнением:
+
+```text
+Покажи только входящие движения по банку за период 2026-04-20 2026-04-30 больше 50000
+```
+
+Текущий safe path:
+- `get_cash_bank_movements(date_from="2026-04-20", date_to="2026-04-30", movement_type="incoming", account_type="bank", min_amount="50000")`
+
 ### Топ клиенты
 
 ```text
@@ -145,20 +164,6 @@
 - `validate_inventory_report_text`
 
 ## Partially Covered in Current MVP
-
-### Движения по банку/кассе
-
-Пользовательский prompt:
-
-```text
-Покажи движения по банку и кассе за неделю
-```
-
-Статус:
-- частично покрывается через:
-  - `get_incoming_payments`
-  - `get_outgoing_payments`
-- dedicated safe tool с формулировкой "движения банка/кассы" пока не выделен
 
 ## Good Demo Sequence
 

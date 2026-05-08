@@ -107,6 +107,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 | `discover_payment_sources` | Ищет OData-источник оплат | L0 | `read_payments` | yes | no | yes |
 | `get_outgoing_payments` | Кому мы заплатили | L0 | `read_payments` | yes | no | yes |
 | `get_incoming_payments` | От кого получили деньги | L0 | `read_payments` | yes | no | yes |
+| `get_cash_bank_movements` | Движения по банку и кассе | L0 | `read_cash_bank_movements` | yes | no | yes |
 | `payment_summary_by_counterparty` | Топ клиенты / топ поставщики | L1 | `create_local_report`, `read_payments` | yes | no | yes |
 | `get_unpaid_customers_summary` | Неоплаченные клиенты | L1 | `read_receivables`, `create_local_report` | yes | no | yes |
 | `get_overdue_unpaid_customers` | Просроченные должники | L1 | `read_receivables`, `create_local_report` | yes | no | yes |
@@ -136,6 +137,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 - `Какие товары заканчиваются`
 - `Кому мы заплатили за период 2026-05-01 2026-05-07`
 - `От кого получили деньги за период 2026-05-01 2026-05-07`
+- `Покажи движения по банку и кассе за неделю`
 - `Покажи взаиморасчеты с покупателями`
 - `Топ клиенты за этот месяц`
 - `Кто не оплатил`
@@ -215,6 +217,7 @@ Blocked tool call example:
 - он не вызывает LLM Proxy Hub напрямую;
 - он принимает `trace_id/project_id/agent_id/policy_id/session_id`, если upstream их передаёт;
 - если `trace_id` не пришёл, он генерируется локально;
+- `get_cash_bank_movements` — это read-only operational view по published OData payment documents, а не официальная банковская выписка, кассовая книга или бухгалтерский отчет 1С;
 - `get_customer_settlements_summary` — это read-only управленческая оценка по OData, а не официальный бухгалтерский акт сверки и не баланс взаиморасчетов;
 - blocked operations являются feature, а не limitation.
 
@@ -228,5 +231,4 @@ Blocked tool call example:
 - audit/security demonstration
 
 Но перед коммерческим пилотом желательно добрать:
-- dedicated safe tool для движений по банку/кассе в привычной для бухгалтера формулировке
 - простой audit viewer поверх `audit.jsonl`
