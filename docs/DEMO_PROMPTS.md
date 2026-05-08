@@ -20,6 +20,26 @@
 Текущий safe path:
 - `find_buh_entity(kind="counterparty", query="Ромашка")`
 
+### Найти счет/документ по номеру
+
+Пользовательский prompt:
+
+```text
+Найди документ по номеру 000500
+```
+
+Текущий safe path:
+- `search_document_by_number(document_number="000500")`
+
+С уточнением типа и периода:
+
+```text
+Найди банковский документ по номеру 000101 за 2026-04-24
+```
+
+Текущий safe path:
+- `search_document_by_number(document_number="000101", document_type="банковский", date_from="2026-04-24", date_to="2026-04-24")`
+
 ### Остатки по складу
 
 ```text
@@ -106,22 +126,6 @@
 - `validate_inventory_report_text`
 
 ## Partially Covered in Current MVP
-
-### Найти счет/документ по номеру
-
-Пользовательский prompt:
-
-```text
-Найди счет по номеру 000123
-```
-
-Статус:
-- dedicated safe read-only tool пока не выделен
-- `query_entity` для этого не подходит в demo, потому что blocked by policy
-
-Что говорить на demo:
-- сейчас лучше показывать metadata, остатки, оплаты и дебиторку
-- поиск документа по номеру следует оформить как отдельный safe wrapper перед коммерческим пилотом
 
 ### Взаиморасчеты с покупателями
 

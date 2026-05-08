@@ -98,6 +98,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 | `list_entities` | Показывает опубликованные OData сущности | L0 | `read_metadata` | yes | no | yes |
 | `describe_entity` | Описывает поля одной сущности | L0 | `read_metadata` | yes | no | yes |
 | `sample_entity` | Берёт sample rows из сущности | L0 | `read_documents` | yes | no | yes |
+| `search_document_by_number` | Ищет document-like сущности по номеру | L0 | `read_documents` | yes | no | yes |
 | `search_metadata` | Ищет сущности/поля по metadata | L0 | `read_metadata` | yes | no | yes |
 | `explore_live_entities` | Проверяет, какие сущности реально отдают данные | L0 | `read_metadata` | yes | no | yes |
 | `discover_inventory_sources` | Ищет источник остатков | L0 | `read_inventory` | yes | no | yes |
@@ -129,6 +130,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 - `Проверь подключение к 1С`
 - `Сделай паспорт базы 1С`
 - `Какие сущности опубликованы в OData`
+- `Найди документ по номеру 000500`
 - `Покажи остатки по складу Основной`
 - `Какие товары заканчиваются`
 - `Кому мы заплатили за период 2026-05-01 2026-05-07`
@@ -223,7 +225,6 @@ Blocked tool call example:
 - audit/security demonstration
 
 Но перед коммерческим пилотом желательно добрать:
-- dedicated safe tool для поиска документов по номеру
 - dedicated safe tool для более явных взаиморасчётов покупателей
 - dedicated safe tool для движений по банку/кассе в привычной для бухгалтера формулировке
 - простой audit viewer поверх `audit.jsonl`

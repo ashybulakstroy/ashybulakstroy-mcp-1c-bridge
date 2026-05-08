@@ -544,6 +544,86 @@ class OneCODataClient:
             "note": "Реализации/счета определены по metadata-эвристике OData. Для точного дебиторского учета сверяйте с официальными отчетами 1С.",
         }
 
+    def search_document_by_number(
+        self,
+        document_number: str,
+        document_type: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Search document-like OData entities by document number without exposing raw OData to the caller."""
+        needle = str(document_number or "").strip()
+        if not needle:
+            raise ODataError("document_number не должен быть пустым.")
+
+        effective_limit = min(max(int(limit), 1), 20)
+        candidates = self._discover_document_search_candidates(document_type=document_type)
+        if not candidates:
+            return self._empty_document_search_result(
+                needle=needle,
+                document_type=document_type,
+                date_from=date_from,
+                date_to=date_to,
+                limit=effective_limit,
+                warnings=[
+                    "Не найдено document-like OData сущностей для поиска по номеру. "
+                    "Проверьте публикацию документов в OData или уточните document_type."
+                ],
+            )
+
+        warnings: list[str] = []
+        rows: list[dict[str, Any]] = []
+        for candidate in candidates:
+            mapped = candidate.get("mapped_fields") or {}
+            if not mapped.get("number"):
+                warnings.append(f"Пропущена сущность {candidate['entity']}: не найдено поле номера документа.")
+                continue
+            select = self._build_document_select(mapped)
+            filter_expr = self._build_document_search_filter(
+                mapped,
+                document_number=needle,
+                date_from=date_from,
+                date_to=date_to,
+            )
+            raw = self.query_entity(
+                candidate["entity"],
+                top=min(effective_limit, self.settings.max_top),
+                select=select or None,
+                filter_expr=filter_expr or None,
+            )
+            for row in raw.get("data") or []:
+                normalized = self._normalize_document_search_row(row, candidate["entity"], mapped)
+                if not self._text_match(normalized.get("number"), needle):
+                    continue
+                if (date_from or date_to) and not self._date_in_range(normalized.get("date"), date_from, date_to):
+                    continue
+                rows.append(normalized)
+
+        rows.sort(
+            key=lambda item: (
+                self._parse_date_like(item.get("date")) or date.min,
+                str(item.get("number") or ""),
+                str(item.get("document_type") or ""),
+            ),
+            reverse=True,
+        )
+
+        return {
+            "document_number": needle,
+            "document_type_filter": document_type,
+            "filters_applied_in_python": {
+                "date_from": date_from,
+                "date_to": date_to,
+                "limit": effective_limit,
+            },
+            "matched_entities": sorted({str(row.get("document_type") or "") for row in rows if row.get("document_type")}),
+            "count_returned": min(len(rows), effective_limit),
+            "data": rows[:effective_limit],
+            "warnings": warnings,
+            "note": "Поиск выполнен через безопасный read-only wrapper поверх document-like OData сущностей без raw OData для агента.",
+        }
+
     def get_unpaid_customers_summary(
         self,
         date_to: str | None = None,
@@ -1293,6 +1373,26 @@ class OneCODataClient:
             mapped[key] = choice
         return mapped
 
+    def _map_document_fields(self, field_names: list[str]) -> dict[str, str | None]:
+        patterns: dict[str, list[str]] = {
+            "counterparty": ["контрагент", "partner", "counterparty", "client", "customer", "buyer", "supplier", "покупатель", "поставщик"],
+            "amount": ["суммадокумента", "сумма", "amount", "total"],
+            "date": ["дата", "date", "period", "период", "documentdate"],
+            "number": ["номер", "number", "documentnumber"],
+            "status": ["статус", "status", "state"],
+            "posted": ["posted", "проведен", "проведён"],
+            "reference": ["ref_key", "refkey", "ссылка", "ref", "id", "key"],
+            "deletion_mark": ["deletionmark", "пометкаудаления", "markedfordeletion", "isdeleted"],
+        }
+        mapped: dict[str, str | None] = {k: None for k in patterns}
+        normalized = [(name, self._norm(name)) for name in field_names]
+        for key, terms in patterns.items():
+            exactish = [x for x in normalized if any(x[1] == self._norm(t) for t in terms)]
+            contains = [x for x in normalized if any(self._norm(t) in x[1] for t in terms)]
+            choice = (exactish or contains or [(None, "")])[0][0]
+            mapped[key] = choice
+        return mapped
+
     @staticmethod
     def _confidence_from_score(score: int) -> str:
         if score >= 85:
@@ -1323,6 +1423,15 @@ class OneCODataClient:
     def _build_sales_select(mapped: dict[str, str | None]) -> list[str]:
         out: list[str] = []
         for key in ("counterparty", "amount", "date", "number", "organization"):
+            value = mapped.get(key)
+            if value and value not in out:
+                out.append(value)
+        return out
+
+    @staticmethod
+    def _build_document_select(mapped: dict[str, str | None]) -> list[str]:
+        out: list[str] = []
+        for key in ("counterparty", "amount", "date", "number", "status", "posted", "reference", "deletion_mark"):
             value = mapped.get(key)
             if value and value not in out:
                 out.append(value)
@@ -1373,6 +1482,138 @@ class OneCODataClient:
             "number": pick("number"),
             "organization": pick("organization"),
             "raw": row,
+        }
+
+    def _normalize_document_search_row(self, row: dict[str, Any], entity_name: str, mapped: dict[str, str | None]) -> dict[str, Any]:
+        def pick(key: str) -> Any:
+            field = mapped.get(key)
+            return row.get(field) if field else None
+
+        return {
+            "document_type": entity_name,
+            "number": pick("number"),
+            "date": pick("date"),
+            "counterparty": pick("counterparty"),
+            "amount": pick("amount"),
+            "status": self._extract_document_status(row, mapped),
+            "reference": pick("reference"),
+        }
+
+    def _extract_document_status(self, row: dict[str, Any], mapped: dict[str, str | None]) -> str | None:
+        explicit_status = row.get(mapped["status"]) if mapped.get("status") else None
+        if explicit_status not in (None, ""):
+            return str(explicit_status)
+
+        deletion_mark = self._to_bool_like(row.get(mapped["deletion_mark"])) if mapped.get("deletion_mark") else None
+        if deletion_mark is True:
+            return "marked_for_deletion"
+
+        posted = self._to_bool_like(row.get(mapped["posted"])) if mapped.get("posted") else None
+        if posted is True:
+            return "posted"
+        if posted is False:
+            return "not_posted"
+        return None
+
+    def _discover_document_search_candidates(self, document_type: str | None = None) -> list[dict[str, Any]]:
+        requested_type = self._norm(document_type) if document_type else ""
+        deduped: dict[str, dict[str, Any]] = {}
+        for entity in self.list_entities():
+            name = self._norm(entity.name)
+            etype = self._norm(entity.entity_type)
+            score = 0
+            reasons: list[str] = []
+            if "document" in name or "документ" in name or "document" in etype or "документ" in etype:
+                score += 24
+                reasons.append("match:document_entity")
+            sales_score, sales_reasons = self._score_sales_entity(entity)
+            payment_score, payment_reasons, _ = self._score_payment_entity(entity)
+            if sales_score > 0:
+                score += sales_score
+                reasons.extend(sales_reasons)
+            if payment_score > 0:
+                score += payment_score
+                reasons.extend(payment_reasons)
+            if score <= 0:
+                continue
+            if requested_type and requested_type not in name and requested_type not in etype:
+                continue
+
+            mapped = self._map_document_fields([field.name for field in (entity.fields or [])])
+            if not mapped.get("number"):
+                continue
+
+            candidate = {
+                "entity": entity.name,
+                "entity_type": entity.entity_type,
+                "score": score,
+                "confidence": self._confidence_from_score(score),
+                "reasons": sorted(set(reasons)),
+                "mapped_fields": mapped,
+            }
+            current = deduped.get(entity.name)
+            if current is None or candidate["score"] > current["score"]:
+                deduped[entity.name] = candidate
+        return sorted(deduped.values(), key=lambda row: row["score"], reverse=True)
+
+    def _build_document_search_filter(
+        self,
+        mapped: dict[str, str | None],
+        *,
+        document_number: str,
+        date_from: str | None,
+        date_to: str | None,
+    ) -> str:
+        parts: list[str] = []
+        number_field = mapped.get("number")
+        if number_field:
+            escaped = self._escape_odata_string_literal(document_number)
+            parts.append(f"substringof('{escaped}', {number_field}) eq true")
+        date_field = mapped.get("date")
+        if date_field and date_from:
+            from_literal = self._to_odata_datetime_literal(date_from, end_of_day=False)
+            if from_literal:
+                parts.append(f"{date_field} ge {from_literal}")
+        if date_field and date_to:
+            to_literal = self._to_odata_datetime_literal(date_to, end_of_day=True)
+            if to_literal:
+                parts.append(f"{date_field} le {to_literal}")
+        return " and ".join(parts)
+
+    @staticmethod
+    def _escape_odata_string_literal(value: str) -> str:
+        return str(value).replace("'", "''")
+
+    def _to_odata_datetime_literal(self, value: str, *, end_of_day: bool) -> str | None:
+        parsed = self._parse_date_like(value)
+        if parsed is None:
+            return None
+        time_part = "23:59:59" if end_of_day else "00:00:00"
+        return f"datetime'{parsed.isoformat()}T{time_part}'"
+
+    def _empty_document_search_result(
+        self,
+        *,
+        needle: str,
+        document_type: str | None,
+        date_from: str | None,
+        date_to: str | None,
+        limit: int,
+        warnings: list[str] | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "document_number": needle,
+            "document_type_filter": document_type,
+            "filters_applied_in_python": {
+                "date_from": date_from,
+                "date_to": date_to,
+                "limit": limit,
+            },
+            "matched_entities": [],
+            "count_returned": 0,
+            "data": [],
+            "warnings": warnings or [],
+            "note": "Поиск выполнен через безопасный read-only wrapper поверх document-like OData сущностей без raw OData для агента.",
         }
 
     def _build_customer_settlement(
@@ -1478,6 +1719,19 @@ class OneCODataClient:
     @staticmethod
     def _severity_rank(value: Any) -> int:
         return {"critical": 0, "high": 1, "medium": 2}.get(str(value), 9)
+
+    @staticmethod
+    def _to_bool_like(value: Any) -> bool | None:
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return value
+        text = str(value).strip().lower()
+        if text in {"true", "1", "yes", "y", "да"}:
+            return True
+        if text in {"false", "0", "no", "n", "нет"}:
+            return False
+        return None
 
     @staticmethod
     def _text_match(value: Any, needle: str) -> bool:

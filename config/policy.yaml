@@ -90,6 +90,12 @@ tools:
       - read_documents
     auto_approval: true
 
+  search_document_by_number:
+    risk: L0
+    capabilities:
+      - read_documents
+    auto_approval: true
+
   search_metadata:
     risk: L0
     capabilities:

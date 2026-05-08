@@ -60,3 +60,42 @@ def test_audit_records_include_optional_correlation_metadata(monkeypatch, tmp_pa
     assert record["agent_id"] == "agent-7"
     assert record["policy_id"] == "policy-z"
     assert record["session_id"] == "session-42"
+
+
+def test_search_document_by_number_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "search_document_by_number",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [
+                {
+                    "document_type": "Document_РеализацияТоваровУслуг",
+                    "number": kwargs["document_number"],
+                    "date": "2026-05-08T09:00:00",
+                    "counterparty": "ТОО Альфа Строй",
+                    "amount": "100000",
+                    "status": "posted",
+                    "reference": "demo-ref",
+                }
+            ],
+        },
+    )
+
+    result = core_server.search_document_by_number("000500", project_id="project-docs", agent_id="agent-docs")
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "search_document_by_number"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-docs"
+    assert record["agent_id"] == "agent-docs"
+    assert isinstance(record["trace_id"], str)
+    assert record["trace_id"]

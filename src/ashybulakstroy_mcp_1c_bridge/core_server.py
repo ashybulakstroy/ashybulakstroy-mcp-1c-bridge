@@ -277,6 +277,8 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Платежи получены адаптивно: сервер нашел платежную сущность по metadata, прочитал строки OData и нормализовал дату, контрагента и сумму.")
     elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty"}:
         explanation["summary"].append("Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.")
+    elif tool == "search_document_by_number":
+        explanation["summary"].append("Поиск документа выполняется через безопасный wrapper: сервер выбирает document-like OData сущности, ищет совпадение по номеру и возвращает только нормализованные поля документа.")
     elif tool == "validate_inventory_report_text":
         explanation["summary"].append("Сверка сравнила нормализованные строки MCP и строки отчета 1С по ключам item+warehouse с учетом допусков.")
     if not explanation["warnings"]:
@@ -537,6 +539,33 @@ def sample_entity(entity_name: str, top: int = 5) -> dict[str, Any]:
     """
     try:
         return _ok(odata.sample_entity(entity_name, top=top))
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def search_document_by_number(
+    document_number: str,
+    document_type: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 20,
+) -> dict[str, Any]:
+    """Найти документ 1С по номеру через безопасный read-only wrapper.
+
+    Подходит для demo-сценариев: «Найди счет по номеру», «Найди реализацию 000500»,
+    «Покажи банковский документ 000101 за период».
+    Возвращает только нормализованные поля документа без raw OData-поверхности.
+    """
+    try:
+        result = odata.search_document_by_number(
+            document_number=document_number,
+            document_type=document_type,
+            date_from=date_from,
+            date_to=date_to,
+            limit=min(max(int(limit), 1), 20),
+        )
+        return _ok(result, tool="search_document_by_number")
     except Exception as exc:
         return _err(exc)
 

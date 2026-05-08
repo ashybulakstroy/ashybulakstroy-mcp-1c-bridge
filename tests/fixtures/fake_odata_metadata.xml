@@ -22,6 +22,7 @@
         <Property Name="Контрагент" Type="Edm.String" />
         <Property Name="СуммаДокумента" Type="Edm.Decimal" />
         <Property Name="Номер" Type="Edm.String" />
+        <Property Name="Posted" Type="Edm.Boolean" />
       </EntityType>
       <EntityType Name="Document_ПоступлениеНаБанковскийСчетType">
         <Key><PropertyRef Name="Ref_Key" /></Key>
@@ -30,6 +31,7 @@
         <Property Name="Контрагент" Type="Edm.String" />
         <Property Name="СуммаДокумента" Type="Edm.Decimal" />
         <Property Name="Номер" Type="Edm.String" />
+        <Property Name="Posted" Type="Edm.Boolean" />
       </EntityType>
       <EntityType Name="Document_РеализацияТоваровУслугType">
         <Key><PropertyRef Name="Ref_Key" /></Key>
@@ -38,6 +40,7 @@
         <Property Name="Контрагент" Type="Edm.String" />
         <Property Name="СуммаДокумента" Type="Edm.Decimal" />
         <Property Name="Номер" Type="Edm.String" />
+        <Property Name="Posted" Type="Edm.Boolean" />
       </EntityType>
       <EntityContainer Name="FakeContainer">
         <EntitySet Name="AccumulationRegister_ТоварыНаСкладах" EntityType="Fake1C.AccumulationRegister_ТоварыНаСкладахType" />
