@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from .models import Capability, OutputPolicy, Policy, RiskLevel, ToolPolicy
+from .models import Capability, OutputPolicy, Policy, ProxyPolicy, RiskLevel, ToolPolicy
 
 
 def _capabilities(values: list[str] | None) -> tuple[Capability, ...]:
@@ -32,6 +32,25 @@ def _output_policy(raw: dict[str, Any] | None) -> OutputPolicy:
     )
 
 
+def _proxy_policy(raw: dict[str, Any] | None) -> ProxyPolicy:
+    raw = raw or {}
+    provider_allowlist = tuple(str(x) for x in (raw.get("provider_allowlist") or []))
+    cloud_providers = tuple(str(x) for x in (raw.get("cloud_providers") or []))
+    project_token_limits = {
+        str(name): max(1, int(limit))
+        for name, limit in (raw.get("project_token_limits") or {}).items()
+    }
+    return ProxyPolicy(
+        policy_id=str(raw.get("policy_id", "secure-readonly-v1")),
+        default_project_id=str(raw.get("default_project_id", "default-project")),
+        default_agent_id=str(raw.get("default_agent_id", "mcp-1c-bridge")),
+        provider_allowlist=provider_allowlist,
+        cloud_providers=cloud_providers,
+        project_token_limits=project_token_limits,
+        mask_pii_before_cloud=bool(raw.get("mask_pii_before_cloud", True)),
+    )
+
+
 def load_policy(path: str | Path) -> Policy:
     policy_path = Path(path)
     raw = yaml.safe_load(policy_path.read_text(encoding="utf-8")) or {}
@@ -44,4 +63,5 @@ def load_policy(path: str | Path) -> Policy:
         tools=tools,
         forbidden=forbidden,
         output=_output_policy(raw.get("output")),
+        proxy=_proxy_policy(raw.get("proxy")),
     )

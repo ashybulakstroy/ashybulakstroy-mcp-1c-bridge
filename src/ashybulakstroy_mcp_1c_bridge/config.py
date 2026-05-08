@@ -17,6 +17,9 @@ class Settings:
     max_top: int
     policy_path: Path = Path("./config/policy.yaml")
     audit_log_path: Path = Path("./audit/audit.jsonl")
+    default_project_id: str = "default-project"
+    default_agent_id: str = "mcp-1c-bridge"
+    default_policy_id: str = "secure-readonly-v1"
 
 
 def _bool(value: str | None, default: bool) -> bool:
@@ -42,4 +45,7 @@ def load_settings() -> Settings:
         max_top=max(1, int(os.getenv("BRIDGE_MAX_TOP", "500"))),
         policy_path=Path(os.getenv("BRIDGE_POLICY_PATH", "./config/policy.yaml")),
         audit_log_path=Path(os.getenv("BRIDGE_AUDIT_LOG_PATH", "./audit/audit.jsonl")),
+        default_project_id=os.getenv("BRIDGE_PROJECT_ID", "default-project"),
+        default_agent_id=os.getenv("BRIDGE_AGENT_ID", "mcp-1c-bridge"),
+        default_policy_id=os.getenv("BRIDGE_POLICY_ID", "secure-readonly-v1"),
     )

@@ -1,6 +1,22 @@
 version: "1.0.0"
 mode: read_only
 
+proxy:
+  policy_id: secure-readonly-v1
+  default_project_id: ashybulak-demo
+  default_agent_id: secure-mcp-1c
+  provider_allowlist:
+    - local_or_low_cost
+    - gpt_compatible
+    - approved_secure_provider
+  cloud_providers:
+    - gpt_compatible
+    - approved_secure_provider
+  project_token_limits:
+    default: 4000
+    ashybulak-demo: 3000
+  mask_pii_before_cloud: true
+
 output:
   max_rows: 100
   mask_iin_bin: false

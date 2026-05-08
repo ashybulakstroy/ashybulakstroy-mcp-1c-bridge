@@ -6,11 +6,14 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
+from time import perf_counter
 from typing import Any
 
 import httpx
 
 from .config import Settings
+from .security.audit import AuditLogger
+from .security.context import get_request_context
 
 log = logging.getLogger(__name__)
 
@@ -36,8 +39,9 @@ class EntityInfo:
 
 
 class OneCODataClient:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, audit_logger: AuditLogger | None = None):
         self.settings = settings
+        self.audit_logger = audit_logger
         auth = None
         if settings.username and settings.password:
             auth = (settings.username, settings.password)
@@ -61,7 +65,7 @@ class OneCODataClient:
     def get_metadata_xml(self, refresh: bool = False) -> str:
         if self._metadata_xml is not None and not refresh:
             return self._metadata_xml
-        response = self.client.get(self._url("$metadata"), headers={"Accept": "application/xml"})
+        response = self._get("$metadata", headers={"Accept": "application/xml"})
         if response.status_code >= 400:
             raise ODataError(f"Ошибка чтения $metadata: HTTP {response.status_code}: {response.text[:500]}")
         self._metadata_xml = response.text
@@ -143,7 +147,7 @@ class OneCODataClient:
         if orderby:
             params["$orderby"] = orderby
 
-        response = self.client.get(self._url(entity_name), params=params)
+        response = self._get(entity_name, params=params)
         if response.status_code >= 400:
             raise ODataError(f"Ошибка OData запроса: HTTP {response.status_code}: {response.text[:1000]}")
         data = response.json()
@@ -154,6 +158,60 @@ class OneCODataClient:
             "top_applied": top,
             "data": values,
         }
+
+    def _get(self, path: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None) -> httpx.Response:
+        started = perf_counter()
+        error: str | None = None
+        response: httpx.Response | None = None
+        try:
+            response = self.client.get(self._url(path), params=params, headers=headers)
+            return response
+        except Exception as exc:
+            error = str(exc)
+            raise
+        finally:
+            self._audit_adapter_call(
+                path=path,
+                params=params,
+                status_code=response.status_code if response is not None else None,
+                duration_ms=int((perf_counter() - started) * 1000),
+                error=error,
+            )
+
+    def _audit_adapter_call(
+        self,
+        *,
+        path: str,
+        params: dict[str, Any] | None,
+        status_code: int | None,
+        duration_ms: int,
+        error: str | None,
+    ) -> None:
+        if self.audit_logger is None:
+            return
+        ctx = get_request_context()
+        self.audit_logger.append(
+            {
+                "timestamp": datetime.now().astimezone().isoformat(),
+                "stage": "1c_adapter_call",
+                "actor": ctx.actor if ctx else "mcp_client",
+                "project_id": ctx.project_id if ctx else None,
+                "agent_id": ctx.agent_id if ctx else None,
+                "policy_id": ctx.policy_id if ctx else None,
+                "session_id": ctx.session_id if ctx else None,
+                "trace_id": ctx.trace_id if ctx else None,
+                "tool": ctx.tool_name if ctx else None,
+                "risk": ctx.risk_level if ctx else None,
+                "provider": ctx.provider if ctx else None,
+                "adapter": "odata",
+                "method": "GET",
+                "path": path,
+                "params": params or {},
+                "status_code": status_code,
+                "duration_ms": duration_ms,
+                "error": error,
+            }
+        )
 
     def search_metadata(self, text: str, limit: int = 30) -> list[dict[str, Any]]:
         q = text.strip().lower()

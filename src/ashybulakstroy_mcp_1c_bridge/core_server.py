@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import sys
+import inspect
 from functools import wraps
 from decimal import Decimal
 from typing import Any
@@ -12,7 +13,7 @@ from mcp.server.fastmcp import FastMCP
 from .config import load_settings
 from .knowledge import KnowledgeStore, Recipe
 from .odata import OneCODataClient, ODataError
-from .security import AuditLogger, SecureToolRunner, load_policy
+from .security import AuditLogger, Policy, SecureToolRunner, load_policy
 from .validation import InventoryValidationConfig, parse_inventory_report_text as parse_inventory_report_text_impl, validate_inventory_rows
 
 logging.basicConfig(
@@ -23,31 +24,103 @@ logging.basicConfig(
 log = logging.getLogger("1c-cognitive-bridge")
 
 settings = load_settings()
-odata = OneCODataClient(settings)
-store = KnowledgeStore(settings.db_path)
-mcp = FastMCP("AshybulakStroy 1C Bridge")
 POLICY = load_policy(settings.policy_path)
 AUDIT_LOGGER = AuditLogger(settings.audit_log_path)
+odata = OneCODataClient(settings, audit_logger=AUDIT_LOGGER)
+store = KnowledgeStore(settings.db_path)
+mcp = FastMCP("AshybulakStroy 1C Bridge")
 SECURE_TOOL_RUNNER = SecureToolRunner(settings.policy_path, AUDIT_LOGGER)
 LAST_ANSWER_TRACE: dict[str, Any] = {}
+SECURE_REGISTERED_TOOL_NAMES: set[str] = set()
+CORRELATION_PARAMETERS = (
+    ("trace_id", str | None),
+    ("project_id", str | None),
+    ("agent_id", str | None),
+    ("policy_id", str | None),
+    ("session_id", str | None),
+)
 
-_original_mcp_tool = mcp.tool
+_base_mcp_tool_decorator = mcp.tool
 
 
-def _secure_tool_decorator(*decorator_args: Any, **decorator_kwargs: Any):
-    base_decorator = _original_mcp_tool(*decorator_args, **decorator_kwargs)
+def secure_tool(*decorator_args: Any, **decorator_kwargs: Any):
+    base_decorator = _base_mcp_tool_decorator(*decorator_args, **decorator_kwargs)
 
     def register(func):
+        signature = inspect.signature(func)
+        tool_name = str(decorator_kwargs.get("name") or func.__name__)
+
         @wraps(func)
         def wrapped(*args: Any, **kwargs: Any):
-            return SECURE_TOOL_RUNNER.run(func.__name__, func, *args, **kwargs)
+            return SECURE_TOOL_RUNNER.run(tool_name, func, *args, **kwargs)
 
+        wrapped.__signature__ = _with_correlation_signature(signature)
+        wrapped.__secure_tool_name__ = tool_name
+        SECURE_REGISTERED_TOOL_NAMES.add(tool_name)
         return base_decorator(wrapped)
 
     return register
 
 
-mcp.tool = _secure_tool_decorator
+def get_registered_mcp_tool_names(server: FastMCP | None = None) -> list[str]:
+    server = server or mcp
+    return sorted(str(name) for name in server._tool_manager._tools.keys())
+
+
+def validate_secure_tool_policy_coverage(policy: Policy, server: FastMCP | None = None) -> list[str]:
+    server = server or mcp
+    registered_names = get_registered_mcp_tool_names(server)
+    errors: list[str] = []
+    secure_only = sorted(set(registered_names) - SECURE_REGISTERED_TOOL_NAMES)
+    if secure_only:
+        errors.append(
+            "registered MCP tools not created through secure_tool: "
+            + ", ".join(secure_only)
+        )
+
+    forbidden_and_allowed = sorted(name for name in registered_names if name in policy.forbidden and name in policy.tools)
+    if forbidden_and_allowed:
+        errors.append(
+            "tools cannot be both forbidden and allowed in policy: "
+            + ", ".join(forbidden_and_allowed)
+        )
+
+    for tool_name in registered_names:
+        if tool_name in policy.forbidden:
+            continue
+        tool_policy = policy.tools.get(tool_name)
+        if tool_policy is None:
+            errors.append(f"registered MCP tool '{tool_name}' is missing from policy allowlist")
+            continue
+        if tool_policy.risk is None:
+            errors.append(f"registered MCP tool '{tool_name}' has no risk level in policy")
+        if not tool_policy.capabilities:
+            errors.append(f"registered MCP tool '{tool_name}' has no capabilities in policy")
+    return errors
+
+
+def ensure_secure_runtime_configuration(policy: Policy, server: FastMCP | None = None) -> None:
+    errors = validate_secure_tool_policy_coverage(policy, server)
+    if errors:
+        joined = "\n - ".join(errors)
+        raise RuntimeError(f"Secure runtime validation failed:\n - {joined}")
+
+
+def _with_correlation_signature(signature: inspect.Signature) -> inspect.Signature:
+    params = list(signature.parameters.values())
+    existing = {param.name for param in params}
+    for name, annotation in CORRELATION_PARAMETERS:
+        if name in existing:
+            continue
+        params.append(
+            inspect.Parameter(
+                name=name,
+                kind=inspect.Parameter.KEYWORD_ONLY,
+                default=None,
+                annotation=annotation,
+            )
+        )
+    return signature.replace(parameters=params)
 
 
 def _remember(tool: str, data: Any) -> None:
@@ -113,7 +186,7 @@ def _extract_counterparty_hint(text: str) -> str | None:
     return _extract_after_keywords(text, ["контрагент", "клиент", "поставщик", "от", "кому"])
 
 
-@mcp.tool()
+@secure_tool()
 def get_server_status() -> dict[str, Any]:
     """Проверить настройки сервера и доступность базовой конфигурации без чтения бизнес-данных."""
     try:
@@ -129,7 +202,7 @@ def get_server_status() -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def setup_wizard(check_live_entities: bool = False, live_limit: int = 30) -> dict[str, Any]:
     """Запустить мастер первичной настройки AshybulakStroy 1C Bridge.
 
@@ -144,7 +217,7 @@ def setup_wizard(check_live_entities: bool = False, live_limit: int = 30) -> dic
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def generate_1c_database_profile(check_inventory_data: bool = True, live_limit: int = 0) -> dict[str, Any]:
     """Сформировать паспорт опубликованной OData-базы 1С.
 
@@ -159,7 +232,7 @@ def generate_1c_database_profile(check_inventory_data: bool = True, live_limit: 
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def explain_last_answer() -> dict[str, Any]:
     """Объяснить последний важный ответ сервера: какой tool работал, какой источник выбрал и какие есть предупреждения.
 
@@ -211,7 +284,7 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
     return explanation
 
 
-@mcp.tool()
+@secure_tool()
 def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
     """Понять простой пользовательский запрос к 1С обычным текстом и вызвать подходящий read-only инструмент.
 
@@ -417,7 +490,7 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def list_entities(refresh: bool = False, limit: int = 200) -> dict[str, Any]:
     """Показать, какие таблицы/справочники/документы/регистры опубликованы в OData 1С.
 
@@ -434,7 +507,7 @@ def list_entities(refresh: bool = False, limit: int = 200) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def describe_entity(entity_name: str) -> dict[str, Any]:
     """Показать поля конкретной OData-сущности 1С и их типы.
 
@@ -456,7 +529,7 @@ def describe_entity(entity_name: str) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def sample_entity(entity_name: str, top: int = 5) -> dict[str, Any]:
     """Получить несколько примерных строк из выбранной сущности 1С.
 
@@ -468,7 +541,7 @@ def sample_entity(entity_name: str, top: int = 5) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def query_entity(
     entity_name: str,
     top: int = 50,
@@ -497,7 +570,7 @@ def query_entity(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def search_metadata(text: str, limit: int = 30) -> dict[str, Any]:
     """Найти таблицы и поля 1С по обычному тексту.
 
@@ -510,7 +583,7 @@ def search_metadata(text: str, limit: int = 30) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def explore_live_entities(limit: int = 200) -> dict[str, Any]:
     """Проверить, какие опубликованные OData-сущности 1С реально содержат данные.
 
@@ -523,7 +596,7 @@ def explore_live_entities(limit: int = 200) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def discover_inventory_sources(limit: int = 10, check_data: bool = True) -> dict[str, Any]:
     """Найти вероятные источники остатков товаров/ТМЗ в 1С без знания точного имени регистра.
 
@@ -536,7 +609,7 @@ def discover_inventory_sources(limit: int = 10, check_data: bool = True) -> dict
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def discover_payment_sources(direction: str | None = None, limit: int = 10, check_data: bool = True) -> dict[str, Any]:
     """Найти вероятные OData-источники платежей: входящих и исходящих.
 
@@ -549,7 +622,7 @@ def discover_payment_sources(direction: str | None = None, limit: int = 10, chec
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def get_inventory_auto(
     warehouse: str | None = None,
     item: str | None = None,
@@ -592,7 +665,7 @@ def get_inventory_auto(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def get_low_stock_items(
     warehouse: str | None = None,
     item: str | None = None,
@@ -621,7 +694,7 @@ def get_low_stock_items(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def get_outgoing_payments(
     date: str | None = None,
     date_from: str | None = None,
@@ -650,7 +723,7 @@ def get_outgoing_payments(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def get_incoming_payments(
     date: str | None = None,
     date_from: str | None = None,
@@ -679,7 +752,7 @@ def get_incoming_payments(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def payment_summary_by_counterparty(
     direction: str,
     date: str | None = None,
@@ -709,7 +782,7 @@ def payment_summary_by_counterparty(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def get_unpaid_customers_summary(
     date_to: str | None = None,
     date_from: str | None = None,
@@ -737,7 +810,7 @@ def get_unpaid_customers_summary(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def get_overdue_unpaid_customers(
     as_of_date: str | None = None,
     threshold_days: int = 3,
@@ -766,7 +839,7 @@ def get_overdue_unpaid_customers(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def get_customer_payment_behavior_summary(
     as_of_date: str | None = None,
     date_from: str | None = None,
@@ -793,7 +866,7 @@ def get_customer_payment_behavior_summary(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def parse_inventory_report_text(report_text: str) -> dict[str, Any]:
     """Преобразовать скопированную с экрана/из Excel таблицу отчета 1С в строки для сверки.
 
@@ -812,7 +885,7 @@ def parse_inventory_report_text(report_text: str) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def validate_inventory_report_text(
     report_text: str,
     warehouse: str | None = None,
@@ -851,7 +924,7 @@ def validate_inventory_report_text(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def validate_inventory_against_1c_report(
     report_rows: list[dict[str, Any]],
     warehouse: str | None = None,
@@ -889,7 +962,7 @@ def validate_inventory_against_1c_report(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def compare_inventory_rows(
     mcp_rows: list[dict[str, Any]],
     report_rows: list[dict[str, Any]],
@@ -915,7 +988,7 @@ def compare_inventory_rows(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def save_recipe(
     name: str,
     description: str,
@@ -937,7 +1010,7 @@ def save_recipe(
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def list_recipes() -> dict[str, Any]:
     """Показать сохранённые рецепты запросов к 1С: проверенные и candidate-рецепты."""
     try:
@@ -946,7 +1019,7 @@ def list_recipes() -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def run_recipe(name: str, top_override: int | None = None) -> dict[str, Any]:
     """Запустить ранее сохранённый read-only рецепт.
 
@@ -985,7 +1058,7 @@ def run_recipe(name: str, top_override: int | None = None) -> dict[str, Any]:
 # recipes and explain trace stay intact.
 # ---------------------------------------------------------------------------
 
-@mcp.tool()
+@secure_tool()
 def list_capabilities() -> dict[str, Any]:
     """Показать business capabilities сервера: чтение, валидация, нормализация, документы."""
     try:
@@ -995,7 +1068,7 @@ def list_capabilities() -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def get_capability(name: str) -> dict[str, Any]:
     """Показать описание одной capability по имени, например stock.read или input.normalize_sales_invoice."""
     try:
@@ -1005,7 +1078,7 @@ def get_capability(name: str) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def buh_inspect(check_live_entities: bool = False, live_limit: int = 30) -> dict[str, Any]:
     """Единая диагностическая команда: OData, metadata, источники остатков, паспорт базы."""
     try:
@@ -1018,7 +1091,7 @@ def buh_inspect(check_live_entities: bool = False, live_limit: int = 30) -> dict
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def parse_sales_invoice_text(text: str) -> dict[str, Any]:
     """Разобрать свободный текст реализации в черновую структуру без записи в 1С."""
     try:
@@ -1028,7 +1101,7 @@ def parse_sales_invoice_text(text: str) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def find_buh_entity(kind: str, query: str, limit: int = 10) -> dict[str, Any]:
     """Найти кандидатов в 1С по тексту: kind=counterparty|item|warehouse. Только чтение."""
     try:
@@ -1038,7 +1111,7 @@ def find_buh_entity(kind: str, query: str, limit: int = 10) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def normalize_sales_invoice(payload: dict[str, Any] | None = None, text: str | None = None, confidence: float = 0.78) -> dict[str, Any]:
     """Нормализовать реализацию: текст/JSON -> refs кандидатов 1С + issues. Не создает документ."""
     try:
@@ -1048,7 +1121,7 @@ def normalize_sales_invoice(payload: dict[str, Any] | None = None, text: str | N
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def validate_sales_invoice(payload: dict[str, Any]) -> dict[str, Any]:
     """Проверить структуру реализации перед созданием/проведением: контрагент, строки, количества, цены."""
     try:
@@ -1058,7 +1131,7 @@ def validate_sales_invoice(payload: dict[str, Any]) -> dict[str, Any]:
         return _err(exc)
 
 
-@mcp.tool()
+@secure_tool()
 def post_document_validated(document_ref: str, validation_result: dict[str, Any]) -> dict[str, Any]:
     """Guardrail для проведения: не проводит документ, если validation_result.valid != true.
 
@@ -1074,6 +1147,9 @@ def post_document_validated(document_ref: str, validation_result: dict[str, Any]
         }, tool="post_document_validated")
     except Exception as exc:
         return _err(exc)
+
+
+ensure_secure_runtime_configuration(POLICY, mcp)
 
 
 # MCP Resources: stable read-only context for compatible clients.
@@ -1131,6 +1207,8 @@ except Exception as exc:
 
 def main() -> None:
     # FastMCP.run uses stdio by default. Do not print to stdout.
+    startup_policy = load_policy(settings.policy_path)
+    ensure_secure_runtime_configuration(startup_policy, mcp)
     log.info(
         "Starting AshybulakStroy 1C Bridge MCP server",
     )
@@ -1144,6 +1222,13 @@ def main() -> None:
         POLICY.mode,
         POLICY.version,
         settings.audit_log_path,
+    )
+    log.info(
+        "Proxy defaults project_id=%s agent_id=%s policy_id=%s providers=%s",
+        POLICY.proxy.default_project_id or settings.default_project_id,
+        POLICY.proxy.default_agent_id or settings.default_agent_id,
+        POLICY.proxy.policy_id or settings.default_policy_id,
+        list(POLICY.proxy.provider_allowlist),
     )
     if not settings.odata_url:
         log.warning("ONEC_ODATA_URL is not configured. Metadata and OData tools will fail until .env is filled.")

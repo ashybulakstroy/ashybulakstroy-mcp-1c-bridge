@@ -14,6 +14,8 @@ AshybulakStroy MCP 1C Bridge — MCP-сервер для безопасного 
 
 Сервер работает в режиме `Secure Mode`:
 - каждый MCP tool проходит policy decision перед исполнением;
+- каждый MCP tool регистрируется через secure registration helper;
+- при старте сервер проверяет policy coverage для всех зарегистрированных MCP tools;
 - unknown tools запрещаются;
 - forbidden tools блокируются;
 - `L3` и `L4` операции блокируются всегда;
@@ -25,6 +27,24 @@ AshybulakStroy MCP 1C Bridge — MCP-сервер для безопасного 
 ```text
 AI может читать и объяснять данные 1С, но не должен иметь возможности сам себе выдать опасные разрешения или обойти policy.
 ```
+
+## LLM Proxy Position
+
+`AshybulakStroy_chat_LLM_Proxy` для этого репозитория считается upstream-компонентом, а не внутренней частью MCP backend.
+
+Текущее правило:
+- `mcp-1c-bridge` не вызывает LLM Proxy по HTTP;
+- `mcp-1c-bridge` не вызывает LLM providers напрямую;
+- `mcp-1c-bridge` только принимает correlation metadata и выполняет MCP tools как backend к 1С.
+
+Поддерживаемые correlation metadata для secure tool calls:
+- `trace_id`
+- `project_id`
+- `agent_id`
+- `policy_id`
+- `session_id`
+
+Если `trace_id` не передан, сервер генерирует его локально и пишет в audit log.
 
 ## Read-only MVP
 
@@ -103,6 +123,11 @@ audit/audit.jsonl
 Каждая запись содержит:
 - `timestamp`
 - `actor`
+- `project_id`
+- `agent_id`
+- `policy_id`
+- `session_id`
+- `trace_id`
 - `tool`
 - `risk`
 - `capabilities`
@@ -154,6 +179,8 @@ Phase 1 явно запрещает такие операции:
 ```text
 MCP client
   -> MCP tool call
+  -> optional correlation metadata accepted
+  -> startup-validated secure tool registration
   -> policy load
   -> allowlist / denylist check
   -> risk check
@@ -189,6 +216,48 @@ Business read logic
 1C OData
 ```
 
+Current actual flow:
+
+```text
+Open Interpreter / MCP client
+  -> direct MCP call to this server
+  -> SecureToolRunner
+  -> 1C OData adapter
+  -> output filter
+  -> audit log
+  -> MCP response
+```
+
+Future intended flow:
+
+```text
+User query
+  -> AshybulakStroy_chat_LLM_Proxy
+  -> model/provider decision
+  -> MCP call to mcp-1c-bridge with trace_id/project_id/agent_id/policy_id/session_id
+  -> SecureToolRunner
+  -> 1C OData adapter
+  -> output filter
+  -> audit log linked by trace_id
+  -> final answer
+```
+
+Важно:
+- LLM Proxy Hub должен жить upstream;
+- этот MCP сервер только принимает correlation metadata и не становится LLM client;
+- это позволяет связать audit trail между proxy и MCP backend без переноса model-call логики в bridge.
+
+Startup policy validation:
+
+```text
+registered MCP tools
+  -> compare with config/policy.yaml
+  -> require policy coverage
+  -> require risk and capabilities for allowed tools
+  -> reject forbidden+allowed conflicts
+  -> fail startup on mismatch
+```
+
 ## Что умеет сервер
 
 Основные MCP tools:
@@ -199,7 +268,6 @@ Business read logic
 - `list_entities`
 - `describe_entity`
 - `sample_entity`
-- `query_entity`
 - `search_metadata`
 - `explore_live_entities`
 - `discover_inventory_sources`
@@ -224,7 +292,10 @@ Business read logic
 - `find_buh_entity`
 - `normalize_sales_invoice`
 - `validate_sales_invoice`
-- `post_document_validated`
+
+Заблокированные compatibility tools:
+- `query_entity` зарегистрирован в коде, но блокируется policy в Secure Mode
+- `post_document_validated` зарегистрирован как compatibility guardrail, но блокируется policy в Secure Mode
 
 MCP resources:
 - `buh://health`
@@ -402,6 +473,12 @@ pip install -e .[dev]
 python -m pytest -q
 ```
 
+Проверка audit log:
+
+```bash
+python scripts/verify_audit_log.py
+```
+
 GitHub Actions прогоняет тесты на `Python 3.10`, `3.11` и `3.12`.
 
 Подробнее:
@@ -419,6 +496,10 @@ GitHub Actions прогоняет тесты на `Python 3.10`, `3.11` и `3.12
 
 See [Secure AI Bridge Roadmap](docs/ROADMAP_SECURE_AI_BRIDGE.md).
 
+mcp-1c-bridge is not an LLM client.
+It does not call LLM Proxy Hub directly.
+LLM Proxy Hub is upstream.
+Correlation is done via trace_id, project_id, agent_id, policy_id.
 
 ## Лицензия
 
