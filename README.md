@@ -15,6 +15,15 @@ AshybulakStroy MCP 1C Bridge — MCP-сервер для безопасного 
 - сверка MCP-данных с отчётом 1С, вставленным обычным текстом;
 - guardrail-пайплайн для нормализации и валидации документов без фактической записи в 1С.
 
+## Demo Quickstart
+
+Для быстрого demo и проверки Secure Mode:
+- [Read-only Demo Guide](docs/DEMO_READONLY_SECURE_MODE.md)
+- [Demo Prompts](docs/DEMO_PROMPTS.md)
+- [Demo Checklist](docs/DEMO_CHECKLIST.md)
+- [Security Baseline](docs/SECURITY_BASELINE.md)
+- [Audit Log Examples](docs/AUDIT_LOG_EXAMPLES.md)
+
 ## Secure Mode
 
 Сервер работает в режиме `Secure Mode`:
