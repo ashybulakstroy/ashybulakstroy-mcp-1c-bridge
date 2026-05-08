@@ -9,6 +9,8 @@ CRITICAL_RELATIVE_PATHS = (
     "docs/DEMO_PROMPTS.md",
     "docs/DEMO_READONLY_SECURE_MODE.md",
     "docs/DEMO_CHECKLIST.md",
+    "docs/SECURITY_BASELINE.md",
+    "docs/AUDIT_LOG_EXAMPLES.md",
     "scripts/verify_audit_log.py",
 )
 
