@@ -1,5 +1,12 @@
 # Use cases
 
+Документ описывает текущие read-only сценарии runtime.
+
+Важно:
+- это MCP backend, а не LLM client;
+- для демонстраций и пилотов используйте только разрешённые read-only tools;
+- blocked tools вроде `query_entity` и `post_document_validated` не должны использоваться как demo-path.
+
 ## Проверка подключения и базовой конфигурации
 
 ```text
@@ -117,3 +124,9 @@
 
 Рекомендуемый tool:
 - `validate_inventory_report_text`
+
+## Demo docs
+
+Для пошаговой демонстрации и готовых prompt’ов см.:
+- `docs/DEMO_READONLY_SECURE_MODE.md`
+- `docs/DEMO_PROMPTS.md`

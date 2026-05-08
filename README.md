@@ -2,6 +2,11 @@
 
 AshybulakStroy MCP 1C Bridge — MCP-сервер для безопасного AI-доступа к данным 1С:Бухгалтерия для Казахстана 3.0 через OData.
 
+Продуктовая роль:
+- это MCP backend для 1С Kazakhstan;
+- это read-only Secure Mode bridge, а не LLM client;
+- `AshybulakStroy_chat_LLM_Proxy` должен быть upstream-компонентом, который вызывает MCP server отдельно и передаёт correlation metadata.
+
 Текущий фокус проекта:
 - read-only доступ к опубликованным OData-сущностям 1С;
 - поиск и объяснение источников остатков;
@@ -485,6 +490,8 @@ GitHub Actions прогоняет тесты на `Python 3.10`, `3.11` и `3.12
 - `docs/testing.md`
 - `docs/architecture.md`
 - `docs/MCP_RESOURCES_PROMPTS_HTTP.md`
+- `docs/DEMO_READONLY_SECURE_MODE.md`
+- `docs/DEMO_PROMPTS.md`
 
 ## Статус проекта
 
@@ -492,14 +499,17 @@ GitHub Actions прогоняет тесты на `Python 3.10`, `3.11` и `3.12
 
 Слой нормализации и валидации документов уже встроен, но реальная запись и проведение в 1С требуют отдельного RPC-адаптера и явного расширения текущего runtime.
 
+Для demo и первичного пилота лучше показывать:
+- metadata inspection и setup;
+- остатки и low stock;
+- входящие/исходящие оплаты;
+- дебиторку и просрочку;
+- explain/sverka сценарии;
+- audit log и blocked operations.
+
 ## Roadmap
 
 See [Secure AI Bridge Roadmap](docs/ROADMAP_SECURE_AI_BRIDGE.md).
-
-mcp-1c-bridge is not an LLM client.
-It does not call LLM Proxy Hub directly.
-LLM Proxy Hub is upstream.
-Correlation is done via trace_id, project_id, agent_id, policy_id.
 
 ## Лицензия
 
