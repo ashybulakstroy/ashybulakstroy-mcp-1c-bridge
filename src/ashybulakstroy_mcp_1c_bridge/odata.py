@@ -78,17 +78,17 @@ class OneCODataClient:
 
         xml = self.get_metadata_xml(refresh=refresh)
         root = ET.fromstring(xml)
-        ns = {
-            "edmx": "http://schemas.microsoft.com/ado/2007/06/edmx",
-            "edm": "http://schemas.microsoft.com/ado/2008/09/edm",
-        }
         entity_types: dict[str, list[FieldInfo]] = {}
-        for et in root.findall(".//edm:EntityType", ns):
+        for et in root.iter():
+            if self._xml_local_name(et.tag) != "EntityType":
+                continue
             et_name = et.attrib.get("Name")
             if not et_name:
                 continue
             fields: list[FieldInfo] = []
-            for prop in et.findall("edm:Property", ns):
+            for prop in et:
+                if self._xml_local_name(prop.tag) != "Property":
+                    continue
                 fields.append(
                     FieldInfo(
                         name=prop.attrib.get("Name", ""),
@@ -99,8 +99,12 @@ class OneCODataClient:
             entity_types[et_name] = fields
 
         entities: list[EntityInfo] = []
-        for container in root.findall(".//edm:EntityContainer", ns):
-            for entity_set in container.findall("edm:EntitySet", ns):
+        for container in root.iter():
+            if self._xml_local_name(container.tag) != "EntityContainer":
+                continue
+            for entity_set in container:
+                if self._xml_local_name(entity_set.tag) != "EntitySet":
+                    continue
                 name = entity_set.attrib.get("Name")
                 raw_type = entity_set.attrib.get("EntityType")
                 short_type = raw_type.split(".")[-1] if raw_type else None
@@ -202,6 +206,9 @@ class OneCODataClient:
                 "trace_id": ctx.trace_id if ctx else None,
                 "tool": ctx.tool_name if ctx else None,
                 "risk": ctx.risk_level if ctx else None,
+                "capabilities": list(ctx.capabilities) if ctx else [],
+                "decision": ctx.decision if ctx else "allow",
+                "policy_version": ctx.policy_version if ctx else None,
                 "provider": ctx.provider if ctx else None,
                 "adapter": "odata",
                 "method": "GET",
@@ -262,9 +269,13 @@ class OneCODataClient:
                 "field_count": len(field_names),
                 "sample_fields": field_names[:40],
             }
-            if check_data:
+            candidates.append(row)
+
+        ranked = sorted(candidates, key=lambda r: r["score"], reverse=True)
+        if check_data:
+            for row in ranked[: min(max(limit * 3, 10), 20)]:
                 try:
-                    sample = self.query_entity(entity.name, top=1)
+                    sample = self.query_entity(row["entity"], top=1)
                     row["has_data"] = bool(sample.get("data"))
                     row["sample"] = (sample.get("data") or [])[:1]
                     if row["has_data"]:
@@ -274,8 +285,7 @@ class OneCODataClient:
                 except Exception as exc:
                     row["has_data"] = None
                     row["error"] = str(exc)[:300]
-            candidates.append(row)
-        return sorted(candidates, key=lambda r: r["score"], reverse=True)[:limit]
+        return sorted(ranked, key=lambda r: r["score"], reverse=True)[:limit]
 
     def get_inventory_auto(
         self,
@@ -421,9 +431,22 @@ class OneCODataClient:
                 "field_count": len(field_names),
                 "sample_fields": field_names[:40],
             }
-            if check_data:
+            candidates.append(row)
+
+        ranked = sorted(
+            candidates,
+            key=lambda r: (
+                1 if r.get("direction") in {"incoming", "outgoing"} else 0,
+                1 if r.get("account_type") == "bank" else 0,
+                r["score"],
+                1 if r.get("has_data") is True else 0,
+            ),
+            reverse=True,
+        )
+        if check_data:
+            for row in ranked[: min(max(limit * 3, 10), 20)]:
                 try:
-                    sample = self.query_entity(entity.name, top=1)
+                    sample = self.query_entity(row["entity"], top=1)
                     row["has_data"] = bool(sample.get("data"))
                     row["sample"] = (sample.get("data") or [])[:1]
                     if row["has_data"]:
@@ -433,10 +456,10 @@ class OneCODataClient:
                 except Exception as exc:
                     row["has_data"] = None
                     row["error"] = str(exc)[:300]
-            candidates.append(row)
         return sorted(
-            candidates,
+            ranked,
             key=lambda r: (
+                1 if r.get("direction") in {"incoming", "outgoing"} else 0,
                 1 if r.get("account_type") == "bank" else 0,
                 r["score"],
                 1 if r.get("has_data") is True else 0,
@@ -468,9 +491,13 @@ class OneCODataClient:
                 "field_count": len(field_names),
                 "sample_fields": field_names[:40],
             }
-            if check_data:
+            candidates.append(row)
+
+        ranked = sorted(candidates, key=lambda r: r["score"], reverse=True)
+        if check_data:
+            for row in ranked[: min(max(limit * 3, 10), 20)]:
                 try:
-                    sample = self.query_entity(entity.name, top=1)
+                    sample = self.query_entity(row["entity"], top=1)
                     row["has_data"] = bool(sample.get("data"))
                     row["sample"] = (sample.get("data") or [])[:1]
                     if row["has_data"]:
@@ -480,8 +507,7 @@ class OneCODataClient:
                 except Exception as exc:
                     row["has_data"] = None
                     row["error"] = str(exc)[:300]
-            candidates.append(row)
-        return sorted(candidates, key=lambda r: r["score"], reverse=True)[:limit]
+        return sorted(ranked, key=lambda r: r["score"], reverse=True)[:limit]
 
     def get_sales_documents(
         self,
@@ -523,16 +549,32 @@ class OneCODataClient:
             text_field_key="counterparty",
             text_value=counterparty,
         )
-        raw = self.query_entity(
-            source["entity"],
-            top=min(max(limit, 50), self.settings.max_top),
-            select=select or None,
-            filter_expr=filter_expr or None,
-        )
+        query_top = min(max(limit, 50), self.settings.max_top)
+        try:
+            raw = self.query_entity(
+                source["entity"],
+                top=query_top,
+                select=select or None,
+                filter_expr=filter_expr or None,
+            )
+            filter_fallback_used = False
+        except ODataError as exc:
+            if filter_expr and self._is_unsupported_where_filter_error(exc):
+                raw = self.query_entity(
+                    source["entity"],
+                    top=min(max(limit * 3, 100), self.settings.max_top),
+                    select=select or None,
+                    filter_expr=None,
+                )
+                filter_fallback_used = True
+            else:
+                raise
         rows = raw.get("data") or []
         normalized = [self._normalize_sales_row(r, mapped) for r in rows]
 
         warnings: list[str] = []
+        if filter_fallback_used:
+            warnings.append("OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.")
         if effective_from or effective_to:
             normalized = [r for r in normalized if self._date_in_range(r.get("date"), effective_from, effective_to)]
         if counterparty:
@@ -607,12 +649,40 @@ class OneCODataClient:
                 date_from=date_from,
                 date_to=date_to,
             )
-            raw = self.query_entity(
-                candidate["entity"],
-                top=min(effective_limit, self.settings.max_top),
-                select=select or None,
-                filter_expr=filter_expr or None,
-            )
+            query_top = min(effective_limit, self.settings.max_top)
+            filter_fallback_used = False
+            try:
+                raw = self.query_entity(
+                    candidate["entity"],
+                    top=query_top,
+                    select=select or None,
+                    filter_expr=filter_expr or None,
+                )
+            except ODataError as exc:
+                if filter_expr and self._is_unsupported_where_filter_error(exc):
+                    try:
+                        raw = self.query_entity(
+                            candidate["entity"],
+                            top=min(max(effective_limit * 5, 50), self.settings.max_top),
+                            select=select or None,
+                            filter_expr=None,
+                        )
+                        filter_fallback_used = True
+                    except ODataError as fallback_exc:
+                        warnings.append(
+                            f"Источник {candidate['entity']} пропущен: provider rejected $filter and bounded fallback read "
+                            "is not accessible for this entity in current 1C publication."
+                        )
+                        if self._is_access_denied_error(fallback_exc):
+                            continue
+                        raise
+                else:
+                    raise
+            if filter_fallback_used:
+                warnings.append(
+                    f"OData provider rejected pushdown filter for {candidate['entity']}. "
+                    "Applied bounded Python-side filtering instead."
+                )
             for row in raw.get("data") or []:
                 normalized = self._normalize_document_search_row(row, candidate["entity"], mapped)
                 if not self._text_match(normalized.get("number"), needle):
@@ -1171,16 +1241,32 @@ class OneCODataClient:
             text_field_key="counterparty",
             text_value=counterparty,
         )
-        raw = self.query_entity(
-            source["entity"],
-            top=min(max(limit, 50), self.settings.max_top),
-            select=select or None,
-            filter_expr=filter_expr or None,
-        )
+        query_top = min(max(limit, 50), self.settings.max_top)
+        try:
+            raw = self.query_entity(
+                source["entity"],
+                top=query_top,
+                select=select or None,
+                filter_expr=filter_expr or None,
+            )
+            filter_fallback_used = False
+        except ODataError as exc:
+            if filter_expr and self._is_unsupported_where_filter_error(exc):
+                raw = self.query_entity(
+                    source["entity"],
+                    top=min(max(limit * 3, 100), self.settings.max_top),
+                    select=select or None,
+                    filter_expr=None,
+                )
+                filter_fallback_used = True
+            else:
+                raise
         rows = raw.get("data") or []
         normalized = [self._normalize_payment_row(r, mapped, source.get("direction")) for r in rows]
 
         warnings: list[str] = []
+        if filter_fallback_used:
+            warnings.append("OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.")
         if effective_from or effective_to:
             normalized = [
                 r for r in normalized
@@ -1302,7 +1388,13 @@ class OneCODataClient:
         recommendations: list[str] = []
 
         url_ok = bool(self.settings.odata_url)
-        checks.append({"name": "ONEC_ODATA_URL configured", "status": "ok" if url_ok else "error", "details": self.settings.odata_url or "not set"})
+        checks.append(
+            {
+                "name": "ONEC_ODATA_URL configured",
+                "status": "ok" if url_ok else "error",
+                "details": "configured" if url_ok else "not set",
+            }
+        )
         checks.append({"name": "credentials configured", "status": "ok" if (self.settings.username and self.settings.password) else "warning", "details": "username/password set" if (self.settings.username and self.settings.password) else "username or password missing"})
         checks.append({"name": "ssl verification", "status": "ok" if self.settings.verify_ssl else "warning", "details": self.settings.verify_ssl})
 
@@ -2127,13 +2219,21 @@ class OneCODataClient:
         return needle.lower() in str(value).lower()
 
     @staticmethod
-    def _normalize_payment_direction(value: str | None) -> str:
+    def _normalize_payment_direction(value: str | None) -> str | None:
+        if value is None or not str(value).strip():
+            return None
         direction = (value or "").strip().lower()
         if direction in {"outgoing", "payment_out", "paid", "expense", "расход", "исходящий", "out"}:
             return "outgoing"
         if direction in {"incoming", "payment_in", "received", "income", "приход", "входящий", "in"}:
             return "incoming"
         raise ODataError(f"Недопустимое направление платежа: {value!r}. Используйте incoming или outgoing.")
+
+    @staticmethod
+    def _xml_local_name(tag: str) -> str:
+        if "}" in tag:
+            return tag.rsplit("}", 1)[-1]
+        return tag
 
     @staticmethod
     def _parse_date_like(value: Any) -> date | None:
@@ -2168,3 +2268,18 @@ class OneCODataClient:
         if to_date and row_date > to_date:
             return False
         return True
+
+    @staticmethod
+    def _is_unsupported_where_filter_error(exc: Exception) -> bool:
+        text = str(exc).lower()
+        return (
+            "операция не разрешена в предложении" in text
+            or "\"где\"" in text
+            or "autoorder" in text
+            or "ошибка при разборе опции запроса $filter" in text
+        )
+
+    @staticmethod
+    def _is_access_denied_error(exc: Exception) -> bool:
+        text = str(exc).lower()
+        return "доступ запрещен" in text or "http 401" in text or "\"code\": \"20\"" in text

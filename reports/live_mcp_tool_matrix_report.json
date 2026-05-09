@@ -1,0 +1,512 @@
+{
+  "generated_at": "2026-05-09T16:17:34.558433+05:00",
+  "base_url": "http://192.168.1.183/SaryDala",
+  "service_url": "http://192.168.1.183/SaryDala/odata/standard.odata",
+  "total_tools": 26,
+  "passed": 24,
+  "pass_empty": 0,
+  "skipped": 0,
+  "failed": 0,
+  "blocked_expected": 2,
+  "audit_path": "C:\\Work\\Projects\\Prj_9_MCP_1C_Ashybulak\\audit\\audit.jsonl",
+  "results": [
+    {
+      "tool_name": "get_server_status",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_metadata"
+      ],
+      "status": "PASS",
+      "input_used": {},
+      "result_summary": "{\"ok\": true, \"data\": {\"odata_url_configured\": true, \"db_path\": \"bridge_knowledge.sqlite3\", \"max_top\": 500, \"mode\": \"read-only\"}}",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "setup_wizard",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_metadata"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "check_live_entities": false,
+        "live_limit": 5
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"status\": \"ready\", \"server\": \"ashybulakstroy-1c-bridge\", \"mode\": \"read-only\", \"checks\": [{\"name\": \"ONEC_ODATA_URL configured\", \"status\": \"ok\", \"details\": \"configured\"}, {\"name\": \"credentials configured\", \"status\": \"ok\", \"details\": \"username/password set\"}, {\"name\": \"ssl verification\", \"status\": \"ok\", \"details\": true}, {\"name\": \"$metadata readable\", \"status\": \"ok\", \"details\": {\"bytes\": 4153448}}, {\"name\": \"entities parsed\", \"status\": \"ok\", \"details\": {\"entity_count\": 1192}}, {\"name\": \"inventory source candidates\", \"status\": \"ok\", \"details\": {\"count\": 5, \"top\": [{\"entity\": \"AccumulationRegister_РеализацияТМЗ_RecordType\", \"entity_type\": \"AccumulationRegister_РеализацияТМЗ_",
+      "row_count": 5,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "generate_1c_database_profile",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_metadata"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "check_inventory_data": false,
+        "live_limit": 0
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"server\": \"ashybulakstroy-1c-bridge\", \"mode\": \"read-only\", \"entity_summary\": {\"total\": 1192, \"counts\": {\"catalogs\": 315, \"documents\": 398, \"accumulation_registers\": 82, \"information_registers\": 359, \"accounting_registers\": 0, \"other\": 38}, \"samples\": {\"catalogs\": [\"Catalog_АвансовыйОтчетПрисоединенныеФайлы\", \"Catalog_АвансовыйОтчетПрисоединенныеФайлы_УдалитьСертификатыШифрования\", \"Catalog_АвансовыйОтчетПрисоединенныеФайлы_УдалитьЭлектронныеПодписи\", \"Catalog_АдресныеСокращения\", \"Catalog_АктСверкиВзаиморасчетовПрисоединенныеФайлы\", \"Catalog_АктСверкиВзаиморасчетовПрисоединенныеФайлы_УдалитьСертификатыШифрования\", \"Catalog_АктСверкиВзаиморасчетовПрисоединенныеФайлы_Удал",
+      "row_count": 10,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "ask_1c",
+      "policy_risk_level": "L1",
+      "capabilities": [
+        "route_read_only_requests"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "text": "Проверь подключение к 1С"
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"intent\": \"setup_wizard\", \"result\": {\"status\": \"ready\", \"server\": \"ashybulakstroy-1c-bridge\", \"mode\": \"read-only\", \"checks\": [{\"name\": \"ONEC_ODATA_URL configured\", \"status\": \"ok\", \"details\": \"configured\"}, {\"name\": \"credentials configured\", \"status\": \"ok\", \"details\": \"username/password set\"}, {\"name\": \"ssl verification\", \"status\": \"ok\", \"details\": true}, {\"name\": \"$metadata readable\", \"status\": \"ok\", \"details\": {\"bytes\": 4153448}}, {\"name\": \"entities parsed\", \"status\": \"ok\", \"details\": {\"entity_count\": 1192}}, {\"name\": \"inventory source candidates\", \"status\": \"ok\", \"details\": {\"count\": 5, \"top\": [{\"entity\": \"AccumulationRegister_РеализацияТМЗ_RecordType\", \"entity_type\":",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "list_entities",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_metadata"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "limit": 15
+      },
+      "result_summary": "{\"ok\": true, \"data\": [{\"name\": \"AccumulationRegister_Акциз\", \"entity_type\": \"AccumulationRegister_Акциз\", \"field_count\": 3}, {\"name\": \"AccumulationRegister_Акциз_RecordType\", \"entity_type\": \"AccumulationRegister_Акциз_RecordType\", \"field_count\": 14}, {\"name\": \"AccumulationRegister_ВОСМСПодлежитПеречислениюВФонды\", \"entity_type\": \"AccumulationRegister_ВОСМСПодлежитПеречислениюВФонды\", \"field_count\": 3}, {\"name\": \"AccumulationRegister_ВОСМСПодлежитПеречислениюВФонды_RecordType\", \"entity_type\": \"AccumulationRegister_ВОСМСПодлежитПеречислениюВФонды_RecordType\", \"field_count\": 17}, {\"name\": \"AccumulationRegister_ВОСМСРасчетыСФондами\", \"entity_type\": \"AccumulationRegister_ВОСМСРасчетыСФондами\", \"f",
+      "row_count": 15,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "describe_entity",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_metadata"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "entity_name": "AccumulationRegister_Акциз"
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"name\": \"AccumulationRegister_Акциз\", \"entity_type\": \"AccumulationRegister_Акциз\", \"fields\": [{\"name\": \"Recorder\", \"type\": \"Edm.String\", \"nullable\": false}, {\"name\": \"RecordSet\", \"type\": \"Collection(StandardODATA.AccumulationRegister_Акциз_RowType)\", \"nullable\": false}, {\"name\": \"Recorder_Type\", \"type\": \"Edm.String\", \"nullable\": false}]}}",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "search_metadata",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_metadata"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "text": "контрагент",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": [{\"entity\": \"Catalog_Контрагенты\", \"entity_type\": \"Catalog_Контрагенты\", \"score\": 16, \"fields\": [{\"name\": \"ГоловнойКонтрагент_Key\", \"type\": \"Edm.Guid\"}, {\"name\": \"ОсновнойДоговорКонтрагента_Key\", \"type\": \"Edm.Guid\"}, {\"name\": \"ДополнительныеРеквизиты\", \"type\": \"Collection(StandardODATA.Catalog_Контрагенты_ДополнительныеРеквизиты_RowType)\"}]}, {\"entity\": \"Catalog_ДоговорыКонтрагентов\", \"entity_type\": \"Catalog_ДоговорыКонтрагентов\", \"score\": 14, \"fields\": [{\"name\": \"УчастникиСовместнойДеятельности\", \"type\": \"Collection(StandardODATA.Catalog_ДоговорыКонтрагентов_УчастникиСовместнойДеятельности_RowType)\"}, {\"name\": \"ДополнительныеРеквизиты\", \"type\": \"Collection(StandardODATA",
+      "row_count": 10,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "discover_inventory_sources",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_inventory"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "limit": 10,
+        "check_data": false
+      },
+      "result_summary": "{\"ok\": true, \"data\": [{\"entity\": \"AccumulationRegister_РеализацияТМЗ_RecordType\", \"entity_type\": \"AccumulationRegister_РеализацияТМЗ_RecordType\", \"score\": 126, \"confidence\": \"high\", \"reasons\": [\"match:accumulationregister\", \"match:тмз\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"match:сумма\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=Количество\", \"field:amount=Сумма\", \"field:period=Period\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"Количество\", \"amount\": \"Сумма\", \"period\": \"Period\"}, \"field_count\": 18, \"sample_fields\": [\"Recorder\", \"Period\", \"LineNumber\", \"Active\", \"Организация_Key\", \"СчетУчета_Key\", ",
+      "row_count": 10,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "get_inventory_auto",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_inventory"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"AccumulationRegister_РеализацияТМЗ_RecordType\", \"entity_type\": \"AccumulationRegister_РеализацияТМЗ_RecordType\", \"score\": 126, \"confidence\": \"high\", \"reasons\": [\"match:accumulationregister\", \"match:тмз\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"match:сумма\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=Количество\", \"field:amount=Сумма\", \"field:period=Period\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"Количество\", \"amount\": \"Сумма\", \"period\": \"Period\"}, \"field_count\": 18, \"sample_fields\": [\"Recorder\", \"Period\", \"LineNumber\", \"Active\", \"Организация_Key\", \"СчетУч",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "get_low_stock_items",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_inventory"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "limit": 10,
+        "threshold_quantity": "10"
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"AccumulationRegister_РеализацияТМЗ_RecordType\", \"entity_type\": \"AccumulationRegister_РеализацияТМЗ_RecordType\", \"score\": 126, \"confidence\": \"high\", \"reasons\": [\"match:accumulationregister\", \"match:тмз\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"match:сумма\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=Количество\", \"field:amount=Сумма\", \"field:period=Period\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"Количество\", \"amount\": \"Сумма\", \"period\": \"Period\"}, \"field_count\": 18, \"sample_fields\": [\"Recorder\", \"Period\", \"LineNumber\", \"Active\", \"Организация_Key\", \"СчетУч",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "discover_payment_sources",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_payments"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "limit": 10,
+        "check_data": false
+      },
+      "result_summary": "{\"ok\": true, \"data\": [{\"entity\": \"Catalog_БанковскиеСчетаПрисоединенныеФайлы_УдалитьЭлектронныеПодписи\", \"entity_type\": \"Catalog_БанковскиеСчетаПрисоединенныеФайлы_УдалитьЭлектронныеПодписи\", \"direction\": \"outgoing\", \"account_type\": \"bank\", \"score\": 52, \"confidence\": \"low\", \"reasons\": [\"match:банк\", \"match:счет\", \"match:счета\", \"match:дата\", \"direction:outgoing\", \"field:date=ДатаПодписи\", \"field:number=LineNumber\", \"penalty:catalog\"], \"mapped_fields\": {\"counterparty\": null, \"amount\": null, \"date\": \"ДатаПодписи\", \"number\": \"LineNumber\", \"organization\": null, \"bank_account\": null, \"currency\": null, \"purpose\": \"Комментарий\"}, \"field_count\": 14, \"sample_fields\": [\"Ref_Key\", \"LineNumber\", \"ДатаПо",
+      "row_count": 10,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "get_outgoing_payments",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_payments"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "date_from": "2024-01-01",
+        "date_to": "2026-12-31",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Catalog_БанковскиеСчетаПрисоединенныеФайлы_УдалитьЭлектронныеПодписи\", \"entity_type\": \"Catalog_БанковскиеСчетаПрисоединенныеФайлы_УдалитьЭлектронныеПодписи\", \"direction\": \"outgoing\", \"account_type\": \"bank\", \"score\": 52, \"confidence\": \"low\", \"reasons\": [\"match:банк\", \"match:счет\", \"match:счета\", \"match:дата\", \"direction:outgoing\", \"field:date=ДатаПодписи\", \"field:number=LineNumber\", \"penalty:catalog\"], \"mapped_fields\": {\"counterparty\": null, \"amount\": null, \"date\": \"ДатаПодписи\", \"number\": \"LineNumber\", \"organization\": null, \"bank_account\": null, \"currency\": null, \"purpose\": \"Комментарий\"}, \"field_count\": 14, \"sample_fields\": [\"Ref_Key\", \"LineNumber",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "get_incoming_payments",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_payments"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "date_from": "2024-01-01",
+        "date_to": "2026-12-31",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПриходныйКассовыйОрдер\", \"entity_type\": \"Document_ПриходныйКассовыйОрдер\", \"direction\": \"incoming\", \"account_type\": \"cash\", \"score\": 156, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:касс\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"direction:incoming\", \"account:cash_priority\", \"field:counterparty=Контрагент\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\", \"bank_account\": \"Касса_Key\", \"currency\": \"Вал",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "payment_summary_by_counterparty",
+      "policy_risk_level": "L1",
+      "capabilities": [
+        "create_local_report",
+        "read_payments"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "direction": "incoming",
+        "date_from": "2024-01-01",
+        "date_to": "2026-12-31",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПриходныйКассовыйОрдер\", \"entity_type\": \"Document_ПриходныйКассовыйОрдер\", \"direction\": \"incoming\", \"account_type\": \"cash\", \"score\": 156, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:касс\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"direction:incoming\", \"account:cash_priority\", \"field:counterparty=Контрагент\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\", \"bank_account\": \"Касса_Key\", \"currency\": \"Вал",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "get_unpaid_customers_summary",
+      "policy_risk_level": "L1",
+      "capabilities": [
+        "read_receivables",
+        "create_local_report"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "date_from": "2024-01-01",
+        "date_to": "2026-12-31",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"sales_source\": {\"entity\": \"Document_СчетФактураВыданный\", \"entity_type\": \"Document_СчетФактураВыданный\", \"score\": 121, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:реализац\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"match:number\", \"match:номер\", \"field:counterparty=ДоговорКонтрагента_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"ДоговорКонтрагента_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\"}, \"field_count\": 60, \"sample_fields\": [\"Ref_Key\", \"DataVersion\", \"Number\", \"Date",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "get_overdue_unpaid_customers",
+      "policy_risk_level": "L1",
+      "capabilities": [
+        "read_receivables",
+        "create_local_report"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "date_from": "2024-01-01",
+        "as_of_date": "2026-05-09",
+        "threshold_days": 3,
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"sales_source\": {\"entity\": \"Document_СчетФактураВыданный\", \"entity_type\": \"Document_СчетФактураВыданный\", \"score\": 121, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:реализац\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"match:number\", \"match:номер\", \"field:counterparty=ДоговорКонтрагента_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"ДоговорКонтрагента_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\"}, \"field_count\": 60, \"sample_fields\": [\"Ref_Key\", \"DataVersion\", \"Number\", \"Date",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "get_customer_payment_behavior_summary",
+      "policy_risk_level": "L1",
+      "capabilities": [
+        "read_receivables",
+        "create_local_report"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "date_from": "2024-01-01",
+        "as_of_date": "2026-05-09",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"sales_source\": {\"entity\": \"Document_СчетФактураВыданный\", \"entity_type\": \"Document_СчетФактураВыданный\", \"score\": 121, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:реализац\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"match:number\", \"match:номер\", \"field:counterparty=ДоговорКонтрагента_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"ДоговорКонтрагента_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\"}, \"field_count\": 60, \"sample_fields\": [\"Ref_Key\", \"DataVersion\", \"Number\", \"Date",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "explain_last_answer",
+      "policy_risk_level": "L1",
+      "capabilities": [
+        "explain_results"
+      ],
+      "status": "PASS",
+      "input_used": {},
+      "result_summary": "{\"ok\": true, \"data\": {\"last_tool\": \"get_customer_payment_behavior_summary\", \"summary\": [\"Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.\"], \"warnings\": [\"OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.\", \"OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.\", \"typical_payment_days считается только по полностью закрытым реализациям/счетам.\"], \"source\": null, \"confidence\": null}}",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "parse_inventory_report_text",
+      "policy_risk_level": "L1",
+      "capabilities": [
+        "create_local_report"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "report_text": "Номенклатура    Склад           Количество    Сумма\nЦемент М400     Основной склад  10            250000\nПесок           Основной склад  5             30000"
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"rows\": [{\"item\": \"Цемент М400\", \"warehouse\": \"Основной склад\", \"quantity\": \"10\", \"amount\": \"250000\"}, {\"item\": \"Песок\", \"warehouse\": \"Основной склад\", \"quantity\": \"5\", \"amount\": \"30000\"}], \"row_count\": 2, \"usage\": \"Передайте эти rows в compare_inventory_rows или используйте validate_inventory_report_text для сверки с текущими MCP-остатками.\"}}",
+      "row_count": 2,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "validate_inventory_report_text",
+      "policy_risk_level": "L1",
+      "capabilities": [
+        "read_inventory",
+        "create_local_report"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "report_text": "Номенклатура    Склад           Количество    Сумма\nЦемент М400     Основной склад  10            250000\nПесок           Основной склад  5             30000",
+        "warehouse": "Основной склад",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"status\": \"no_mcp_rows\", \"summary\": {\"mcp_rows\": 0, \"report_rows\": 2, \"matched_keys\": 0, \"mismatched_keys\": 0, \"missing_in_mcp\": 2, \"missing_in_report\": 0, \"total_mcp_quantity\": 0, \"total_report_quantity\": 15, \"total_quantity_diff\": -15, \"total_mcp_amount\": 0, \"total_report_amount\": 280000, \"total_amount_diff\": -280000}, \"settings\": {\"key_fields\": [\"item\", \"warehouse\"], \"tolerance_quantity\": \"0.001\", \"tolerance_amount\": \"1.00\", \"compare_amount\": true}, \"mismatched\": [], \"missing_in_mcp\": [{\"key\": {\"item\": \"песок\", \"warehouse\": \"основной склад\"}, \"mcp_quantity\": 0, \"report_quantity\": 5, \"quantity_diff\": -5, \"mcp_amount\": 0, \"report_amount\": 30000, \"amount_diff\": -30000, ",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "find_buh_entity",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_metadata"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "kind": "counterparty",
+        "query": "ТОО",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"kind\": \"counterparty\", \"query\": \"ТОО\", \"catalogs_checked\": [\"Catalog_Контрагенты\", \"Catalog_ДоговорыКонтрагентов\", \"Catalog_ДоговорыКонтрагентовПрисоединенныеФайлы\", \"Catalog_КонтрагентыПрисоединенныеФайлы\", \"Catalog_ДоговорыКонтрагентов_ДополнительныеРеквизиты\"], \"candidates\": [{\"entity\": \"Catalog_Контрагенты\", \"name\": \"\\\"РМ Компани ЛТД\\\" ТОО\", \"ref\": \"564615f5-4d7d-11eb-8bb5-5c3a45e64368\", \"score\": 0.82, \"raw\": {\"Ref_Key\": \"564615f5-4d7d-11eb-8bb5-5c3a45e64368\", \"DataVersion\": \"AAAADAAAAAA=\", \"DeletionMark\": false, \"Parent_Key\": \"564615f4-4d7d-11eb-8bb5-5c3a45e64368\", \"IsFolder\": false, \"Code\": \"000000006\", \"Description\": \"\\\"РМ Компани ЛТД\\\" ТОО\", \"ГоловнойКонтрагент",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "search_document_by_number",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_documents"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "document_number": "0001",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"document_number\": \"0001\", \"document_type_filter\": null, \"filters_applied_in_python\": {\"date_from\": null, \"date_to\": null, \"limit\": 10}, \"matched_entities\": [\"Catalog_БанковскиеСчета\", \"Document_ВводНачальныхОстатков\", \"Document_СчетНаОплатуПокупателю\", \"Document_УстановкаСоответствияСчетовБУиНУ\"], \"count_returned\": 8, \"data\": [{\"document_type\": \"Document_СчетНаОплатуПокупателю\", \"number\": \"00000000001\", \"date\": \"2021-08-23T16:39:05\", \"counterparty\": \"00000000-0000-0000-0000-000000000000\", \"amount\": 87725, \"status\": \"not_posted\", \"reference\": \"4601dee4-03d9-11ec-8ce2-5c3a45e64368\"}, {\"document_type\": \"Document_ВводНачальныхОстатков\", \"number\": \"00000000001\", \"date\": \"20",
+      "row_count": 8,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "get_customer_settlements_summary",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_customer_settlements"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "date_from": "2024-01-01",
+        "date_to": "2026-12-31",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 0, \"data\": [], \"filters_applied_in_python\": {\"date_from\": \"2024-01-01\", \"date_to\": \"2026-12-31\", \"counterparty_name\": null, \"min_debt\": \"0\", \"limit\": 10}, \"sales_source\": {\"entity\": \"Document_СчетФактураВыданный\", \"entity_type\": \"Document_СчетФактураВыданный\", \"score\": 121, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:реализац\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"match:number\", \"match:номер\", \"field:counterparty=ДоговорКонтрагента_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"ДоговорКонтрагента_Key\", \"amou",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "get_cash_bank_movements",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_cash_bank_movements"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "date_from": "2024-01-01",
+        "date_to": "2026-12-31",
+        "movement_type": "all",
+        "account_type": "all",
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 0, \"data\": [], \"filters_applied_in_python\": {\"date_from\": \"2024-01-01\", \"date_to\": \"2026-12-31\", \"movement_type\": \"all\", \"account_type\": \"all\", \"counterparty_name\": null, \"min_amount\": \"0\", \"limit\": 10}, \"missing_sources\": [], \"source_explanation\": {\"incoming_sources_used\": [\"AccumulationRegister_СведенияСчетовФактурПолученных_RecordType\", \"Catalog_НастройкиОбменСБанками\", \"Document_Доверенность\", \"Document_ОприходованиеТоваров\", \"Document_ОприходованиеТоваров_Товары\", \"Document_ОтчетОРозничныхПродажах_Товары\", \"Document_ПлатежноеПоручениеИсходящее\", \"Document_ПринятиеКУчетуОС\", \"Document_ПриходныйКассовыйОрдер\", \"Document_ПриходныйКассовыйОрдер_Выдача",
+      "row_count": 0,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned structured non-tabular summary."
+    },
+    {
+      "tool_name": "query_entity",
+      "policy_risk_level": null,
+      "capabilities": [],
+      "status": "BLOCKED_EXPECTED",
+      "input_used": {
+        "entity_name": "AccumulationRegister_Акциз",
+        "top": 1
+      },
+      "result_summary": "{\"ok\": false, \"error\": \"tool is forbidden by policy denylist\", \"type\": \"PolicyBlocked\"}",
+      "row_count": 0,
+      "error_type": "PolicyBlocked",
+      "audit_record_created": true,
+      "output_filter_applied": false,
+      "raw_odata_url_leaked": false,
+      "notes": "tool is forbidden by policy denylist"
+    },
+    {
+      "tool_name": "post_document_validated",
+      "policy_risk_level": null,
+      "capabilities": [],
+      "status": "BLOCKED_EXPECTED",
+      "input_used": {
+        "document_ref": "TEST-REF",
+        "validation_result": {}
+      },
+      "result_summary": "{\"ok\": false, \"error\": \"tool is forbidden by policy denylist\", \"type\": \"PolicyBlocked\"}",
+      "row_count": 0,
+      "error_type": "PolicyBlocked",
+      "audit_record_created": true,
+      "output_filter_applied": false,
+      "raw_odata_url_leaked": false,
+      "notes": "tool is forbidden by policy denylist"
+    }
+  ]
+}

@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .env
+.env.local
 .data/
 *.sqlite3
 .DS_Store
@@ -13,3 +14,5 @@ dist/
 .cursor/
 .vscode/
 *.zip
+audit/
+reports/*.jsonl

@@ -36,6 +36,9 @@ class SecureToolRunner:
             session_id=metadata.get("session_id"),
             tool_name=tool_name,
             risk_level=decision.risk.value if decision.risk else None,
+            capabilities=tuple(cap.name for cap in decision.capabilities),
+            decision=decision.action.value,
+            policy_version=policy.version,
         )
         if not decision.allowed:
             duration_ms = int((perf_counter() - started) * 1000)

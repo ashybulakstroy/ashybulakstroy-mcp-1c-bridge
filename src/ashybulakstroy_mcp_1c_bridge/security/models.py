@@ -93,3 +93,6 @@ class RequestContext:
     token_limit: int | None = None
     requested_tokens: int | None = None
     user_query: str | None = None
+    capabilities: tuple[str, ...] = ()
+    decision: str | None = None
+    policy_version: str | None = None

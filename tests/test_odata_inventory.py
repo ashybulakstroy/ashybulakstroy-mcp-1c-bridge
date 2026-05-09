@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ashybulakstroy_mcp_1c_bridge.config import Settings
-from ashybulakstroy_mcp_1c_bridge.odata import OneCODataClient
+from ashybulakstroy_mcp_1c_bridge.odata import ODataError, OneCODataClient
 
 
 class FakeOneCODataClient(OneCODataClient):
@@ -178,8 +178,41 @@ class FakeOneCODataClient(OneCODataClient):
         return {"entity": entity_name, "count_returned": 0, "top_applied": top, "data": []}
 
 
+class FakeOneCODataClientRejectingDocumentFilter(FakeOneCODataClient):
+    def query_entity(self, entity_name, top=50, select=None, filter_expr=None, orderby=None, skip=0):
+        if entity_name == "Document_РеализацияТоваровУслуг" and filter_expr:
+            raise ODataError("Ошибка при разборе опции запроса $filter")
+        return super().query_entity(entity_name, top=top, select=select, filter_expr=filter_expr, orderby=orderby, skip=skip)
+
+
+class FakeOneCODataClientRejectingDocumentFilterAndFallbackAccess(FakeOneCODataClient):
+    def query_entity(self, entity_name, top=50, select=None, filter_expr=None, orderby=None, skip=0):
+        if entity_name == "Document_РеализацияТоваровУслуг" and filter_expr:
+            raise ODataError("Ошибка при разборе опции запроса $filter")
+        if entity_name == "Document_РеализацияТоваровУслуг" and not filter_expr:
+            raise ODataError('Ошибка OData запроса: HTTP 401: {"odata.error":{"code":"20","message":{"lang":"ru","value":"Доступ запрещен"}}}')
+        return super().query_entity(entity_name, top=top, select=select, filter_expr=filter_expr, orderby=orderby, skip=skip)
+
+
+class FakeOneCODataClient2009Namespace(FakeOneCODataClient):
+    def get_metadata_xml(self, refresh: bool = False) -> str:
+        return self._fake_xml.replace(
+            "http://schemas.microsoft.com/ado/2008/09/edm",
+            "http://schemas.microsoft.com/ado/2009/11/edm",
+        )
+
+
 def test_list_entities_parses_fake_metadata():
     client = FakeOneCODataClient()
+    entities = client.list_entities(refresh=True)
+
+    names = [e.name for e in entities]
+    assert "AccumulationRegister_ТоварыНаСкладах" in names
+    assert "Catalog_Номенклатура" in names
+
+
+def test_list_entities_parses_2009_11_namespace_metadata():
+    client = FakeOneCODataClient2009Namespace()
     entities = client.list_entities(refresh=True)
 
     names = [e.name for e in entities]
@@ -232,6 +265,17 @@ def test_discover_payment_sources_finds_outgoing_and_incoming_documents():
     assert outgoing[0]["direction"] == "outgoing"
     assert incoming[0]["entity"] == "Document_ПоступлениеНаБанковскийСчет"
     assert incoming[0]["direction"] == "incoming"
+
+
+def test_discover_payment_sources_without_direction_returns_candidates():
+    client = FakeOneCODataClient()
+
+    sources = client.discover_payment_sources(direction=None, limit=10, check_data=True)
+
+    assert sources
+    directions = {row["direction"] for row in sources}
+    assert "incoming" in directions
+    assert "outgoing" in directions
 
 
 def test_get_outgoing_payments_filters_by_period_and_groups_by_counterparty():
@@ -373,6 +417,40 @@ def test_search_document_by_number_returns_empty_when_nothing_found():
     assert result["count_returned"] == 0
     assert result["data"] == []
     assert len(client.captured_queries) == 1
+
+
+def test_search_document_by_number_falls_back_when_odata_filter_is_rejected():
+    client = FakeOneCODataClientRejectingDocumentFilter()
+
+    result = client.search_document_by_number(document_number="00050", document_type="Реализация", limit=5)
+
+    assert result["count_returned"] == 3
+    assert result["data"][0]["number"] == "000502"
+    assert any("rejected pushdown filter" in warning for warning in result["warnings"])
+    assert len(client.captured_queries) == 1
+    assert client.captured_queries[0]["entity_name"] == "Document_РеализацияТоваровУслуг"
+    assert client.captured_queries[0]["filter_expr"] is None
+    assert client.captured_queries[0]["top"] == 50
+
+
+def test_search_document_by_number_skips_entity_when_fallback_read_is_forbidden():
+    client = FakeOneCODataClientRejectingDocumentFilterAndFallbackAccess()
+
+    result = client.search_document_by_number(document_number="00050", document_type="Реализация", limit=5)
+
+    assert result["count_returned"] == 0
+    assert result["data"] == []
+    assert any("not accessible for this entity" in warning for warning in result["warnings"])
+
+
+def test_setup_wizard_does_not_return_raw_odata_url_in_checks():
+    client = FakeOneCODataClient()
+
+    result = client.setup_wizard(check_live_entities=False, live_limit=5)
+
+    url_check = next(check for check in result["checks"] if check["name"] == "ONEC_ODATA_URL configured")
+    assert url_check["details"] == "configured"
+    assert "http://" not in str(url_check["details"])
 
 
 def test_get_customer_settlements_summary_returns_safe_receivables_rows():
