@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-09T16:26:22.354111+05:00",
+  "generated_at": "2026-05-09T16:36:49.764283+05:00",
   "base_url": "http://192.168.1.183/SaryDala",
   "service_url": "http://192.168.1.183/SaryDala/odata/standard.odata",
   "entity_count": 1192,
@@ -2082,7 +2082,6 @@
           "СуммаКорректировкиОборота"
         ],
         "possible_counterparty_fields": [
-          "Налогоплательщик_Key",
           "Контрагент_Key"
         ],
         "possible_warehouse_fields": [],
@@ -2239,12 +2238,11 @@
           }
         ],
         "possible_date_field": "Period",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерВходящегоДокумента",
         "possible_amount_fields": [
           "СуммаКорректировкиОборота"
         ],
         "possible_counterparty_fields": [
-          "Налогоплательщик_Key",
           "Контрагент_Key"
         ],
         "possible_warehouse_fields": [],
@@ -2391,7 +2389,6 @@
           "СуммаБезНДС"
         ],
         "possible_counterparty_fields": [
-          "Налогоплательщик_Key",
           "Контрагент_Key"
         ],
         "possible_warehouse_fields": [],
@@ -2803,12 +2800,11 @@
           }
         ],
         "possible_date_field": "Period",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерВходящегоДокумента",
         "possible_amount_fields": [
           "СуммаБезНДС"
         ],
         "possible_counterparty_fields": [
-          "Налогоплательщик_Key",
           "Контрагент_Key"
         ],
         "possible_warehouse_fields": [],
@@ -2965,12 +2961,11 @@
           }
         ],
         "possible_date_field": "Period",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерПлатежногоДокумента",
         "possible_amount_fields": [
           "СуммаНДС"
         ],
         "possible_counterparty_fields": [
-          "Налогоплательщик_Key",
           "Контрагент_Key"
         ],
         "possible_warehouse_fields": [],
@@ -5119,7 +5114,6 @@
           "СуммаВВалютеДоговора"
         ],
         "possible_counterparty_fields": [
-          "Налогоплательщик_Key",
           "Контрагент_Key"
         ],
         "possible_warehouse_fields": [],
@@ -5281,7 +5275,6 @@
           "СуммаВВалютеДоговора"
         ],
         "possible_counterparty_fields": [
-          "Налогоплательщик_Key",
           "Контрагент_Key"
         ],
         "possible_warehouse_fields": [],
@@ -5649,7 +5642,7 @@
           }
         ],
         "possible_date_field": "Period",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [
@@ -6678,7 +6671,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ПрошлыйПериод",
+        "possible_date_field": "ДатаОбновления",
         "possible_number_field": "НомерСтрокиРаздела",
         "possible_amount_fields": [
           "Сумма"
@@ -13399,7 +13392,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ПоследняяДатаПолученияЭД",
+        "possible_date_field": "ДатаСинхронизации",
         "possible_number_field": "НомерЗапроса",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -14584,7 +14577,7 @@
           }
         ],
         "possible_date_field": "Period",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерПередела",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [
@@ -18763,7 +18756,7 @@
           }
         ],
         "possible_date_field": "Period",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерДокумента",
         "possible_amount_fields": [
           "СуммаЗатратБУ"
         ],
@@ -25899,7 +25892,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ПоследняяДатаДобавленияВторойВерсии",
+        "possible_date_field": "ДатаПервогоВходаПослеУдаленияВсехРасширений",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -37061,7 +37054,7 @@
           }
         ],
         "possible_date_field": "ДатаПостановкиНаУчетПоНДС",
-        "possible_number_field": "ИдентификационныйНомер",
+        "possible_number_field": "НомерСвидетельстваПоНДС",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -43946,7 +43939,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерНабора",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -46053,7 +46046,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерЖурнала",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -46150,7 +46143,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерСубконто",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -46300,7 +46293,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерЖурнала",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -51029,7 +51022,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -51174,7 +51167,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -51456,7 +51449,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
@@ -51580,7 +51573,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -51730,7 +51723,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -52170,7 +52163,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -52277,7 +52270,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -52388,7 +52381,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -52568,7 +52561,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
@@ -52684,7 +52677,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -52806,7 +52799,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "ExchangeDate",
+        "possible_date_field": "ДатаНачалаВыгрузкиДокументов",
         "possible_number_field": null,
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
@@ -53124,8 +53117,8 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "НДСВключенВСтоимость"
+          "НДСВключенВСтоимость",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
           "ОплатаПоставщикам"
@@ -53259,7 +53252,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "СуммаКОплате"
+          "СуммаКОплате",
+          "СуммаПлатежа"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -53354,7 +53348,7 @@
           }
         ],
         "possible_date_field": "ДатаВходящегоДокумента",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерВходящегоДокумента",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -53614,7 +53608,7 @@
           }
         ],
         "possible_date_field": "ДатаВходящегоДокумента",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерВходящегоДокумента",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -53754,7 +53748,7 @@
           }
         ],
         "possible_date_field": "ДатаВходящегоДокумента",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерВходящегоДокумента",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -54321,8 +54315,8 @@
           "УдалитьНДСВключенВСтоимость"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key",
-          "Грузополучатель_Key"
+          "Грузополучатель_Key",
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "ПодразделениеОрганизации_Key"
@@ -54753,7 +54747,7 @@
         "possible_number_field": "Number",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -55451,10 +55445,11 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "ВалютнаяСумма"
+          "ВалютнаяСумма",
+          "СуммаБУ"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [],
         "possible_currency_fields": [
@@ -55570,7 +55565,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [
@@ -55910,7 +55905,7 @@
           }
         ],
         "possible_date_field": "ДатаПринятияКУчетуРегл",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерДокументаПринятияКУчетуРегл",
         "possible_amount_fields": [
           "ПервоначальнаяСтоимостьБУ"
         ],
@@ -56911,7 +56906,7 @@
           "СуммаВключаетАкциз"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -56966,7 +56961,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -57700,12 +57695,12 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "НДСВключенВСтоимость"
+          "НДСВключенВСтоимость",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key",
-          "Грузополучатель_Key"
+          "Грузополучатель_Key",
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -57889,7 +57884,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -58300,7 +58295,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерНабора",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -58807,8 +58802,8 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "НДСВключенВСтоимость"
+          "НДСВключенВСтоимость",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
           "Контрагент_Key"
@@ -58817,7 +58812,7 @@
           "СтруктурноеПодразделение_Key"
         ],
         "possible_currency_fields": [
-          "ВалютаВзаиморасчетов_Key"
+          "ВалютаДокумента_Key"
         ],
         "comments_for_tool_developers": [
           "Looks usable for payment or cash/bank movement tools.",
@@ -58941,10 +58936,10 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерРаздела",
         "possible_amount_fields": [
-          "ФактурнаяСтоимость",
-          "СуммаПошлины"
+          "СуммаПошлины",
+          "ФактурнаяСтоимость"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [
@@ -59033,8 +59028,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "ТаможеннаяСтоимость",
-          "СуммаПошлины"
+          "СуммаПошлины",
+          "ТаможеннаяСтоимость"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -59184,10 +59179,10 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерРаздела",
         "possible_amount_fields": [
-          "ФактурнаяСтоимость",
-          "СуммаПошлины"
+          "СуммаПошлины",
+          "ФактурнаяСтоимость"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -59617,7 +59612,7 @@
         "possible_number_field": "Number",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -59759,7 +59754,7 @@
           "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -60485,7 +60480,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерНабора",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -60725,7 +60720,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерКартСчета_Key",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -61146,11 +61141,11 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "НДСВключенВСтоимость"
+          "НДСВключенВСтоимость",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -61295,7 +61290,7 @@
           }
         ],
         "possible_date_field": "ДатаПринятияНаУчет",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерСчетаФактуры",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -61470,7 +61465,7 @@
           }
         ],
         "possible_date_field": "ДатаТранспортногоДокумента",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерТранспортногоДокумента",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -61636,9 +61631,10 @@
           }
         ],
         "possible_date_field": "ДатаВходящегоДокумента",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерВходящегоДокумента",
         "possible_amount_fields": [
-          "СуммаВзаиморасчетов"
+          "СуммаВзаиморасчетов",
+          "СуммаПлатежа"
         ],
         "possible_counterparty_fields": [
           "Получатель_Key"
@@ -64271,7 +64267,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -64322,7 +64318,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -64728,7 +64724,7 @@
         "possible_number_field": "Number",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "КонтрагентДебитор_Key"
         ],
         "possible_warehouse_fields": [
           "ПодразделениеОрганизации_Key"
@@ -65209,8 +65205,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "СуммаМодернизацииБУ",
-          "СтоимостьБУ"
+          "СтоимостьБУ",
+          "СуммаМодернизацииБУ"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -66514,7 +66510,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -67831,7 +67827,7 @@
           "СуммаВключаетАкциз"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -67876,7 +67872,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -68188,7 +68184,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -68546,7 +68542,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -68634,7 +68630,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "ПлановаяСтоимость",
           "СуммаПлановая"
@@ -68960,7 +68956,7 @@
         "possible_number_field": "Number",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -69318,7 +69314,7 @@
           "Сумма"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -69599,8 +69595,8 @@
           "СуммаВключаетНДС"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key",
-          "Грузополучатель_Key"
+          "Грузополучатель_Key",
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -70040,7 +70036,7 @@
         "possible_number_field": "Number",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -70093,7 +70089,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -70522,7 +70518,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -70898,8 +70894,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "СтоимостьБУ",
-          "СписываемаяСуммаРезерваЗаМесяцБУ"
+          "СписываемаяСуммаРезерваЗаМесяцБУ",
+          "СтоимостьБУ"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -71930,7 +71926,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерКартСчета_Key",
         "possible_amount_fields": [
           "СуммаПлатежа"
         ],
@@ -72133,7 +72129,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "СуммаКПеречислению"
+          "СуммаКПеречислению",
+          "СуммаПлатежа"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -73367,7 +73364,7 @@
           "Сумма"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -73943,11 +73940,11 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "НДСВключенВСтоимость"
+          "НДСВключенВСтоимость",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "ПодразделениеОрганизации_Key"
@@ -74012,7 +74009,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -74129,7 +74126,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "СуммаПлановая"
         ],
@@ -74447,11 +74444,11 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "НДСВключенВСтоимость"
+          "НДСВключенВСтоимость",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -74785,11 +74782,11 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "НДСВключенВСтоимость"
+          "НДСВключенВСтоимость",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -74983,7 +74980,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -75968,7 +75965,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -77325,7 +77322,7 @@
           "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "ПодразделениеОрганизации_Key"
@@ -77842,7 +77839,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "МесяцНалоговогоПериода",
+        "possible_date_field": "ДатаНачала",
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
           "Сумма"
@@ -78941,8 +78938,8 @@
           "СуммаВключаетАкциз"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key",
-          "Грузополучатель_Key"
+          "Грузополучатель_Key",
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -78997,7 +78994,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -79660,8 +79657,8 @@
           "СуммаВключаетНДС"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key",
-          "Грузополучатель_Key"
+          "Грузополучатель_Key",
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -80135,7 +80132,7 @@
           "Сумма"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -80474,7 +80471,7 @@
             "nullable": true
           }
         ],
-        "possible_date_field": "МесяцНалоговогоПериода",
+        "possible_date_field": "ДатаДохода",
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
           "СуммаДохода"
@@ -80762,7 +80759,7 @@
           "СуммаВключаетНДС"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -80996,7 +80993,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -81318,7 +81315,7 @@
           "СуммаВключаетНДС"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -81425,7 +81422,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -83643,7 +83640,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -83943,7 +83940,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -84353,7 +84350,7 @@
           "СуммаВключаетАкциз"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -84867,8 +84864,8 @@
           "СуммаВключаетАкциз"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key",
-          "Грузополучатель_Key"
+          "Грузополучатель_Key",
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -85016,7 +85013,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -85499,7 +85496,7 @@
           "СуммаВключаетНДС"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -85735,7 +85732,7 @@
           }
         ],
         "possible_date_field": "ДатаОборота",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -86073,7 +86070,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерНабора",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -86469,7 +86466,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -87751,7 +87748,7 @@
           "СуммаВключаетНДС"
         ],
         "possible_counterparty_fields": [
-          "ДоговорКонтрагента_Key"
+          "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -87811,7 +87808,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерПлатежнойКарты",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -88524,14 +88521,14 @@
           "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "ГрузополучательИдентификатор",
+          "Грузополучатель",
           "Контрагент_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
         ],
         "possible_currency_fields": [
-          "ВалютаКод"
+          "Валюта_Key"
         ],
         "comments_for_tool_developers": [
           "Looks usable for payment or cash/bank movement tools.",
@@ -88725,7 +88722,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерСвидетельстваПоНДС",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
           "Получатель"
@@ -88912,7 +88909,7 @@
           }
         ],
         "possible_date_field": "ДокументПодтверждающийПоставкуДата",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерСвидетельстваПоНДС",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
           "Поставщик"
@@ -89096,7 +89093,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерЗаявленияВРамкахТС",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -89171,7 +89168,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерТовара",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -89244,7 +89241,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерТовара",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -89630,7 +89627,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерНабора",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -90163,7 +90160,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерНабора",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -90920,7 +90917,7 @@
           }
         ],
         "possible_date_field": null,
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерСвидетельстваПоНДС",
         "possible_amount_fields": [],
         "possible_counterparty_fields": [
           "Поставщик"
@@ -91483,7 +91480,7 @@
           }
         ],
         "possible_date_field": "ДатаСертификатаПроисхождения",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерЗаявленияВРамкахТС",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -91649,7 +91646,7 @@
           }
         ],
         "possible_date_field": "ДатаСертификатаПроисхождения",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерЗаявленияВРамкахТС",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -91858,7 +91855,7 @@
           }
         ],
         "possible_date_field": "ДатаСертификатаПроисхождения",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерЗаявленияВРамкахТС",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -92031,7 +92028,7 @@
           }
         ],
         "possible_date_field": "ДатаСертификатаПроисхождения",
-        "possible_number_field": "LineNumber",
+        "possible_number_field": "НомерЗаявленияВРамкахТС",
         "possible_amount_fields": [
           "Сумма"
         ],
@@ -93250,7 +93247,7 @@
         "date": "Date",
         "number": "Number",
         "organization": "Организация_Key",
-        "bank_account": "СчетОрганизации_Key",
+        "bank_account": "СчетБанк_Key",
         "currency": "ВалютаДокумента_Key",
         "purpose": "Комментарий"
       },
@@ -93328,7 +93325,7 @@
         "date": "Date",
         "number": "Number",
         "organization": "Организация_Key",
-        "bank_account": "СчетОрганизации_Key",
+        "bank_account": "СчетБанк_Key",
         "currency": "ВалютаДокумента_Key",
         "purpose": "Комментарий"
       },
@@ -93406,7 +93403,7 @@
         "date": "Date",
         "number": "Number",
         "organization": "Организация_Key",
-        "bank_account": "СчетОрганизации_Key",
+        "bank_account": "СчетБанк_Key",
         "currency": "ВалютаДокумента_Key",
         "purpose": "Комментарий"
       },
@@ -93959,13 +93956,13 @@
         "direction:outgoing",
         "account:bank_priority",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=НомерКартСчета_Key"
       ],
       "mapped_fields": {
         "counterparty": null,
         "amount": "СуммаПлатежа",
         "date": null,
-        "number": "LineNumber",
+        "number": "НомерКартСчета_Key",
         "organization": null,
         "bank_account": null,
         "currency": null,
@@ -94209,12 +94206,12 @@
         "match:сумма",
         "direction:outgoing",
         "account:bank_priority",
-        "field:amount=СуммаКПеречислению",
+        "field:amount=СуммаПлатежа",
         "field:number=LineNumber"
       ],
       "mapped_fields": {
         "counterparty": null,
-        "amount": "СуммаКПеречислению",
+        "amount": "СуммаПлатежа",
         "date": null,
         "number": "LineNumber",
         "organization": null,
@@ -94264,7 +94261,7 @@
         "date": "Date",
         "number": "Number",
         "organization": "Организация_Key",
-        "bank_account": "СчетОрганизации_Key",
+        "bank_account": "СчетБанк_Key",
         "currency": "ВалютаДокумента_Key",
         "purpose": "Комментарий"
       },
@@ -94342,7 +94339,7 @@
         "date": "Date",
         "number": "Number",
         "organization": "Организация_Key",
-        "bank_account": "СчетОрганизации_Key",
+        "bank_account": "СчетБанк_Key",
         "currency": "ВалютаДокумента_Key",
         "purpose": "Комментарий"
       },
@@ -94787,7 +94784,7 @@
         "date": "Date",
         "number": "Number",
         "organization": "Организация_Key",
-        "bank_account": "СчетОрганизации_Key",
+        "bank_account": "СчетБанк_Key",
         "currency": "ВалютаДокумента_Key",
         "purpose": "Комментарий"
       },
@@ -95116,13 +95113,13 @@
         "direction:outgoing",
         "account:bank_priority",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=НомерКартСчета_Key"
       ],
       "mapped_fields": {
         "counterparty": null,
         "amount": "СуммаПлатежа",
         "date": null,
-        "number": "LineNumber",
+        "number": "НомерКартСчета_Key",
         "organization": null,
         "bank_account": null,
         "currency": null,
@@ -95225,12 +95222,12 @@
         "match:сумма",
         "direction:outgoing",
         "account:bank_priority",
-        "field:amount=СуммаКПеречислению",
+        "field:amount=СуммаПлатежа",
         "field:number=LineNumber"
       ],
       "mapped_fields": {
         "counterparty": null,
-        "amount": "СуммаКПеречислению",
+        "amount": "СуммаПлатежа",
         "date": null,
         "number": "LineNumber",
         "organization": null,
@@ -95266,13 +95263,13 @@
         "match:number",
         "match:номер",
         "sales_priority:реализациятоваровуслуг",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Грузополучатель_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Грузополучатель_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -95338,13 +95335,13 @@
         "match:number",
         "match:номер",
         "sales_priority:реализацияуслугпопереработке",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Грузополучатель_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Грузополучатель_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -95410,13 +95407,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=Контрагент_Key",
+        "field:counterparty=Грузополучатель",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "Контрагент_Key",
+        "counterparty": "Грузополучатель",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -95480,13 +95477,13 @@
         "match:date",
         "match:number",
         "sales_priority:счетнаоплатупокупателю",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -95541,13 +95538,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=Сумма",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "Сумма",
         "date": "Date",
         "number": "Number",
@@ -95613,13 +95610,13 @@
         "match:номер",
         "sales_priority:счетнаоплатупокупателю",
         "penalty:чекккм",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -95743,13 +95740,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -95941,13 +95938,13 @@
         "match:number",
         "match:номер",
         "penalty:счетфактуравыданный",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Грузополучатель_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Грузополучатель_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -96011,13 +96008,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Грузополучатель_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Грузополучатель_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -96081,13 +96078,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Грузополучатель_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Грузополучатель_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -96151,13 +96148,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Грузополучатель_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Грузополучатель_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -96221,13 +96218,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=Сумма",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "Сумма",
         "date": "Date",
         "number": "Number",
@@ -96291,13 +96288,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -96361,13 +96358,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -96427,13 +96424,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -96497,13 +96494,13 @@
         "match:дата",
         "match:number",
         "match:номер",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -96570,13 +96567,13 @@
         "match:number",
         "match:номер",
         "penalty:счетфактураполученный",
-        "field:counterparty=ДоговорКонтрагента_Key",
+        "field:counterparty=Контрагент_Key",
         "field:amount=СуммаДокумента",
         "field:date=Date",
         "field:number=Number"
       ],
       "mapped_fields": {
-        "counterparty": "ДоговорКонтрагента_Key",
+        "counterparty": "Контрагент_Key",
         "amount": "СуммаДокумента",
         "date": "Date",
         "number": "Number",
@@ -97711,8 +97708,8 @@
         "СуммаВключаетАкциз"
       ],
       "possible_counterparty_fields": [
-        "ДоговорКонтрагента_Key",
-        "Грузополучатель_Key"
+        "Грузополучатель_Key",
+        "Контрагент_Key"
       ],
       "possible_warehouse_fields": [
         "Склад_Key"
@@ -98047,8 +98044,8 @@
         "СуммаВключаетНДС"
       ],
       "possible_counterparty_fields": [
-        "ДоговорКонтрагента_Key",
-        "Грузополучатель_Key"
+        "Грузополучатель_Key",
+        "Контрагент_Key"
       ],
       "possible_warehouse_fields": [
         "СтруктурноеПодразделение_Key"
@@ -98704,14 +98701,14 @@
         "СуммаДокумента"
       ],
       "possible_counterparty_fields": [
-        "ГрузополучательИдентификатор",
+        "Грузополучатель",
         "Контрагент_Key"
       ],
       "possible_warehouse_fields": [
         "СтруктурноеПодразделение_Key"
       ],
       "possible_currency_fields": [
-        "ВалютаКод"
+        "Валюта_Key"
       ],
       "comments_for_tool_developers": [
         "Looks usable for payment or cash/bank movement tools.",
@@ -98883,7 +98880,7 @@
         "СуммаВключаетАкциз"
       ],
       "possible_counterparty_fields": [
-        "ДоговорКонтрагента_Key"
+        "Контрагент_Key"
       ],
       "possible_warehouse_fields": [
         "Склад_Key"
@@ -99245,7 +99242,7 @@
         "Сумма"
       ],
       "possible_counterparty_fields": [
-        "ДоговорКонтрагента_Key"
+        "Контрагент_Key"
       ],
       "possible_warehouse_fields": [
         "СтруктурноеПодразделение_Key"
@@ -99448,7 +99445,7 @@
         "СуммаВключаетНДС"
       ],
       "possible_counterparty_fields": [
-        "ДоговорКонтрагента_Key"
+        "Контрагент_Key"
       ],
       "possible_warehouse_fields": [
         "Склад_Key"
@@ -100044,7 +100041,7 @@
         "СуммаВключаетАкциз"
       ],
       "possible_counterparty_fields": [
-        "ДоговорКонтрагента_Key"
+        "Контрагент_Key"
       ],
       "possible_warehouse_fields": [
         "Склад_Key"
@@ -100273,8 +100270,8 @@
       "possible_date_field": "Date",
       "possible_number_field": "Number",
       "possible_amount_fields": [
-        "СуммаДокумента",
-        "НДСВключенВСтоимость"
+        "НДСВключенВСтоимость",
+        "СуммаДокумента"
       ],
       "possible_counterparty_fields": [
         "Контрагент_Key"
@@ -100283,7 +100280,7 @@
         "СтруктурноеПодразделение_Key"
       ],
       "possible_currency_fields": [
-        "ВалютаВзаиморасчетов_Key"
+        "ВалютаДокумента_Key"
       ],
       "comments_for_tool_developers": [
         "Looks usable for payment or cash/bank movement tools.",
@@ -100434,7 +100431,6 @@
         "СуммаВВалютеДоговора"
       ],
       "possible_counterparty_fields": [
-        "Налогоплательщик_Key",
         "Контрагент_Key"
       ],
       "possible_warehouse_fields": [],

@@ -15,8 +15,14 @@ AUDIT_PATH = repo_root() / "audit" / "audit.jsonl"
 
 def _clean_audit_file() -> None:
     AUDIT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    if AUDIT_PATH.exists():
-        AUDIT_PATH.unlink()
+    try:
+        AUDIT_PATH.write_text("", encoding="utf-8")
+    except PermissionError:
+        fallback_path = AUDIT_PATH.with_name(f"audit-{uuid.uuid4().hex}.jsonl")
+        os.environ["BRIDGE_AUDIT_LOG_PATH"] = str(fallback_path)
+        globals()["AUDIT_PATH"] = fallback_path
+        AUDIT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        AUDIT_PATH.write_text("", encoding="utf-8")
 
 
 def _load_core_server():
@@ -58,6 +64,8 @@ def _classify_result(tool_name: str, result: Any, expected_blocked: bool = False
     if isinstance(data, dict) and data and row_count == 0:
         if data.get("missing_sources"):
             return "PASS_EMPTY", 0, "Tool succeeded but required source entities are missing.", output_filter_applied
+        if data.get("no_data_in_checked_sources") or data.get("no_data_in_sources"):
+            return "PASS_EMPTY", 0, "Tool succeeded but current safe live sources returned no business rows.", output_filter_applied
         return "PASS", 0, "Tool returned structured non-tabular summary.", output_filter_applied
     if row_count == 0:
         note = "No business rows returned or source data missing."
@@ -112,23 +120,23 @@ def main() -> int:
         ("list_entities", {"limit": 15}, False),
         ("describe_entity", {"entity_name": entity_name}, False),
         ("search_metadata", {"text": "контрагент", "limit": 10}, False),
-        ("discover_inventory_sources", {"limit": 10, "check_data": False}, False),
+        ("discover_inventory_sources", {"limit": 10, "check_data": True}, False),
         ("get_inventory_auto", {"limit": 10}, False),
         ("get_low_stock_items", {"limit": 10, "threshold_quantity": "10"}, False),
-        ("discover_payment_sources", {"limit": 10, "check_data": False}, False),
-        ("get_outgoing_payments", {"date_from": "2024-01-01", "date_to": "2026-12-31", "limit": 10}, False),
-        ("get_incoming_payments", {"date_from": "2024-01-01", "date_to": "2026-12-31", "limit": 10}, False),
-        ("payment_summary_by_counterparty", {"direction": "incoming", "date_from": "2024-01-01", "date_to": "2026-12-31", "limit": 10}, False),
-        ("get_unpaid_customers_summary", {"date_from": "2024-01-01", "date_to": "2026-12-31", "limit": 10}, False),
-        ("get_overdue_unpaid_customers", {"date_from": "2024-01-01", "as_of_date": "2026-05-09", "threshold_days": 3, "limit": 10}, False),
-        ("get_customer_payment_behavior_summary", {"date_from": "2024-01-01", "as_of_date": "2026-05-09", "limit": 10}, False),
+        ("discover_payment_sources", {"limit": 10, "check_data": True}, False),
+        ("get_outgoing_payments", {"date_from": "2020-01-01", "date_to": "2026-12-31", "limit": 10}, False),
+        ("get_incoming_payments", {"date_from": "2020-01-01", "date_to": "2026-12-31", "limit": 10}, False),
+        ("payment_summary_by_counterparty", {"direction": "incoming", "date_from": "2020-01-01", "date_to": "2026-12-31", "limit": 10}, False),
+        ("get_unpaid_customers_summary", {"date_from": "2020-01-01", "date_to": "2026-12-31", "limit": 10}, False),
+        ("get_overdue_unpaid_customers", {"date_from": "2020-01-01", "as_of_date": "2026-05-09", "threshold_days": 3, "limit": 10}, False),
+        ("get_customer_payment_behavior_summary", {"date_from": "2020-01-01", "as_of_date": "2026-05-09", "limit": 10}, False),
         ("explain_last_answer", {}, False),
         ("parse_inventory_report_text", {"report_text": _safe_text_report()}, False),
         ("validate_inventory_report_text", {"report_text": _safe_text_report(), "warehouse": "Основной склад", "limit": 10}, False),
         ("find_buh_entity", {"kind": "counterparty", "query": "ТОО", "limit": 10}, False),
         ("search_document_by_number", {"document_number": "0001", "limit": 10}, False),
-        ("get_customer_settlements_summary", {"date_from": "2024-01-01", "date_to": "2026-12-31", "limit": 10}, False),
-        ("get_cash_bank_movements", {"date_from": "2024-01-01", "date_to": "2026-12-31", "movement_type": "all", "account_type": "all", "limit": 10}, False),
+        ("get_customer_settlements_summary", {"date_from": "2020-01-01", "date_to": "2026-12-31", "limit": 10}, False),
+        ("get_cash_bank_movements", {"date_from": "2020-01-01", "date_to": "2026-12-31", "movement_type": "all", "account_type": "all", "limit": 10}, False),
         ("query_entity", {"entity_name": entity_name, "top": 1}, True),
         ("post_document_validated", {"document_ref": "TEST-REF", "validation_result": {}}, True),
     ]

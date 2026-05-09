@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-05-09T16:27:41.203382+05:00",
+  "generated_at": "2026-05-09T16:48:53.472422+05:00",
   "base_url": "http://192.168.1.183/SaryDala",
   "service_url": "http://192.168.1.183/SaryDala/odata/standard.odata",
   "total_tools": 26,
-  "passed": 24,
-  "pass_empty": 0,
+  "passed": 20,
+  "pass_empty": 4,
   "skipped": 0,
   "failed": 0,
   "blocked_expected": 2,
@@ -37,7 +37,7 @@
         "check_live_entities": false,
         "live_limit": 5
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"status\": \"ready\", \"server\": \"ashybulakstroy-1c-bridge\", \"mode\": \"read-only\", \"checks\": [{\"name\": \"ONEC_ODATA_URL configured\", \"status\": \"ok\", \"details\": \"configured\"}, {\"name\": \"credentials configured\", \"status\": \"ok\", \"details\": \"username/password set\"}, {\"name\": \"ssl verification\", \"status\": \"ok\", \"details\": true}, {\"name\": \"$metadata readable\", \"status\": \"ok\", \"details\": {\"bytes\": 4153448}}, {\"name\": \"entities parsed\", \"status\": \"ok\", \"details\": {\"entity_count\": 1192}}, {\"name\": \"inventory source candidates\", \"status\": \"ok\", \"details\": {\"count\": 5, \"top\": [{\"entity\": \"Document_ВводНачальныхОстатков_ТоварыОрганизаций\", \"entity_type\": \"Document_ВводНачальныхОстатков_Т",
+      "result_summary": "{\"ok\": true, \"data\": {\"status\": \"ready\", \"server\": \"ashybulakstroy-1c-bridge\", \"mode\": \"read-only\", \"checks\": [{\"name\": \"ONEC_ODATA_URL configured\", \"status\": \"ok\", \"details\": \"configured\"}, {\"name\": \"credentials configured\", \"status\": \"ok\", \"details\": \"username/password set\"}, {\"name\": \"ssl verification\", \"status\": \"ok\", \"details\": true}, {\"name\": \"$metadata readable\", \"status\": \"ok\", \"details\": {\"bytes\": 4153448}}, {\"name\": \"entities parsed\", \"status\": \"ok\", \"details\": {\"entity_count\": 1192}}, {\"name\": \"inventory source candidates\", \"status\": \"ok\", \"details\": {\"count\": 5, \"top\": [{\"entity\": \"Document_ВводНачальныхОстатков_Запасы\", \"entity_type\": \"Document_ВводНачальныхОстатков_Запасы\", \"sc",
       "row_count": 5,
       "error_type": null,
       "audit_record_created": true,
@@ -74,7 +74,7 @@
       "input_used": {
         "text": "Проверь подключение к 1С"
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"intent\": \"setup_wizard\", \"result\": {\"status\": \"ready\", \"server\": \"ashybulakstroy-1c-bridge\", \"mode\": \"read-only\", \"checks\": [{\"name\": \"ONEC_ODATA_URL configured\", \"status\": \"ok\", \"details\": \"configured\"}, {\"name\": \"credentials configured\", \"status\": \"ok\", \"details\": \"username/password set\"}, {\"name\": \"ssl verification\", \"status\": \"ok\", \"details\": true}, {\"name\": \"$metadata readable\", \"status\": \"ok\", \"details\": {\"bytes\": 4153448}}, {\"name\": \"entities parsed\", \"status\": \"ok\", \"details\": {\"entity_count\": 1192}}, {\"name\": \"inventory source candidates\", \"status\": \"ok\", \"details\": {\"count\": 5, \"top\": [{\"entity\": \"Document_ВводНачальныхОстатков_ТоварыОрганизаций\", \"entity_typ",
+      "result_summary": "{\"ok\": true, \"data\": {\"intent\": \"setup_wizard\", \"result\": {\"status\": \"ready\", \"server\": \"ashybulakstroy-1c-bridge\", \"mode\": \"read-only\", \"checks\": [{\"name\": \"ONEC_ODATA_URL configured\", \"status\": \"ok\", \"details\": \"configured\"}, {\"name\": \"credentials configured\", \"status\": \"ok\", \"details\": \"username/password set\"}, {\"name\": \"ssl verification\", \"status\": \"ok\", \"details\": true}, {\"name\": \"$metadata readable\", \"status\": \"ok\", \"details\": {\"bytes\": 4153448}}, {\"name\": \"entities parsed\", \"status\": \"ok\", \"details\": {\"entity_count\": 1192}}, {\"name\": \"inventory source candidates\", \"status\": \"ok\", \"details\": {\"count\": 5, \"top\": [{\"entity\": \"Document_ВводНачальныхОстатков_Запасы\", \"entity_type\": \"Docume",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
@@ -146,9 +146,9 @@
       "status": "PASS",
       "input_used": {
         "limit": 10,
-        "check_data": false
+        "check_data": true
       },
-      "result_summary": "{\"ok\": true, \"data\": [{\"entity\": \"Document_ВводНачальныхОстатков_ТоварыОрганизаций\", \"entity_type\": \"Document_ВводНачальныхОстатков_ТоварыОрганизаций\", \"score\": 142, \"confidence\": \"high\", \"reasons\": [\"match:остат\", \"match:товар\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"inventory_priority:товарыорганизаций\", \"inventory_priority:остатк\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=Количество\", \"penalty:document\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"Количество\", \"amount\": null, \"period\": null}, \"field_count\": 6, \"sample_fields\": [\"Ref_Key\", \"LineNumber\", \"Номенклатура_Key\", \"НомерГТД_Key\", \"Количе",
+      "result_summary": "{\"ok\": true, \"data\": [{\"entity\": \"Document_ВводНачальныхОстатков_Запасы\", \"entity_type\": \"Document_ВводНачальныхОстатков_Запасы\", \"score\": 142, \"confidence\": \"high\", \"reasons\": [\"match:остат\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"match:сумма\", \"inventory_priority:остатк\", \"inventory_priority:запасы\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=КоличествоБУ\", \"field:amount=СуммаБУ\", \"penalty:document\", \"entity_has_data\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"КоличествоБУ\", \"amount\": \"СуммаБУ\", \"period\": null}, \"field_count\": 13, \"sample_fields\": [\"Ref_Key\", \"LineNumber\", \"СчетУчетаБУ_Key\", \"Ном",
       "row_count": 10,
       "error_type": null,
       "audit_record_created": true,
@@ -166,13 +166,13 @@
       "input_used": {
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ВводНачальныхОстатков_ТоварыОрганизаций\", \"entity_type\": \"Document_ВводНачальныхОстатков_ТоварыОрганизаций\", \"score\": 142, \"confidence\": \"high\", \"reasons\": [\"match:остат\", \"match:товар\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"inventory_priority:товарыорганизаций\", \"inventory_priority:остатк\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=Количество\", \"penalty:document\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"Количество\", \"amount\": null, \"period\": null}, \"field_count\": 6, \"sample_fields\": [\"Ref_Key\", \"LineNumber\", \"Номенклатура_Key\", \"НомерГТД_Key",
-      "row_count": 0,
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ВводНачальныхОстатков_Запасы\", \"entity_type\": \"Document_ВводНачальныхОстатков_Запасы\", \"score\": 142, \"confidence\": \"high\", \"reasons\": [\"match:остат\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"match:сумма\", \"inventory_priority:остатк\", \"inventory_priority:запасы\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=КоличествоБУ\", \"field:amount=СуммаБУ\", \"penalty:document\", \"entity_has_data\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"КоличествоБУ\", \"amount\": \"СуммаБУ\", \"period\": null}, \"field_count\": 13, \"sample_fields\": [\"Ref_Key\", \"LineNumber\", \"СчетУчетаБУ_",
+      "row_count": 1,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,
       "raw_odata_url_leaked": false,
-      "notes": "Tool returned structured non-tabular summary."
+      "notes": "Tool returned non-empty read-only result."
     },
     {
       "tool_name": "get_low_stock_items",
@@ -185,7 +185,7 @@
         "limit": 10,
         "threshold_quantity": "10"
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ВводНачальныхОстатков_ТоварыОрганизаций\", \"entity_type\": \"Document_ВводНачальныхОстатков_ТоварыОрганизаций\", \"score\": 142, \"confidence\": \"high\", \"reasons\": [\"match:остат\", \"match:товар\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"inventory_priority:товарыорганизаций\", \"inventory_priority:остатк\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=Количество\", \"penalty:document\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"Количество\", \"amount\": null, \"period\": null}, \"field_count\": 6, \"sample_fields\": [\"Ref_Key\", \"LineNumber\", \"Номенклатура_Key\", \"НомерГТД_Key",
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ВводНачальныхОстатков_Запасы\", \"entity_type\": \"Document_ВводНачальныхОстатков_Запасы\", \"score\": 142, \"confidence\": \"high\", \"reasons\": [\"match:остат\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"match:сумма\", \"inventory_priority:остатк\", \"inventory_priority:запасы\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=КоличествоБУ\", \"field:amount=СуммаБУ\", \"penalty:document\", \"entity_has_data\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"КоличествоБУ\", \"amount\": \"СуммаБУ\", \"period\": null}, \"field_count\": 13, \"sample_fields\": [\"Ref_Key\", \"LineNumber\", \"СчетУчетаБУ_",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
@@ -202,9 +202,9 @@
       "status": "PASS",
       "input_used": {
         "limit": 10,
-        "check_data": false
+        "check_data": true
       },
-      "result_summary": "{\"ok\": true, \"data\": [{\"entity\": \"Document_ПлатежноеПоручениеВходящее\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 177, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:банк\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"direction:incoming\", \"account:bank_priority\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\", \"bank_account\": \"СчетОрга",
+      "result_summary": "{\"ok\": true, \"data\": [{\"entity\": \"Document_ПлатежноеПоручениеВходящее\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 177, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:банк\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"direction:incoming\", \"account:bank_priority\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\", \"bank_account\": \"СчетБанк",
       "row_count": 10,
       "error_type": null,
       "audit_record_created": true,
@@ -218,19 +218,19 @@
       "capabilities": [
         "read_payments"
       ],
-      "status": "PASS",
+      "status": "PASS_EMPTY",
       "input_used": {
-        "date_from": "2024-01-01",
+        "date_from": "2020-01-01",
         "date_to": "2026-12-31",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежныйОрдерСписаниеДенежныхСредств\", \"entity_type\": \"Document_ПлатежныйОрдерСписаниеДенежныхСредств\", \"direction\": \"outgoing\", \"account_type\": \"bank\", \"score\": 177, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:банк\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"direction:outgoing\", \"account:bank_priority\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация",
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеИсходящее_ПеречислениеПоИсполнительнымЛистам\", \"entity_type\": \"Document_ПлатежноеПоручениеИсходящее_ПеречислениеПоИсполнительнымЛистам\", \"direction\": \"outgoing\", \"account_type\": \"bank\", \"score\": 117, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:сумма\", \"direction:outgoing\", \"account:bank_priority\", \"field:amount=СуммаПлатежа\", \"field:number=LineNumber\"], \"mapped_fields\": {\"counterparty\": null, \"amount\": \"СуммаПлатежа\", \"date\": null, \"number\": \"LineNumber\", \"organization\": null, \"bank_account\": null, \"currency\": null, \"purpose\": null}, \"field_count\": 6, \"sample_fields\": [\"Ref",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,
       "raw_odata_url_leaked": false,
-      "notes": "Tool returned structured non-tabular summary."
+      "notes": "Tool succeeded but current safe live sources returned no business rows."
     },
     {
       "tool_name": "get_incoming_payments",
@@ -238,19 +238,19 @@
       "capabilities": [
         "read_payments"
       ],
-      "status": "PASS",
+      "status": "PASS_EMPTY",
       "input_used": {
-        "date_from": "2024-01-01",
+        "date_from": "2020-01-01",
         "date_to": "2026-12-31",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеВходящее\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 177, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:банк\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"direction:incoming\", \"account:bank_priority\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\", \"bank_account\":",
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 117, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:сумма\", \"direction:incoming\", \"account:bank_priority\", \"field:amount=СуммаВозврата\", \"field:number=LineNumber\"], \"mapped_fields\": {\"counterparty\": null, \"amount\": \"СуммаВозврата\", \"date\": null, \"number\": \"LineNumber\", \"organization\": null, \"bank_account\": null, \"currency\": null, \"purpose\": null}, \"field_count\": 4, \"sample_fields\": [\"Ref_Key\", \"LineNu",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,
       "raw_odata_url_leaked": false,
-      "notes": "Tool returned structured non-tabular summary."
+      "notes": "Tool succeeded but current safe live sources returned no business rows."
     },
     {
       "tool_name": "payment_summary_by_counterparty",
@@ -259,20 +259,20 @@
         "create_local_report",
         "read_payments"
       ],
-      "status": "PASS",
+      "status": "PASS_EMPTY",
       "input_used": {
         "direction": "incoming",
-        "date_from": "2024-01-01",
+        "date_from": "2020-01-01",
         "date_to": "2026-12-31",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеВходящее\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 177, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:банк\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"direction:incoming\", \"account:bank_priority\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\", \"bank_account\":",
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 117, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:сумма\", \"direction:incoming\", \"account:bank_priority\", \"field:amount=СуммаВозврата\", \"field:number=LineNumber\"], \"mapped_fields\": {\"counterparty\": null, \"amount\": \"СуммаВозврата\", \"date\": null, \"number\": \"LineNumber\", \"organization\": null, \"bank_account\": null, \"currency\": null, \"purpose\": null}, \"field_count\": 4, \"sample_fields\": [\"Ref_Key\", \"LineNu",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,
       "raw_odata_url_leaked": false,
-      "notes": "Tool returned structured non-tabular summary."
+      "notes": "Tool succeeded but current safe live sources returned no business rows."
     },
     {
       "tool_name": "get_unpaid_customers_summary",
@@ -283,17 +283,17 @@
       ],
       "status": "PASS",
       "input_used": {
-        "date_from": "2024-01-01",
+        "date_from": "2020-01-01",
         "date_to": "2026-12-31",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"sales_source\": {\"entity\": \"Document_РеализацияТоваровУслуг\", \"entity_type\": \"Document_РеализацияТоваровУслуг\", \"score\": 141, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:реализац\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"match:number\", \"match:номер\", \"sales_priority:реализациятоваровуслуг\", \"field:counterparty=ДоговорКонтрагента_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"ДоговорКонтрагента_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\"}, \"field_count\": 52, \"sample_fields\": [\"Ref_Key\", \"D",
-      "row_count": 0,
+      "result_summary": "{\"ok\": true, \"data\": {\"sales_source\": {\"entity\": \"Document_СчетНаОплатуПокупателю\", \"entity_type\": \"Document_СчетНаОплатуПокупателю\", \"score\": 125, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:number\", \"sales_priority:счетнаоплатупокупателю\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\", \"entity_has_data\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\"}, \"field_count\": 30, \"sample_fields\": [\"Ref_Key\", \"DataVersion\", \"Number\", \"D",
+      "row_count": 1,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,
       "raw_odata_url_leaked": false,
-      "notes": "Tool returned structured non-tabular summary."
+      "notes": "Tool returned non-empty read-only result."
     },
     {
       "tool_name": "get_overdue_unpaid_customers",
@@ -304,18 +304,18 @@
       ],
       "status": "PASS",
       "input_used": {
-        "date_from": "2024-01-01",
+        "date_from": "2020-01-01",
         "as_of_date": "2026-05-09",
         "threshold_days": 3,
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"sales_source\": {\"entity\": \"Document_РеализацияТоваровУслуг\", \"entity_type\": \"Document_РеализацияТоваровУслуг\", \"score\": 141, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:реализац\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"match:number\", \"match:номер\", \"sales_priority:реализациятоваровуслуг\", \"field:counterparty=ДоговорКонтрагента_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"ДоговорКонтрагента_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\"}, \"field_count\": 52, \"sample_fields\": [\"Ref_Key\", \"D",
-      "row_count": 0,
+      "result_summary": "{\"ok\": true, \"data\": {\"sales_source\": {\"entity\": \"Document_СчетНаОплатуПокупателю\", \"entity_type\": \"Document_СчетНаОплатуПокупателю\", \"score\": 125, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:number\", \"sales_priority:счетнаоплатупокупателю\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\", \"entity_has_data\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\"}, \"field_count\": 30, \"sample_fields\": [\"Ref_Key\", \"DataVersion\", \"Number\", \"D",
+      "row_count": 1,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,
       "raw_odata_url_leaked": false,
-      "notes": "Tool returned structured non-tabular summary."
+      "notes": "Tool returned non-empty read-only result."
     },
     {
       "tool_name": "get_customer_payment_behavior_summary",
@@ -326,17 +326,17 @@
       ],
       "status": "PASS",
       "input_used": {
-        "date_from": "2024-01-01",
+        "date_from": "2020-01-01",
         "as_of_date": "2026-05-09",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"sales_source\": {\"entity\": \"Document_РеализацияТоваровУслуг\", \"entity_type\": \"Document_РеализацияТоваровУслуг\", \"score\": 141, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:реализац\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"match:number\", \"match:номер\", \"sales_priority:реализациятоваровуслуг\", \"field:counterparty=ДоговорКонтрагента_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"ДоговорКонтрагента_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\"}, \"field_count\": 52, \"sample_fields\": [\"Ref_Key\", \"D",
-      "row_count": 0,
+      "result_summary": "{\"ok\": true, \"data\": {\"sales_source\": {\"entity\": \"Document_СчетНаОплатуПокупателю\", \"entity_type\": \"Document_СчетНаОплатуПокупателю\", \"score\": 125, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:number\", \"sales_priority:счетнаоплатупокупателю\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\", \"entity_has_data\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\"}, \"field_count\": 30, \"sample_fields\": [\"Ref_Key\", \"DataVersion\", \"Number\", \"D",
+      "row_count": 1,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,
       "raw_odata_url_leaked": false,
-      "notes": "Tool returned structured non-tabular summary."
+      "notes": "Tool returned non-empty read-only result."
     },
     {
       "tool_name": "explain_last_answer",
@@ -346,7 +346,7 @@
       ],
       "status": "PASS",
       "input_used": {},
-      "result_summary": "{\"ok\": true, \"data\": {\"last_tool\": \"get_customer_payment_behavior_summary\", \"summary\": [\"Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.\"], \"warnings\": [\"OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.\", \"OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.\", \"typical_payment_days считается только по полностью закрытым реализациям/счетам.\"], \"source\": null, \"confidence\": null}}",
+      "result_summary": "{\"ok\": true, \"data\": {\"last_tool\": \"get_customer_payment_behavior_summary\", \"summary\": [\"Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.\"], \"warnings\": [\"OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.\", \"Источник Document_ПлатежноеПоручениеВходящее не вернул строк по текущим фильтрам. Пробуем следующий safe candidate.\", \"Источник Document_ПлатежныйОрдерПоступлениеДенежныхСредств не вернул строк по текущим фильтрам. Пробуем следующий safe candidate.\", \"Источник Document_ПриходныйКассовыйОрдер не вернул строк по текущим фильтрам. Пробуем следующий safe candidat",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
@@ -424,7 +424,7 @@
         "document_number": "0001",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"document_number\": \"0001\", \"document_type_filter\": null, \"filters_applied_in_python\": {\"date_from\": null, \"date_to\": null, \"limit\": 10}, \"matched_entities\": [\"Catalog_БанковскиеСчета\", \"Document_ВводНачальныхОстатков\", \"Document_СчетНаОплатуПокупателю\", \"Document_УстановкаСоответствияСчетовБУиНУ\"], \"count_returned\": 8, \"data\": [{\"document_type\": \"Document_СчетНаОплатуПокупателю\", \"number\": \"00000000001\", \"date\": \"2021-08-23T16:39:05\", \"counterparty\": \"00000000-0000-0000-0000-000000000000\", \"amount\": 87725, \"status\": \"not_posted\", \"reference\": \"4601dee4-03d9-11ec-8ce2-5c3a45e64368\"}, {\"document_type\": \"Document_ВводНачальныхОстатков\", \"number\": \"00000000001\", \"date\": \"20",
+      "result_summary": "{\"ok\": true, \"data\": {\"document_number\": \"0001\", \"document_type_filter\": null, \"filters_applied_in_python\": {\"date_from\": null, \"date_to\": null, \"limit\": 10}, \"matched_entities\": [\"Catalog_БанковскиеСчета\", \"Document_ВводНачальныхОстатков\", \"Document_СчетНаОплатуПокупателю\", \"Document_УстановкаСоответствияСчетовБУиНУ\"], \"count_returned\": 8, \"data\": [{\"document_type\": \"Document_СчетНаОплатуПокупателю\", \"number\": \"00000000001\", \"date\": \"2021-08-23T16:39:05\", \"counterparty\": \"33959134-98e5-11eb-8c47-5c3a45e64368\", \"amount\": 87725, \"status\": \"not_posted\", \"reference\": \"4601dee4-03d9-11ec-8ce2-5c3a45e64368\"}, {\"document_type\": \"Document_ВводНачальныхОстатков\", \"number\": \"00000000001\", \"date\": \"20",
       "row_count": 8,
       "error_type": null,
       "audit_record_created": true,
@@ -440,17 +440,17 @@
       ],
       "status": "PASS",
       "input_used": {
-        "date_from": "2024-01-01",
+        "date_from": "2020-01-01",
         "date_to": "2026-12-31",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 0, \"data\": [], \"filters_applied_in_python\": {\"date_from\": \"2024-01-01\", \"date_to\": \"2026-12-31\", \"counterparty_name\": null, \"min_debt\": \"0\", \"limit\": 10}, \"sales_source\": {\"entity\": \"Document_РеализацияТоваровУслуг\", \"entity_type\": \"Document_РеализацияТоваровУслуг\", \"score\": 141, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:реализац\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"match:number\", \"match:номер\", \"sales_priority:реализациятоваровуслуг\", \"field:counterparty=ДоговорКонтрагента_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"До",
-      "row_count": 0,
+      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 1, \"data\": [{\"counterparty\": \"33959134-98e5-11eb-8c47-5c3a45e64368\", \"bin_or_iin\": null, \"debt_amount\": \"87725\", \"currency\": null, \"last_payment_date\": null, \"overdue_days\": 1956, \"source_document_count\": 1, \"source_entity\": \"Document_СчетНаОплатуПокупателю\"}], \"filters_applied_in_python\": {\"date_from\": \"2020-01-01\", \"date_to\": \"2026-12-31\", \"counterparty_name\": null, \"min_debt\": \"0\", \"limit\": 10}, \"sales_source\": {\"entity\": \"Document_СчетНаОплатуПокупателю\", \"entity_type\": \"Document_СчетНаОплатуПокупателю\", \"score\": 125, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:d",
+      "row_count": 1,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,
       "raw_odata_url_leaked": false,
-      "notes": "Tool returned structured non-tabular summary."
+      "notes": "Tool returned non-empty read-only result."
     },
     {
       "tool_name": "get_cash_bank_movements",
@@ -458,21 +458,21 @@
       "capabilities": [
         "read_cash_bank_movements"
       ],
-      "status": "PASS",
+      "status": "PASS_EMPTY",
       "input_used": {
-        "date_from": "2024-01-01",
+        "date_from": "2020-01-01",
         "date_to": "2026-12-31",
         "movement_type": "all",
         "account_type": "all",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 0, \"data\": [], \"filters_applied_in_python\": {\"date_from\": \"2024-01-01\", \"date_to\": \"2026-12-31\", \"movement_type\": \"all\", \"account_type\": \"all\", \"counterparty_name\": null, \"min_amount\": \"0\", \"limit\": 10}, \"missing_sources\": [], \"source_explanation\": {\"incoming_sources_used\": [\"AccumulationRegister_СведенияСчетовФактурПолученных_RecordType\", \"Catalog_НастройкиОбменСБанками\", \"Document_Доверенность\", \"Document_ОприходованиеТоваров\", \"Document_ОприходованиеТоваров_Товары\", \"Document_ОтчетОРозничныхПродажах_Товары\", \"Document_ПлатежноеПоручениеВходящее\", \"Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты\", \"Document_ПлатежноеПоручениеВходящее_Возвр",
+      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 0, \"data\": [], \"no_data_in_sources\": true, \"filters_applied_in_python\": {\"date_from\": \"2020-01-01\", \"date_to\": \"2026-12-31\", \"movement_type\": \"all\", \"account_type\": \"all\", \"counterparty_name\": null, \"min_amount\": \"0\", \"limit\": 10}, \"missing_sources\": [], \"source_explanation\": {\"incoming_sources_used\": [\"AccumulationRegister_СведенияСчетовФактурПолученных_RecordType\", \"Catalog_НастройкиОбменСБанками\", \"Document_Доверенность\", \"Document_ОприходованиеТоваров\", \"Document_ОприходованиеТоваров_Товары\", \"Document_ОтчетОРозничныхПродажах_Товары\", \"Document_ПлатежноеПоручениеВходящее\", \"Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты\", \"Document_Плат",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,
       "raw_odata_url_leaked": false,
-      "notes": "Tool returned structured non-tabular summary."
+      "notes": "Tool succeeded but current safe live sources returned no business rows."
     },
     {
       "tool_name": "query_entity",

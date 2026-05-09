@@ -1,6 +1,6 @@
 # 1C OData Schema: SaryDala
 
-- Generated: `2026-05-09T16:26:22.354111+05:00`
+- Generated: `2026-05-09T16:36:49.764283+05:00`
 - Base URL: `http://192.168.1.183/SaryDala`
 - Service URL: `http://192.168.1.183/SaryDala/odata/standard.odata`
 - Total entity count: `1192`
@@ -256,7 +256,7 @@
 - Possible date field: `Date`
 - Possible number field: `Number`
 - Possible amount fields: `СуммаДокумента, СуммаВключаетАкциз`
-- Possible counterparty fields: `ДоговорКонтрагента_Key, Грузополучатель_Key`
+- Possible counterparty fields: `Грузополучатель_Key, Контрагент_Key`
 - Possible warehouse fields: `Склад_Key`
 - Possible currency fields: `ВалютаДокумента_Key`
 - Comments for tool developers:
@@ -356,7 +356,7 @@
 - Possible date field: `Date`
 - Possible number field: `Number`
 - Possible amount fields: `СуммаДокумента, СуммаВключаетНДС`
-- Possible counterparty fields: `ДоговорКонтрагента_Key, Грузополучатель_Key`
+- Possible counterparty fields: `Грузополучатель_Key, Контрагент_Key`
 - Possible warehouse fields: `СтруктурноеПодразделение_Key`
 - Possible currency fields: `ВалютаДокумента_Key`
 - Comments for tool developers:
@@ -479,9 +479,9 @@
 - Possible date field: `Date`
 - Possible number field: `Number`
 - Possible amount fields: `СуммаДокумента`
-- Possible counterparty fields: `ГрузополучательИдентификатор, Контрагент_Key`
+- Possible counterparty fields: `Грузополучатель, Контрагент_Key`
 - Possible warehouse fields: `СтруктурноеПодразделение_Key`
-- Possible currency fields: `ВалютаКод`
+- Possible currency fields: `Валюта_Key`
 - Comments for tool developers:
   - Looks usable for payment or cash/bank movement tools.
   - Looks usable for sales or customer settlement summaries.
@@ -556,7 +556,7 @@
 - Possible date field: `Date`
 - Possible number field: `Number`
 - Possible amount fields: `СуммаДокумента, СуммаВключаетАкциз`
-- Possible counterparty fields: `ДоговорКонтрагента_Key`
+- Possible counterparty fields: `Контрагент_Key`
 - Possible warehouse fields: `Склад_Key`
 - Possible currency fields: `ВалютаДокумента_Key`
 - Comments for tool developers:

@@ -285,7 +285,14 @@ class OneCODataClient:
                 except Exception as exc:
                     row["has_data"] = None
                     row["error"] = str(exc)[:300]
-        return sorted(ranked, key=lambda r: r["score"], reverse=True)[:limit]
+        return sorted(
+            ranked,
+            key=lambda r: (
+                1 if r.get("has_data") is True else 0,
+                r["score"],
+            ),
+            reverse=True,
+        )[:limit]
 
     def get_inventory_auto(
         self,
@@ -507,7 +514,14 @@ class OneCODataClient:
                 except Exception as exc:
                     row["has_data"] = None
                     row["error"] = str(exc)[:300]
-        return sorted(ranked, key=lambda r: r["score"], reverse=True)[:limit]
+        return sorted(
+            ranked,
+            key=lambda r: (
+                1 if r.get("has_data") is True else 0,
+                r["score"],
+            ),
+            reverse=True,
+        )[:limit]
 
     def get_sales_documents(
         self,
@@ -1172,6 +1186,7 @@ class OneCODataClient:
         return {
             "count_returned": min(len(rows), effective_limit),
             "data": rows[:effective_limit],
+            "no_data_in_sources": not bool(rows),
             "filters_applied_in_python": {
                 "date_from": validated_from,
                 "date_to": validated_to,
@@ -1204,6 +1219,11 @@ class OneCODataClient:
     ) -> dict[str, Any]:
         """Read incoming or outgoing payment-like rows from OData using metadata heuristics."""
         normalized_direction = self._normalize_payment_direction(direction)
+        effective_from = date or date_from
+        effective_to = date or date_to
+        source_candidates_checked: list[str] = []
+        warnings: list[str] = []
+
         if entity_name:
             entity = self.describe_entity(entity_name)
             if entity is None:
@@ -1214,75 +1234,91 @@ class OneCODataClient:
                     f"Сущность {entity_name} выглядит как payment direction={entity_direction}, а запрошено direction={normalized_direction}."
                 )
             mapped = self._map_payment_fields([f.name for f in (entity.fields or [])])
-            source = {
+            source_candidates = [{
                 "entity": entity.name,
                 "direction": entity_direction,
                 "score": score,
                 "confidence": self._confidence_from_score(score),
                 "reasons": reasons,
                 "mapped_fields": mapped,
-            }
+            }]
         else:
-            sources = self.discover_payment_sources(direction=normalized_direction, limit=1, check_data=True)
-            if not sources:
+            source_candidates = self.discover_payment_sources(direction=normalized_direction, limit=10, check_data=True)
+            if not source_candidates:
                 raise ODataError(
                     f"Не найден кандидат на источник платежей direction={normalized_direction}. Запустите discover_payment_sources для диагностики."
                 )
-            source = sources[0]
+        source = source_candidates[0]
+        normalized: list[dict[str, Any]] = []
+        query_top = min(max(limit, 50), self.settings.max_top)
+        chosen_filter_fallback_used = False
+
+        for idx, candidate in enumerate(source_candidates):
+            source_candidates_checked.append(str(candidate.get("entity")))
+            mapped = candidate.get("mapped_fields") or {}
+            select = self._build_payment_select(mapped)
+            filter_expr = self._build_common_text_date_filter(
+                mapped,
+                date_from=effective_from,
+                date_to=effective_to,
+                text_field_key="counterparty",
+                text_value=counterparty,
+            )
+            try:
+                raw = self.query_entity(
+                    candidate["entity"],
+                    top=query_top,
+                    select=select or None,
+                    filter_expr=filter_expr or None,
+                )
+                filter_fallback_used = False
+            except ODataError as exc:
+                if filter_expr and self._is_unsupported_where_filter_error(exc):
+                    raw = self.query_entity(
+                        candidate["entity"],
+                        top=min(max(limit * 3, 100), self.settings.max_top),
+                        select=select or None,
+                        filter_expr=None,
+                    )
+                    filter_fallback_used = True
+                elif entity_name:
+                    raise
+                else:
+                    warnings.append(f"Источник {candidate['entity']} пропущен: безопасное чтение не удалось.")
+                    continue
+
+            rows = raw.get("data") or []
+            candidate_normalized = [self._normalize_payment_row(r, mapped, candidate.get("direction")) for r in rows]
+            if effective_from or effective_to:
+                candidate_normalized = [
+                    r for r in candidate_normalized
+                    if self._date_in_range(r.get("date"), effective_from, effective_to)
+                ]
+            if counterparty:
+                candidate_normalized = [
+                    r for r in candidate_normalized
+                    if self._text_match(r.get("counterparty"), counterparty) or self._text_match(r.get("raw"), counterparty)
+                ]
+
+            source = candidate
+            normalized = candidate_normalized
+            chosen_filter_fallback_used = filter_fallback_used
+            if entity_name or candidate_normalized:
+                break
+            if idx < len(source_candidates) - 1:
+                warnings.append(f"Источник {candidate['entity']} не вернул строк по текущим фильтрам. Пробуем следующий safe candidate.")
 
         mapped = source.get("mapped_fields") or {}
-        select = self._build_payment_select(mapped)
-        effective_from = date or date_from
-        effective_to = date or date_to
-        filter_expr = self._build_common_text_date_filter(
-            mapped,
-            date_from=effective_from,
-            date_to=effective_to,
-            text_field_key="counterparty",
-            text_value=counterparty,
-        )
-        query_top = min(max(limit, 50), self.settings.max_top)
-        try:
-            raw = self.query_entity(
-                source["entity"],
-                top=query_top,
-                select=select or None,
-                filter_expr=filter_expr or None,
-            )
-            filter_fallback_used = False
-        except ODataError as exc:
-            if filter_expr and self._is_unsupported_where_filter_error(exc):
-                raw = self.query_entity(
-                    source["entity"],
-                    top=min(max(limit * 3, 100), self.settings.max_top),
-                    select=select or None,
-                    filter_expr=None,
-                )
-                filter_fallback_used = True
-            else:
-                raise
-        rows = raw.get("data") or []
-        normalized = [self._normalize_payment_row(r, mapped, source.get("direction")) for r in rows]
-
-        warnings: list[str] = []
-        if filter_fallback_used:
+        if chosen_filter_fallback_used:
             warnings.append("OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.")
-        if effective_from or effective_to:
-            normalized = [
-                r for r in normalized
-                if self._date_in_range(r.get("date"), effective_from, effective_to)
-            ]
-        if counterparty:
-            normalized = [
-                r for r in normalized
-                if self._text_match(r.get("counterparty"), counterparty) or self._text_match(r.get("raw"), counterparty)
-            ]
         if not mapped.get("counterparty"):
             warnings.append("Не найдено явное поле контрагента. Проверьте mapped_fields и сущность вручную.")
         if not mapped.get("amount"):
             warnings.append("Не найдено явное поле суммы. Возможна неполная интерпретация платежей.")
         if not mapped.get("date"):
             warnings.append("Не найдено явное поле даты. Фильтрация по периоду могла сработать не для всех строк.")
+        if not normalized:
+            warnings.append("В текущей OData-публикации не найдено строк по проверенным payment-like safe sources для заданных фильтров.")
 
         counterparty_totals: dict[str, Decimal] = {}
         total_amount = Decimal("0")
@@ -1305,6 +1341,8 @@ class OneCODataClient:
 
         return {
             "source": source,
+            "source_candidates_checked": source_candidates_checked,
+            "no_data_in_checked_sources": not bool(normalized),
             "filters_applied_in_python": {
                 "direction": normalized_direction,
                 "date": date,
@@ -1373,6 +1411,8 @@ class OneCODataClient:
 
         return {
             "source": payments.get("source"),
+            "source_candidates_checked": payments.get("source_candidates_checked") or [],
+            "no_data_in_sources": bool(payments.get("no_data_in_checked_sources")) and not bool(summary_rows),
             "filters_applied_in_python": payments.get("filters_applied_in_python"),
             "direction": self._normalize_payment_direction(direction),
             "total_amount": str(total_amount),
@@ -1800,58 +1840,49 @@ class OneCODataClient:
 
     def _map_payment_fields(self, field_names: list[str]) -> dict[str, str | None]:
         patterns: dict[str, list[str]] = {
-            "counterparty": ["контрагент", "partner", "counterparty", "client", "customer", "supplier", "получатель", "плательщик"],
-            "amount": ["суммадокумента", "сумма", "amount", "paymentamount", "total"],
-            "date": ["дата", "date", "period", "период", "documentdate"],
-            "number": ["номер", "number", "documentnumber"],
-            "organization": ["организация", "organization", "company"],
-            "bank_account": ["банковскийсчет", "bankaccount", "счеторганизации", "касса", "cashbox"],
-            "currency": ["валюта", "currency"],
-            "purpose": ["комментарий", "comment", "назначениеплатежа", "purpose", "description"],
+            "counterparty": ["контрагентkey", "контрагент", "partner", "counterparty", "client", "customer", "supplier", "получательkey", "получатель", "плательщикkey", "плательщик", "договорконтрагентакey"],
+            "amount": ["суммадокумента", "суммаплатежа", "сумма", "amount", "paymentamount", "total"],
+            "date": ["date", "дата", "period", "период", "documentdate"],
+            "number": ["number", "номер", "documentnumber"],
+            "organization": ["организацияkey", "организация", "organization", "company"],
+            "bank_account": ["счеторганизацииkey", "банковскийсчетkey", "счетбанкkey", "кассаkey", "банковскийсчет", "bankaccount", "счеторганизации", "касса", "cashbox"],
+            "currency": ["валютадокументаkey", "валютаkey", "валюта", "currency"],
+            "purpose": ["назначениеплатежа", "комментарий", "comment", "purpose", "description"],
         }
-        mapped: dict[str, str | None] = {k: None for k in patterns}
-        normalized = [(name, self._norm(name)) for name in field_names]
-        for key, terms in patterns.items():
-            exactish = [x for x in normalized if any(x[1] == self._norm(t) for t in terms)]
-            contains = [x for x in normalized if any(self._norm(t) in x[1] for t in terms)]
-            choice = (exactish or contains or [(None, "")])[0][0]
-            mapped[key] = choice
-        return mapped
+        return self._map_fields_by_patterns(field_names, patterns)
 
     def _map_sales_fields(self, field_names: list[str]) -> dict[str, str | None]:
         patterns: dict[str, list[str]] = {
-            "counterparty": ["контрагент", "partner", "counterparty", "client", "customer", "buyer", "покупатель"],
+            "counterparty": ["контрагентkey", "контрагент", "customer", "buyer", "покупатель", "грузополучательkey", "грузополучатель", "договорконтрагентакey"],
             "amount": ["суммадокумента", "сумма", "amount", "total"],
-            "date": ["дата", "date", "period", "период", "documentdate"],
-            "number": ["номер", "number", "documentnumber"],
-            "organization": ["организация", "organization", "company"],
+            "date": ["date", "дата", "period", "период", "documentdate"],
+            "number": ["number", "номер", "documentnumber"],
+            "organization": ["организацияkey", "организация", "organization", "company"],
         }
-        mapped: dict[str, str | None] = {k: None for k in patterns}
-        normalized = [(name, self._norm(name)) for name in field_names]
-        for key, terms in patterns.items():
-            exactish = [x for x in normalized if any(x[1] == self._norm(t) for t in terms)]
-            contains = [x for x in normalized if any(self._norm(t) in x[1] for t in terms)]
-            choice = (exactish or contains or [(None, "")])[0][0]
-            mapped[key] = choice
-        return mapped
+        return self._map_fields_by_patterns(field_names, patterns)
 
     def _map_document_fields(self, field_names: list[str]) -> dict[str, str | None]:
         patterns: dict[str, list[str]] = {
-            "counterparty": ["контрагент", "partner", "counterparty", "client", "customer", "buyer", "supplier", "покупатель", "поставщик"],
+            "counterparty": ["контрагентkey", "контрагент", "customer", "buyer", "supplier", "покупатель", "поставщик", "грузополучательkey", "грузополучатель", "договорконтрагентакey"],
             "amount": ["суммадокумента", "сумма", "amount", "total"],
-            "date": ["дата", "date", "period", "период", "documentdate"],
-            "number": ["номер", "number", "documentnumber"],
+            "date": ["date", "дата", "period", "период", "documentdate"],
+            "number": ["number", "номер", "documentnumber"],
             "status": ["статус", "status", "state"],
             "posted": ["posted", "проведен", "проведён"],
-            "reference": ["ref_key", "refkey", "ссылка", "ref", "id", "key"],
+            "reference": ["refkey", "ref_key", "ссылка", "ref", "id", "key"],
             "deletion_mark": ["deletionmark", "пометкаудаления", "markedfordeletion", "isdeleted"],
         }
+        return self._map_fields_by_patterns(field_names, patterns)
+
+    def _map_fields_by_patterns(self, field_names: list[str], patterns: dict[str, list[str]]) -> dict[str, str | None]:
         mapped: dict[str, str | None] = {k: None for k in patterns}
         normalized = [(name, self._norm(name)) for name in field_names]
         for key, terms in patterns.items():
-            exactish = [x for x in normalized if any(x[1] == self._norm(t) for t in terms)]
-            contains = [x for x in normalized if any(self._norm(t) in x[1] for t in terms)]
-            choice = (exactish or contains or [(None, "")])[0][0]
+            normalized_terms = [self._norm(t) for t in terms]
+            exactish = [x for x in normalized if any(x[1] == term for term in normalized_terms)]
+            starts = [x for x in normalized if any(x[1].startswith(term) for term in normalized_terms)]
+            contains = [x for x in normalized if any(term in x[1] for term in normalized_terms)]
+            choice = (exactish or starts or contains or [(None, "")])[0][0]
             mapped[key] = choice
         return mapped
 
