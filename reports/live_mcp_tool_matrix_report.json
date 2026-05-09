@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-09T16:48:53.472422+05:00",
+  "generated_at": "2026-05-09T16:58:23.970723+05:00",
   "base_url": "http://192.168.1.183/SaryDala",
   "service_url": "http://192.168.1.183/SaryDala/odata/standard.odata",
   "total_tools": 26,
@@ -385,7 +385,7 @@
         "warehouse": "Основной склад",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"status\": \"no_mcp_rows\", \"summary\": {\"mcp_rows\": 0, \"report_rows\": 2, \"matched_keys\": 0, \"mismatched_keys\": 0, \"missing_in_mcp\": 2, \"missing_in_report\": 0, \"total_mcp_quantity\": 0, \"total_report_quantity\": 15, \"total_quantity_diff\": -15, \"total_mcp_amount\": 0, \"total_report_amount\": 280000, \"total_amount_diff\": -280000}, \"settings\": {\"key_fields\": [\"item\", \"warehouse\"], \"tolerance_quantity\": \"0.001\", \"tolerance_amount\": \"1.00\", \"compare_amount\": true}, \"mismatched\": [], \"missing_in_mcp\": [{\"key\": {\"item\": \"песок\", \"warehouse\": \"основной склад\"}, \"mcp_quantity\": 0, \"report_quantity\": 5, \"quantity_diff\": -5, \"mcp_amount\": 0, \"report_amount\": 30000, \"amount_diff\": -30000, ",
+      "result_summary": "{\"ok\": true, \"data\": {\"status\": \"mismatch\", \"summary\": {\"mcp_rows\": 1, \"report_rows\": 2, \"matched_keys\": 0, \"mismatched_keys\": 0, \"missing_in_mcp\": 2, \"missing_in_report\": 1, \"total_mcp_quantity\": 100, \"total_report_quantity\": 15, \"total_quantity_diff\": 85, \"total_mcp_amount\": 55000, \"total_report_amount\": 280000, \"total_amount_diff\": -225000}, \"settings\": {\"key_fields\": [\"item\", \"warehouse\"], \"tolerance_quantity\": \"0.001\", \"tolerance_amount\": \"1.00\", \"compare_amount\": true}, \"mismatched\": [], \"missing_in_mcp\": [{\"key\": {\"item\": \"песок\", \"warehouse\": \"основной склад\"}, \"mcp_quantity\": 0, \"report_quantity\": 5, \"quantity_diff\": -5, \"mcp_amount\": 0, \"report_amount\": 30000, \"amount_diff\": -30000",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
@@ -424,7 +424,7 @@
         "document_number": "0001",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"document_number\": \"0001\", \"document_type_filter\": null, \"filters_applied_in_python\": {\"date_from\": null, \"date_to\": null, \"limit\": 10}, \"matched_entities\": [\"Catalog_БанковскиеСчета\", \"Document_ВводНачальныхОстатков\", \"Document_СчетНаОплатуПокупателю\", \"Document_УстановкаСоответствияСчетовБУиНУ\"], \"count_returned\": 8, \"data\": [{\"document_type\": \"Document_СчетНаОплатуПокупателю\", \"number\": \"00000000001\", \"date\": \"2021-08-23T16:39:05\", \"counterparty\": \"33959134-98e5-11eb-8c47-5c3a45e64368\", \"amount\": 87725, \"status\": \"not_posted\", \"reference\": \"4601dee4-03d9-11ec-8ce2-5c3a45e64368\"}, {\"document_type\": \"Document_ВводНачальныхОстатков\", \"number\": \"00000000001\", \"date\": \"20",
+      "result_summary": "{\"ok\": true, \"data\": {\"document_number\": \"0001\", \"document_type_filter\": null, \"filters_applied_in_python\": {\"date_from\": null, \"date_to\": null, \"limit\": 10}, \"matched_entities\": [\"Catalog_БанковскиеСчета\", \"Document_ВводНачальныхОстатков\", \"Document_СчетНаОплатуПокупателю\", \"Document_УстановкаСоответствияСчетовБУиНУ\"], \"count_returned\": 8, \"data\": [{\"document_type\": \"Document_СчетНаОплатуПокупателю\", \"number\": \"00000000001\", \"date\": \"2021-08-23T16:39:05\", \"counterparty\": \"DWS Group ТОО\", \"counterparty_ref\": \"33959134-98e5-11eb-8c47-5c3a45e64368\", \"amount\": 87725, \"status\": \"not_posted\", \"reference\": \"4601dee4-03d9-11ec-8ce2-5c3a45e64368\"}, {\"document_type\": \"Document_ВводНачальныхОстатков\",",
       "row_count": 8,
       "error_type": null,
       "audit_record_created": true,
@@ -444,7 +444,7 @@
         "date_to": "2026-12-31",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 1, \"data\": [{\"counterparty\": \"33959134-98e5-11eb-8c47-5c3a45e64368\", \"bin_or_iin\": null, \"debt_amount\": \"87725\", \"currency\": null, \"last_payment_date\": null, \"overdue_days\": 1956, \"source_document_count\": 1, \"source_entity\": \"Document_СчетНаОплатуПокупателю\"}], \"filters_applied_in_python\": {\"date_from\": \"2020-01-01\", \"date_to\": \"2026-12-31\", \"counterparty_name\": null, \"min_debt\": \"0\", \"limit\": 10}, \"sales_source\": {\"entity\": \"Document_СчетНаОплатуПокупателю\", \"entity_type\": \"Document_СчетНаОплатуПокупателю\", \"score\": 125, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:d",
+      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 1, \"data\": [{\"counterparty\": \"DWS Group ТОО\", \"bin_or_iin\": \"170640006905\", \"debt_amount\": \"87725\", \"currency\": null, \"last_payment_date\": null, \"overdue_days\": 1956, \"source_document_count\": 1, \"source_entity\": \"Document_СчетНаОплатуПокупателю\"}], \"filters_applied_in_python\": {\"date_from\": \"2020-01-01\", \"date_to\": \"2026-12-31\", \"counterparty_name\": null, \"min_debt\": \"0\", \"limit\": 10}, \"sales_source\": {\"entity\": \"Document_СчетНаОплатуПокупателю\", \"entity_type\": \"Document_СчетНаОплатуПокупателю\", \"score\": 125, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:покупател\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:",
       "row_count": 1,
       "error_type": null,
       "audit_record_created": true,

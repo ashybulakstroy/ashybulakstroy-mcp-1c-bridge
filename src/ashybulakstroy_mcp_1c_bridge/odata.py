@@ -18,6 +18,7 @@ from .security.context import get_request_context
 log = logging.getLogger(__name__)
 
 _IDENTIFIER_RE = re.compile(r"^[A-Za-zА-Яа-я0-9_\.]+$")
+_GUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 
 class ODataError(RuntimeError):
@@ -53,6 +54,7 @@ class OneCODataClient:
         )
         self._metadata_xml: str | None = None
         self._entities_cache: list[EntityInfo] | None = None
+        self._reference_cache: dict[tuple[str, str, tuple[str, ...]], dict[str, Any] | None] = {}
 
     def _require_url(self) -> None:
         if not self.settings.odata_url:
@@ -1033,7 +1035,7 @@ class OneCODataClient:
             rows.append(
                 {
                     "counterparty": customer,
-                    "bin_or_iin": None,
+                    "bin_or_iin": info.get("counterparty_bin_or_iin"),
                     "debt_amount": str(debt_amount),
                     "currency": None,
                     "last_payment_date": last_payment_dates.get(customer),
@@ -1930,52 +1932,73 @@ class OneCODataClient:
                 out.append(value)
         return out
 
-    @staticmethod
-    def _normalize_inventory_row(row: dict[str, Any], mapped: dict[str, str | None]) -> dict[str, Any]:
+    def _normalize_inventory_row(self, row: dict[str, Any], mapped: dict[str, str | None]) -> dict[str, Any]:
         def pick(key: str) -> Any:
             field = mapped.get(key)
             return row.get(field) if field else None
 
+        item_ref = pick("item")
+        warehouse_ref = pick("warehouse")
+
         return {
-            "item": pick("item"),
-            "warehouse": pick("warehouse"),
+            "item": self._resolve_reference_value(mapped.get("item"), item_ref),
+            "item_ref": item_ref,
+            "warehouse": self._resolve_reference_value(mapped.get("warehouse"), warehouse_ref),
+            "warehouse_ref": warehouse_ref,
             "quantity": pick("quantity"),
             "amount": pick("amount"),
             "period": pick("period"),
             "raw": row,
         }
 
-    @staticmethod
-    def _normalize_payment_row(row: dict[str, Any], mapped: dict[str, str | None], direction: str | None) -> dict[str, Any]:
+    def _normalize_payment_row(self, row: dict[str, Any], mapped: dict[str, str | None], direction: str | None) -> dict[str, Any]:
         def pick(key: str) -> Any:
             field = mapped.get(key)
             return row.get(field) if field else None
 
+        counterparty_ref = pick("counterparty")
+        currency_ref = pick("currency")
+        bank_account_ref = pick("bank_account")
+        counterparty_info = self._resolve_counterparty_info(counterparty_ref)
+
         return {
             "direction": direction,
-            "counterparty": pick("counterparty"),
+            "counterparty": counterparty_info.get("display") or self._resolve_reference_value(mapped.get("counterparty"), counterparty_ref),
+            "counterparty_ref": counterparty_ref,
+            "counterparty_bin_or_iin": counterparty_info.get("bin_or_iin"),
             "amount": pick("amount"),
             "date": pick("date"),
             "number": pick("number"),
-            "organization": pick("organization"),
-            "bank_account": pick("bank_account"),
-            "currency": pick("currency"),
+            "organization": self._resolve_reference_value(mapped.get("organization"), pick("organization")),
+            "bank_account": self._resolve_reference_value(mapped.get("bank_account"), bank_account_ref),
+            "bank_account_ref": bank_account_ref,
+            "currency": self._resolve_reference_value(mapped.get("currency"), currency_ref),
+            "currency_ref": currency_ref,
             "purpose": pick("purpose"),
             "raw": row,
         }
 
-    @staticmethod
-    def _normalize_sales_row(row: dict[str, Any], mapped: dict[str, str | None]) -> dict[str, Any]:
+    def _normalize_sales_row(self, row: dict[str, Any], mapped: dict[str, str | None]) -> dict[str, Any]:
         def pick(key: str) -> Any:
             field = mapped.get(key)
             return row.get(field) if field else None
 
+        counterparty_ref = pick("counterparty")
+        organization_ref = pick("organization")
+        currency_ref = pick("currency")
+        counterparty_info = self._resolve_counterparty_info(counterparty_ref)
+
         return {
-            "counterparty": pick("counterparty"),
+            "counterparty": counterparty_info.get("display") or self._resolve_reference_value(mapped.get("counterparty"), counterparty_ref),
+            "counterparty_ref": counterparty_ref,
+            "counterparty_bin_or_iin": counterparty_info.get("bin_or_iin"),
             "amount": pick("amount"),
             "date": pick("date"),
             "number": pick("number"),
-            "organization": pick("organization"),
+            "organization": self._resolve_reference_value(mapped.get("organization"), organization_ref),
+            "organization_ref": organization_ref,
+            "currency": self._resolve_reference_value(mapped.get("currency"), currency_ref),
+            "currency_ref": currency_ref,
             "raw": row,
         }
 
@@ -1984,11 +2007,15 @@ class OneCODataClient:
             field = mapped.get(key)
             return row.get(field) if field else None
 
+        counterparty_ref = pick("counterparty")
+        counterparty_info = self._resolve_counterparty_info(counterparty_ref)
+
         return {
             "document_type": entity_name,
             "number": pick("number"),
             "date": pick("date"),
-            "counterparty": pick("counterparty"),
+            "counterparty": counterparty_info.get("display") or self._resolve_reference_value(mapped.get("counterparty"), counterparty_ref),
+            "counterparty_ref": counterparty_ref,
             "amount": pick("amount"),
             "status": self._extract_document_status(row, mapped),
             "reference": pick("reference"),
@@ -2009,6 +2036,109 @@ class OneCODataClient:
         if posted is False:
             return "not_posted"
         return None
+
+    def _resolve_reference_value(self, field_name: str | None, value: Any) -> Any:
+        if not field_name or not self._is_guid_like(value):
+            return value
+        target_entity = self._reference_target_for_field(field_name)
+        if not target_entity:
+            return value
+        preferred_fields = self._preferred_display_fields_for_entity(target_entity)
+        resolved = self._fetch_entity_by_ref(target_entity, str(value), preferred_fields)
+        if not resolved:
+            return value
+        for field in preferred_fields:
+            resolved_value = resolved.get(field)
+            if resolved_value not in (None, ""):
+                return resolved_value
+        return value
+
+    def _resolve_counterparty_info(self, value: Any) -> dict[str, Any]:
+        if not self._is_guid_like(value):
+            return {"display": value, "bin_or_iin": None}
+        resolved = self._fetch_entity_by_ref(
+            "Catalog_Контрагенты",
+            str(value),
+            ("Description", "НаименованиеПолное", "ИдентификационныйКодЛичности", "РНН", "КодПоОКПО"),
+        )
+        if not resolved:
+            return {"display": value, "bin_or_iin": None}
+        display = resolved.get("Description") or resolved.get("НаименованиеПолное") or value
+        bin_or_iin = (
+            resolved.get("ИдентификационныйКодЛичности")
+            or resolved.get("РНН")
+            or resolved.get("КодПоОКПО")
+        )
+        return {"display": display, "bin_or_iin": bin_or_iin}
+
+    def _fetch_entity_by_ref(self, entity_name: str, ref_key: str, select_fields: tuple[str, ...]) -> dict[str, Any] | None:
+        cache_key = (entity_name, ref_key, tuple(select_fields))
+        if cache_key in self._reference_cache:
+            return self._reference_cache[cache_key]
+        if not self._is_guid_like(ref_key) or ref_key == "00000000-0000-0000-0000-000000000000":
+            self._reference_cache[cache_key] = None
+            return None
+        self._validate_identifier(entity_name, "entity_name")
+        for field in select_fields:
+            self._validate_identifier(field, "select field")
+        path = f"{entity_name}(guid'{ref_key}')"
+        response = self._get(path, params={"$select": ",".join(select_fields)}, headers={"Accept": "application/xml"})
+        if response.status_code >= 400:
+            self._reference_cache[cache_key] = None
+            return None
+        try:
+            root = ET.fromstring(response.text)
+        except ET.ParseError:
+            self._reference_cache[cache_key] = None
+            return None
+        properties = None
+        for node in root.iter():
+            if self._xml_local_name(node.tag) == "properties":
+                properties = node
+                break
+        if properties is None:
+            self._reference_cache[cache_key] = None
+            return None
+        out: dict[str, Any] = {}
+        for child in properties:
+            local_name = self._xml_local_name(child.tag)
+            if local_name in select_fields:
+                out[local_name] = child.text
+        self._reference_cache[cache_key] = out or None
+        return self._reference_cache[cache_key]
+
+    @staticmethod
+    def _preferred_display_fields_for_entity(entity_name: str) -> tuple[str, ...]:
+        if entity_name in {"Catalog_Склады", "Catalog_Кассы", "Catalog_Организации"}:
+            return ("Description", "Code")
+        if entity_name == "Catalog_БанковскиеСчета":
+            return ("Description", "НомерСчета", "Code")
+        if entity_name == "Catalog_Валюты":
+            return ("Description", "БуквенныйКод", "НаименованиеПолное", "Code")
+        return ("Description", "НаименованиеПолное", "Code")
+
+    @staticmethod
+    def _reference_target_for_field(field_name: str) -> str | None:
+        normalized = OneCODataClient._norm(field_name)
+        if "контрагент" in normalized:
+            return "Catalog_Контрагенты"
+        if "номенклатур" in normalized:
+            return "Catalog_Номенклатура"
+        if "склад" in normalized:
+            return "Catalog_Склады"
+        if "валют" in normalized:
+            return "Catalog_Валюты"
+        if "касс" in normalized:
+            return "Catalog_Кассы"
+        if "счетбанк" in normalized or "банковскиесчет" in normalized:
+            return "Catalog_БанковскиеСчета"
+        if "организац" in normalized:
+            return "Catalog_Организации"
+        return None
+
+    @staticmethod
+    def _is_guid_like(value: Any) -> bool:
+        return isinstance(value, str) and bool(_GUID_RE.fullmatch(value))
 
     def _discover_document_search_candidates(self, document_type: str | None = None) -> list[dict[str, Any]]:
         requested_type = self._norm(document_type) if document_type else ""
@@ -2154,6 +2284,11 @@ class OneCODataClient:
         customers = sorted({str((r.get("counterparty") or "<unknown>")) for r in [*sales_rows, *payment_rows]})
         settlement: dict[str, dict[str, Any]] = {}
         for customer in customers:
+            customer_rows = [row for row in [*sales_rows, *payment_rows] if str(row.get("counterparty") or "<unknown>") == customer]
+            customer_bin_or_iin = next(
+                (row.get("counterparty_bin_or_iin") for row in customer_rows if row.get("counterparty_bin_or_iin")),
+                None,
+            )
             customer_sales = [
                 {
                     "invoice_date": self._parse_date_like(row.get("date")),
@@ -2219,6 +2354,7 @@ class OneCODataClient:
                 "open_amount_total": open_amount_total,
                 "billed_amount_total": billed_total,
                 "paid_amount_total": paid_total,
+                "counterparty_bin_or_iin": customer_bin_or_iin,
                 "as_of": as_of.isoformat(),
             }
         return settlement
