@@ -445,6 +445,7 @@ class OneCODataClient:
         ranked = sorted(
             candidates,
             key=lambda r: (
+                1 if self._is_preferred_payment_source_entity(r.get("entity")) else 0,
                 1 if r.get("direction") in {"incoming", "outgoing"} else 0,
                 r["score"],
                 1 if r.get("has_data") is True else 0,
@@ -468,6 +469,7 @@ class OneCODataClient:
         return sorted(
             ranked,
             key=lambda r: (
+                1 if self._is_preferred_payment_source_entity(r.get("entity")) else 0,
                 1 if r.get("direction") in {"incoming", "outgoing"} else 0,
                 r["score"],
                 1 if r.get("has_data") is True else 0,
@@ -1123,7 +1125,8 @@ class OneCODataClient:
             candidates = self.discover_payment_sources(direction=direction, limit=20, check_data=True)
             filtered_candidates = [
                 source for source in candidates
-                if normalized_account_type == "all" or self._classify_payment_account_type(source.get("entity")) == normalized_account_type
+                if self._is_preferred_payment_source_entity(source.get("entity"))
+                and (normalized_account_type == "all" or self._classify_payment_account_type(source.get("entity")) == normalized_account_type)
             ]
             if not filtered_candidates:
                 missing_sources.append(f"{direction}:{normalized_account_type}")
@@ -1189,6 +1192,7 @@ class OneCODataClient:
             "count_returned": min(len(rows), effective_limit),
             "data": rows[:effective_limit],
             "no_data_in_sources": not bool(rows),
+            "published_sources_with_rows_found": bool(rows),
             "filters_applied_in_python": {
                 "date_from": validated_from,
                 "date_to": validated_to,
@@ -1200,8 +1204,8 @@ class OneCODataClient:
             },
             "missing_sources": missing_sources,
             "source_explanation": {
-                "incoming_sources_used": sorted(set(incoming_sources_used)),
-                "outgoing_sources_used": sorted(set(outgoing_sources_used)),
+                "incoming_sources_checked": sorted(set(incoming_sources_used)),
+                "outgoing_sources_checked": sorted(set(outgoing_sources_used)),
                 "missing_sources": missing_sources,
                 "basis": "payment_documents_classified_as_bank_or_cash",
             },
@@ -1245,11 +1249,18 @@ class OneCODataClient:
                 "mapped_fields": mapped,
             }]
         else:
-            source_candidates = self.discover_payment_sources(direction=normalized_direction, limit=10, check_data=True)
+            discovered_candidates = self.discover_payment_sources(direction=normalized_direction, limit=10, check_data=True)
+            preferred_candidates = [
+                candidate
+                for candidate in discovered_candidates
+                if self._is_preferred_payment_source_entity(candidate.get("entity"))
+            ]
+            source_candidates = preferred_candidates or discovered_candidates
             if not source_candidates:
                 raise ODataError(
                     f"Не найден кандидат на источник платежей direction={normalized_direction}. Запустите discover_payment_sources для диагностики."
                 )
+        primary_source = source_candidates[0]
         source = source_candidates[0]
         normalized: list[dict[str, Any]] = []
         query_top = min(max(limit, 50), self.settings.max_top)
@@ -1321,6 +1332,8 @@ class OneCODataClient:
             warnings.append("Не найдено явное поле даты. Фильтрация по периоду могла сработать не для всех строк.")
         if not normalized:
             warnings.append("В текущей OData-публикации не найдено строк по проверенным payment-like safe sources для заданных фильтров.")
+            if source_candidates_checked:
+                warnings.append("Проверены только read-only business-level payment documents. Публикация не дала ни одной строки по этим источникам.")
 
         counterparty_totals: dict[str, Decimal] = {}
         total_amount = Decimal("0")
@@ -1342,9 +1355,11 @@ class OneCODataClient:
             warnings.append(f"Строк без распознанной суммы: {amount_missing}.")
 
         return {
-            "source": source,
+            "source": source if normalized else primary_source,
+            "last_checked_source": source,
             "source_candidates_checked": source_candidates_checked,
             "no_data_in_checked_sources": not bool(normalized),
+            "source_candidates_mode": "preferred_top_level_documents" if not entity_name and source_candidates else "explicit_entity",
             "filters_applied_in_python": {
                 "direction": normalized_direction,
                 "date": date,
@@ -1764,8 +1779,11 @@ class OneCODataClient:
             score -= 36
             reasons.append("penalty:not_payment_document")
         if "_расшифровкаплатежа" in name or "_выдачавподотчет" in name or "_перечисление" in name:
-            score -= 10
+            score -= 30
             reasons.append("penalty:tabular_or_specialized_section")
+        if str(entity.name).count("_") > 1:
+            score -= 14
+            reasons.append("penalty:nested_document_section")
         if not direction:
             score -= 8
             reasons.append("penalty:unknown_direction")
@@ -2238,6 +2256,36 @@ class OneCODataClient:
         if any(term in haystack for term in ["банков", "bank", "расчетногосчета", "банковскогосчета", "платежноепоручение", "платежныйордер"]):
             return "bank"
         return "unknown"
+
+    @staticmethod
+    def _is_top_level_document_entity(entity_name: Any) -> bool:
+        text = str(entity_name or "")
+        return text.startswith("Document_") and text.count("_") == 1
+
+    def _is_preferred_payment_source_entity(self, entity_name: Any) -> bool:
+        text = str(entity_name or "")
+        if not self._is_top_level_document_entity(text):
+            return False
+        haystack = self._norm(text)
+        allowed_terms = [
+            "платежноепоручение",
+            "платежныйордер",
+            "кассовыйордер",
+            "списаниесбанковскогосчета",
+            "поступлениенабанковскийсчет",
+            "оплатаотпокупателяплатежнойкартой",
+        ]
+        blocked_terms = [
+            "обменсбанками",
+            "пакетобмен",
+            "письмообмен",
+            "сообщениеобмен",
+            "счетфактура",
+            "доверенность",
+        ]
+        if any(term in haystack for term in blocked_terms):
+            return False
+        return any(term in haystack for term in allowed_terms)
 
     @staticmethod
     def _escape_odata_string_literal(value: str) -> str:

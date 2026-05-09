@@ -264,6 +264,44 @@ class FakeOneCODataClientPaymentNoData(FakeOneCODataClient):
         return {"entity": entity_name, "count_returned": 0, "top_applied": top, "data": []}
 
 
+class FakeOneCODataClientPaymentSectionsFirst(FakeOneCODataClient):
+    def discover_payment_sources(self, direction: str | None = None, limit: int = 10, check_data: bool = True):
+        if direction == "incoming":
+            return [
+                {
+                    "entity": "Document_ПоступлениеНаБанковскийСчет_РасшифровкаПлатежа",
+                    "direction": "incoming",
+                    "score": 220,
+                    "confidence": "high",
+                    "reasons": ["test:section-first"],
+                    "mapped_fields": {
+                        "counterparty": "Контрагент",
+                        "amount": "СуммаПлатежа",
+                        "date": "Дата",
+                        "number": "Номер",
+                        "currency": "Валюта",
+                        "purpose": "Комментарий",
+                    },
+                },
+                {
+                    "entity": "Document_ПоступлениеНаБанковскийСчет",
+                    "direction": "incoming",
+                    "score": 180,
+                    "confidence": "high",
+                    "reasons": ["test:top-level-second"],
+                    "mapped_fields": {
+                        "counterparty": "Контрагент",
+                        "amount": "СуммаДокумента",
+                        "date": "Дата",
+                        "number": "Номер",
+                        "currency": "Валюта",
+                        "purpose": "Комментарий",
+                    },
+                },
+            ][:limit]
+        return super().discover_payment_sources(direction=direction, limit=limit, check_data=check_data)
+
+
 def test_list_entities_parses_fake_metadata():
     client = FakeOneCODataClient()
     entities = client.list_entities(refresh=True)
@@ -368,10 +406,7 @@ def test_get_payments_falls_back_to_next_safe_source_with_data():
 
     assert result["count_returned"] == 3
     assert result["source"]["entity"] == "Document_ПоступлениеНаБанковскийСчет"
-    assert result["source_candidates_checked"][:2] == [
-        "Document_ПустойИсточникОплат",
-        "Document_ПоступлениеНаБанковскийСчет",
-    ]
+    assert result["source_candidates_checked"] == ["Document_ПоступлениеНаБанковскийСчет"]
 
 
 def test_get_payments_marks_no_data_when_all_safe_sources_are_empty():
@@ -383,6 +418,17 @@ def test_get_payments_marks_no_data_when_all_safe_sources_are_empty():
     assert result["no_data_in_checked_sources"] is True
     assert result["source_candidates_checked"]
     assert any("не найдено строк" in warning.lower() for warning in result["warnings"])
+
+
+def test_get_payments_prefers_top_level_documents_over_sections():
+    client = FakeOneCODataClientPaymentSectionsFirst()
+
+    result = client.get_payments(direction="incoming", limit=10)
+
+    assert result["count_returned"] == 3
+    assert result["source"]["entity"] == "Document_ПоступлениеНаБанковскийСчет"
+    assert result["source_candidates_checked"] == ["Document_ПоступлениеНаБанковскийСчет"]
+    assert result["source_candidates_mode"] == "preferred_top_level_documents"
 
 
 def test_payment_summary_by_counterparty_returns_top_clients():
@@ -650,6 +696,8 @@ def test_get_cash_bank_movements_returns_safe_rows():
     }
     assert "http://" not in str(result)
     assert result["source_explanation"]["basis"] == "payment_documents_classified_as_bank_or_cash"
+    assert "incoming_sources_checked" in result["source_explanation"]
+    assert "outgoing_sources_checked" in result["source_explanation"]
 
 
 def test_get_cash_bank_movements_caps_limit():

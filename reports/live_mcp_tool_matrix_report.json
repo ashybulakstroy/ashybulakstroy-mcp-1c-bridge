@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-09T16:58:23.970723+05:00",
+  "generated_at": "2026-05-09T17:11:29.208202+05:00",
   "base_url": "http://192.168.1.183/SaryDala",
   "service_url": "http://192.168.1.183/SaryDala/odata/standard.odata",
   "total_tools": 26,
@@ -224,7 +224,7 @@
         "date_to": "2026-12-31",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеИсходящее_ПеречислениеПоИсполнительнымЛистам\", \"entity_type\": \"Document_ПлатежноеПоручениеИсходящее_ПеречислениеПоИсполнительнымЛистам\", \"direction\": \"outgoing\", \"account_type\": \"bank\", \"score\": 117, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:сумма\", \"direction:outgoing\", \"account:bank_priority\", \"field:amount=СуммаПлатежа\", \"field:number=LineNumber\"], \"mapped_fields\": {\"counterparty\": null, \"amount\": \"СуммаПлатежа\", \"date\": null, \"number\": \"LineNumber\", \"organization\": null, \"bank_account\": null, \"currency\": null, \"purpose\": null}, \"field_count\": 6, \"sample_fields\": [\"Ref",
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежныйОрдерСписаниеДенежныхСредств\", \"entity_type\": \"Document_ПлатежныйОрдерСписаниеДенежныхСредств\", \"direction\": \"outgoing\", \"account_type\": \"bank\", \"score\": 177, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:банк\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"direction:outgoing\", \"account:bank_priority\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
@@ -244,7 +244,7 @@
         "date_to": "2026-12-31",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 117, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:сумма\", \"direction:incoming\", \"account:bank_priority\", \"field:amount=СуммаВозврата\", \"field:number=LineNumber\"], \"mapped_fields\": {\"counterparty\": null, \"amount\": \"СуммаВозврата\", \"date\": null, \"number\": \"LineNumber\", \"organization\": null, \"bank_account\": null, \"currency\": null, \"purpose\": null}, \"field_count\": 4, \"sample_fields\": [\"Ref_Key\", \"LineNu",
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеВходящее\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 177, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:банк\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"direction:incoming\", \"account:bank_priority\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\", \"bank_account\":",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
@@ -266,7 +266,7 @@
         "date_to": "2026-12-31",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 117, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:сумма\", \"direction:incoming\", \"account:bank_priority\", \"field:amount=СуммаВозврата\", \"field:number=LineNumber\"], \"mapped_fields\": {\"counterparty\": null, \"amount\": \"СуммаВозврата\", \"date\": null, \"number\": \"LineNumber\", \"organization\": null, \"bank_account\": null, \"currency\": null, \"purpose\": null}, \"field_count\": 4, \"sample_fields\": [\"Ref_Key\", \"LineNu",
+      "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ПлатежноеПоручениеВходящее\", \"entity_type\": \"Document_ПлатежноеПоручениеВходящее\", \"direction\": \"incoming\", \"account_type\": \"bank\", \"score\": 177, \"confidence\": \"high\", \"reasons\": [\"match:document\", \"match:документ\", \"match:платеж\", \"match:банк\", \"match:счет\", \"match:контрагент\", \"match:сумма\", \"match:date\", \"match:дата\", \"direction:incoming\", \"account:bank_priority\", \"field:counterparty=Контрагент_Key\", \"field:amount=СуммаДокумента\", \"field:date=Date\", \"field:number=Number\"], \"mapped_fields\": {\"counterparty\": \"Контрагент_Key\", \"amount\": \"СуммаДокумента\", \"date\": \"Date\", \"number\": \"Number\", \"organization\": \"Организация_Key\", \"bank_account\":",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
@@ -346,7 +346,7 @@
       ],
       "status": "PASS",
       "input_used": {},
-      "result_summary": "{\"ok\": true, \"data\": {\"last_tool\": \"get_customer_payment_behavior_summary\", \"summary\": [\"Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.\"], \"warnings\": [\"OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.\", \"Источник Document_ПлатежноеПоручениеВходящее не вернул строк по текущим фильтрам. Пробуем следующий safe candidate.\", \"Источник Document_ПлатежныйОрдерПоступлениеДенежныхСредств не вернул строк по текущим фильтрам. Пробуем следующий safe candidate.\", \"Источник Document_ПриходныйКассовыйОрдер не вернул строк по текущим фильтрам. Пробуем следующий safe candidat",
+      "result_summary": "{\"ok\": true, \"data\": {\"last_tool\": \"get_customer_payment_behavior_summary\", \"summary\": [\"Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.\"], \"warnings\": [\"OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.\", \"Источник Document_ПлатежноеПоручениеВходящее не вернул строк по текущим фильтрам. Пробуем следующий safe candidate.\", \"Источник Document_ПлатежныйОрдерПоступлениеДенежныхСредств не вернул строк по текущим фильтрам. Пробуем следующий safe candidate.\", \"OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.\", \"В ",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
@@ -466,7 +466,7 @@
         "account_type": "all",
         "limit": 10
       },
-      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 0, \"data\": [], \"no_data_in_sources\": true, \"filters_applied_in_python\": {\"date_from\": \"2020-01-01\", \"date_to\": \"2026-12-31\", \"movement_type\": \"all\", \"account_type\": \"all\", \"counterparty_name\": null, \"min_amount\": \"0\", \"limit\": 10}, \"missing_sources\": [], \"source_explanation\": {\"incoming_sources_used\": [\"AccumulationRegister_СведенияСчетовФактурПолученных_RecordType\", \"Catalog_НастройкиОбменСБанками\", \"Document_Доверенность\", \"Document_ОприходованиеТоваров\", \"Document_ОприходованиеТоваров_Товары\", \"Document_ОтчетОРозничныхПродажах_Товары\", \"Document_ПлатежноеПоручениеВходящее\", \"Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты\", \"Document_Плат",
+      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 0, \"data\": [], \"no_data_in_sources\": true, \"published_sources_with_rows_found\": false, \"filters_applied_in_python\": {\"date_from\": \"2020-01-01\", \"date_to\": \"2026-12-31\", \"movement_type\": \"all\", \"account_type\": \"all\", \"counterparty_name\": null, \"min_amount\": \"0\", \"limit\": 10}, \"missing_sources\": [], \"source_explanation\": {\"incoming_sources_checked\": [\"Document_ПлатежноеПоручениеВходящее\", \"Document_ПлатежныйОрдерПоступлениеДенежныхСредств\", \"Document_ПриходныйКассовыйОрдер\"], \"outgoing_sources_checked\": [\"Document_ПлатежныйОрдерСписаниеДенежныхСредств\", \"Document_РасходныйКассовыйОрдер\"], \"missing_sources\": [], \"basis\": \"payment_documents_classified_as_b",
       "row_count": 0,
       "error_type": null,
       "audit_record_created": true,
