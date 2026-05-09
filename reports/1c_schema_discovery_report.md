@@ -1,6 +1,6 @@
 # 1C Schema Discovery Report
 
-- Generated: `2026-05-09T16:16:13.612388+05:00`
+- Generated: `2026-05-09T16:26:22.354111+05:00`
 - Base URL: `http://192.168.1.183/SaryDala`
 - Total entities: `1192`
 - Inventory candidates: `20`

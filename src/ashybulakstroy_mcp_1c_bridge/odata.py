@@ -437,9 +437,9 @@ class OneCODataClient:
             candidates,
             key=lambda r: (
                 1 if r.get("direction") in {"incoming", "outgoing"} else 0,
-                1 if r.get("account_type") == "bank" else 0,
                 r["score"],
                 1 if r.get("has_data") is True else 0,
+                1 if r.get("account_type") == "bank" else 0,
             ),
             reverse=True,
         )
@@ -460,9 +460,9 @@ class OneCODataClient:
             ranked,
             key=lambda r: (
                 1 if r.get("direction") in {"incoming", "outgoing"} else 0,
-                1 if r.get("account_type") == "bank" else 0,
                 r["score"],
                 1 if r.get("has_data") is True else 0,
+                1 if r.get("account_type") == "bank" else 0,
             ),
             reverse=True,
         )[:limit]
@@ -1567,6 +1567,35 @@ class OneCODataClient:
                 score += weight
                 reasons.append(f"match:{term}")
 
+        preferred_inventory_terms = {
+            "товарыорганизаций": 18,
+            "товарынавиртуальныхскладах": 18,
+            "товарывиртуальногоскладаврезерве": 16,
+            "товарынаскладах": 20,
+            "остатк": 18,
+            "запасы": 10,
+        }
+        for term, weight in preferred_inventory_terms.items():
+            if term in haystack:
+                score += weight
+                reasons.append(f"inventory_priority:{term}")
+
+        movement_like_terms = {
+            "реализация": 22,
+            "реализациятмз": 26,
+            "выпуск": 18,
+            "корректировк": 14,
+            "исходныетовары": 18,
+            "электронныйдокументвс": 18,
+            "эсф": 18,
+            "инвентаризац": 10,
+            "списание": 12,
+        }
+        for term, penalty in movement_like_terms.items():
+            if term in haystack:
+                score -= penalty
+                reasons.append(f"penalty:{term}")
+
         mapped = self._map_inventory_fields([f.name for f in (entity.fields or [])])
         for key, weight in {"item": 15, "warehouse": 12, "quantity": 15, "amount": 6, "period": 4}.items():
             if mapped.get(key):
@@ -1580,6 +1609,9 @@ class OneCODataClient:
         if "document" in name or "документ" in name:
             score -= 8
             reasons.append("penalty:document")
+        if "_recordtype" not in name and "accumulationregister" in haystack:
+            score -= 6
+            reasons.append("penalty:register_container")
         return score, reasons
 
     def _map_inventory_fields(self, field_names: list[str]) -> dict[str, str | None]:
@@ -1637,6 +1669,8 @@ class OneCODataClient:
             "списаниесбанковскогосчета",
             "списаниесрасчетногосчета",
             "расходныйкассовыйордер",
+            "платежноепоручениеисходящее",
+            "платежныйордерсписаниеденежныхсредств",
             "outgoing",
             "расход",
             "выдан",
@@ -1646,6 +1680,8 @@ class OneCODataClient:
             "поступлениенабанковскийсчет",
             "поступлениенарасчетныйсчет",
             "приходныйкассовыйордер",
+            "платежноепоручениевходящее",
+            "платежныйордерпоступлениеденежныхсредств",
             "incoming",
             "приход",
             "получен",
@@ -1663,11 +1699,11 @@ class OneCODataClient:
             score += incoming_score
             reasons.append("direction:incoming")
 
-        if any(term in haystack for term in ["списаниесбанковскогосчета", "списаниесрасчетногосчета", "поступлениенабанковскийсчет", "поступлениенарасчетныйсчет"]):
-            score += 8
+        if any(term in haystack for term in ["списаниесбанковскогосчета", "списаниесрасчетногосчета", "поступлениенабанковскийсчет", "поступлениенарасчетныйсчет", "платежноепоручениеисходящее", "платежноепоручениевходящее", "платежныйордерпоступлениеденежныхсредств", "платежныйордерсписаниеденежныхсредств"]):
+            score += 40
             reasons.append("account:bank_priority")
         elif any(term in haystack for term in ["расходныйкассовыйордер", "приходныйкассовыйордер"]):
-            score += 3
+            score += 18
             reasons.append("account:cash_priority")
 
         mapped = self._map_payment_fields([f.name for f in (entity.fields or [])])
@@ -1679,6 +1715,15 @@ class OneCODataClient:
         if "catalog" in name or "справочник" in name:
             score -= 14
             reasons.append("penalty:catalog")
+        if any(term in haystack for term in ["присоединенныефайлы", "удалитьэлектронныеподписи", "удалитьсертификатышифрования"]):
+            score -= 50
+            reasons.append("penalty:attachments")
+        if any(term in haystack for term in ["счетфактура", "реализациятоваровуслуг", "передачаос", "передачанма", "авансовыйотчет", "возвраттоваровотпокупателя"]):
+            score -= 36
+            reasons.append("penalty:not_payment_document")
+        if "_расшифровкаплатежа" in name or "_выдачавподотчет" in name or "_перечисление" in name:
+            score -= 10
+            reasons.append("penalty:tabular_or_specialized_section")
         if not direction:
             score -= 8
             reasons.append("penalty:unknown_direction")
@@ -1716,6 +1761,31 @@ class OneCODataClient:
             if term in haystack:
                 score += weight
                 reasons.append(f"match:{term}")
+
+        preferred_sales_terms = {
+            "реализациятоваровуслуг": 30,
+            "реализацияуслугпопереработке": 20,
+            "счетнаоплатупокупателю": 24,
+            "оплатаотпокупателяплатежнойкартой": 8,
+        }
+        for term, weight in preferred_sales_terms.items():
+            if term in haystack:
+                score += weight
+                reasons.append(f"sales_priority:{term}")
+
+        non_sales_terms = {
+            "счетфактуравыданный": 24,
+            "счетфактураполученный": 30,
+            "платежноепоручение": 30,
+            "платежныйордер": 30,
+            "актсверкивзаиморасчетов": 18,
+            "чекккм": 10,
+            "гтдимпорт": 12,
+        }
+        for term, penalty in non_sales_terms.items():
+            if term in haystack:
+                score -= penalty
+                reasons.append(f"penalty:{term}")
 
         mapped = self._map_sales_fields([f.name for f in (entity.fields or [])])
         for key, weight in {"counterparty": 14, "amount": 15, "date": 12, "number": 4}.items():
@@ -2004,7 +2074,7 @@ class OneCODataClient:
         haystack = self._norm(str(entity_name or ""))
         if any(term in haystack for term in ["касс", "cash", "кассовыйордер"]):
             return "cash"
-        if any(term in haystack for term in ["банков", "bank", "расчетногосчета", "банковскогосчета"]):
+        if any(term in haystack for term in ["банков", "bank", "расчетногосчета", "банковскогосчета", "платежноепоручение", "платежныйордер"]):
             return "bank"
         return "unknown"
 

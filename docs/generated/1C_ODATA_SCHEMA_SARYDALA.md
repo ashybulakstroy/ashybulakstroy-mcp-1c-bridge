@@ -1,6 +1,6 @@
 # 1C OData Schema: SaryDala
 
-- Generated: `2026-05-09T16:16:13.612388+05:00`
+- Generated: `2026-05-09T16:26:22.354111+05:00`
 - Base URL: `http://192.168.1.183/SaryDala`
 - Service URL: `http://192.168.1.183/SaryDala/odata/standard.odata`
 - Total entity count: `1192`
@@ -27,59 +27,41 @@
 
 ## Candidate inventory entities
 
-- `AccumulationRegister_РеализацияТМЗ_RecordType` score=`126` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'Количество', 'amount': 'Сумма', 'period': 'Period'}`
-- `AccumulationRegister_ТоварыВиртуальногоСкладаВРезерве_RecordType` score=`118` mapped_fields=`{'item': 'Номенклатура', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
-- `AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType` score=`118` mapped_fields=`{'item': 'Номенклатура', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
+- `Document_ВводНачальныхОстатков_ТоварыОрганизаций` score=`142` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'Количество', 'amount': None, 'period': None}`
+- `Document_ВводНачальныхОстатков_Запасы` score=`132` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'КоличествоБУ', 'amount': 'СуммаБУ', 'period': None}`
+- `AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType` score=`130` mapped_fields=`{'item': 'Номенклатура', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
+- `AccumulationRegister_ТоварыВиртуальногоСкладаВРезерве_RecordType` score=`128` mapped_fields=`{'item': 'Номенклатура', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
+- `AccumulationRegister_ТоварыОрганизацийБУ_RecordType` score=`112` mapped_fields=`{'item': 'Товар_Key', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
 - `Document_ЭСФ_Товары` score=`108` mapped_fields=`{'item': 'Товар', 'warehouse': 'ПризнакУчетаНаВиртуальномСкладе', 'quantity': 'Количество', 'amount': 'Сумма', 'period': None}`
-- `Document_ВводНачальныхОстатков_ТоварыОрганизаций` score=`106` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'Количество', 'amount': None, 'period': None}`
-- `Document_ВводНачальныхОстатков_Запасы` score=`104` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'КоличествоБУ', 'amount': 'СуммаБУ', 'period': None}`
-- `AccumulationRegister_ТоварыОрганизацийБУ_RecordType` score=`100` mapped_fields=`{'item': 'Товар_Key', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
-- `Document_СписаниеОС_Товары` score=`96` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'Количество', 'amount': 'Сумма', 'period': None}`
-- `InformationRegister_СведенияОКорректировкиСтоимостиПродукцииИТоваров_RecordType` score=`96` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'ПодразделениеВыпуска_Key', 'quantity': 'Количество', 'amount': 'Себестоимость', 'period': 'Period'}`
-- `AccumulationRegister_ВыпускПродукцииУслугБухгалтерскийУчет_RecordType` score=`94` mapped_fields=`{'item': 'НоменклатурнаяГруппа_Key', 'warehouse': 'Подразделение_Key', 'quantity': 'Количество', 'amount': 'ПлановаяСтоимость', 'period': 'Period'}`
+- `Document_ВводНачальныхОстатков` score=`91` mapped_fields=`{'item': 'ТоварыОрганизаций', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': None, 'amount': None, 'period': 'Date'}`
+- `Document_СписаниеОС_Товары` score=`84` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'Количество', 'amount': 'Сумма', 'period': None}`
+- `Document_АвансовыйОтчет_Товары` score=`76` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': None, 'quantity': 'Количество', 'amount': 'Сумма', 'period': 'ДатаВходящегоДокумента'}`
+- `Document_ЗаявлениеОВвозеТоваровИУплатеКосвенныхНалогов_Товары` score=`76` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': None, 'quantity': 'Количество', 'amount': 'Сумма', 'period': 'ДатаТранспортногоДокумента'}`
 
 ## Candidate payment entities
 
-- `Catalog_БанковскиеСчетаПрисоединенныеФайлы_УдалитьЭлектронныеПодписи` direction=`outgoing` account_type=`bank` score=`52`
-- `Document_ПриходныйКассовыйОрдер` direction=`incoming` account_type=`cash` score=`156`
-- `Document_РасходныйКассовыйОрдер` direction=`outgoing` account_type=`cash` score=`156`
-- `Document_СчетФактураВыданный` direction=`outgoing` account_type=`unknown` score=`153`
-- `Document_ПлатежноеПоручениеИсходящее` direction=`incoming` account_type=`unknown` score=`137`
-- `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа` direction=`incoming` account_type=`cash` score=`134`
-- `Document_РасходныйКассовыйОрдер_РасшифровкаПлатежа` direction=`outgoing` account_type=`cash` score=`134`
-- `Document_ПередачаНМА` direction=`outgoing` account_type=`unknown` score=`129`
-- `Document_РеализацияТоваровУслуг` direction=`outgoing` account_type=`unknown` score=`123`
-- `Document_ВозвратТоваровОтПокупателя` direction=`outgoing` account_type=`unknown` score=`119`
+- `Document_ПлатежноеПоручениеВходящее` direction=`incoming` account_type=`bank` score=`177`
+- `Document_ПлатежныйОрдерПоступлениеДенежныхСредств` direction=`incoming` account_type=`bank` score=`177`
+- `Document_ПлатежныйОрдерСписаниеДенежныхСредств` direction=`outgoing` account_type=`bank` score=`177`
+- `Document_ПриходныйКассовыйОрдер` direction=`incoming` account_type=`cash` score=`171`
+- `Document_РасходныйКассовыйОрдер` direction=`outgoing` account_type=`cash` score=`171`
+- `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа` direction=`incoming` account_type=`cash` score=`149`
+- `Document_РасходныйКассовыйОрдер_РасшифровкаПлатежа` direction=`outgoing` account_type=`cash` score=`149`
+- `Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа` direction=`incoming` account_type=`bank` score=`141`
+- `Document_ПлатежноеПоручениеИсходящее_ПеречислениеНДССИзмененнымСрокомУплаты` direction=`outgoing` account_type=`bank` score=`141`
+- `Document_ПлатежноеПоручениеИсходящее_РасшифровкаПлатежа` direction=`outgoing` account_type=`bank` score=`141`
 
 ## Candidate customer settlement entities
 
-### `AccumulationRegister_ВзаиморасчетыОрганизацийСКонтрагентамиФизЛицами`
+### `Document_ПлатежноеПоручениеВходящее`
 
-- Entity type: `AccumulationRegister_ВзаиморасчетыОрганизацийСКонтрагентамиФизЛицами`
-- Possible date field: `None`
-- Possible number field: `None`
-- Possible amount fields: `<none>`
-- Possible counterparty fields: `<none>`
-- Possible warehouse fields: `<none>`
-- Possible currency fields: `<none>`
-- Comments for tool developers:
-  - No strong business mapping identified from metadata only.
-
-| Field | Type | Nullable |
-|---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `RecordSet` | `Collection(StandardODATA.AccumulationRegister_ВзаиморасчетыОрганизацийСКонтрагентамиФизЛицами_RowType)` | `False` |
-| `Recorder_Type` | `Edm.String` | `False` |
-
-### `AccumulationRegister_ВзаиморасчетыОрганизацийСКонтрагентамиФизЛицами_RecordType`
-
-- Entity type: `AccumulationRegister_ВзаиморасчетыОрганизацийСКонтрагентамиФизЛицами_RecordType`
-- Possible date field: `Period`
-- Possible number field: `LineNumber`
-- Possible amount fields: `СуммаВзаиморасчетов`
+- Entity type: `Document_ПлатежноеПоручениеВходящее`
+- Possible date field: `Date`
+- Possible number field: `Number`
+- Possible amount fields: `СуммаДокумента`
 - Possible counterparty fields: `Контрагент_Key`
-- Possible warehouse fields: `<none>`
-- Possible currency fields: `<none>`
+- Possible warehouse fields: `СтруктурноеПодразделениеПолучатель_Key`
+- Possible currency fields: `ВалютаДокумента_Key`
 - Comments for tool developers:
   - Looks usable for payment or cash/bank movement tools.
   - Looks usable for sales or customer settlement summaries.
@@ -87,214 +69,532 @@
 
 | Field | Type | Nullable |
 |---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `Period` | `Edm.DateTime` | `True` |
-| `LineNumber` | `Edm.Int64` | `False` |
-| `Active` | `Edm.Boolean` | `True` |
-| `RecordType` | `Edm.String` | `True` |
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `DataVersion` | `Edm.String` | `True` |
+| `Number` | `Edm.String` | `True` |
+| `Date` | `Edm.DateTime` | `True` |
+| `DeletionMark` | `Edm.Boolean` | `True` |
+| `Posted` | `Edm.Boolean` | `True` |
+| `Автор_Key` | `Edm.Guid` | `True` |
+| `ВалютаДокумента_Key` | `Edm.Guid` | `True` |
+| `ВидОперации` | `Edm.String` | `True` |
+| `ВидУчетаНУ_Key` | `Edm.Guid` | `True` |
+| `ДатаВходящегоДокумента` | `Edm.DateTime` | `True` |
+| `ДатаВыписки` | `Edm.DateTime` | `True` |
+| `ДокументОснование` | `Edm.String` | `True` |
+| `Комментарий` | `Edm.String` | `True` |
 | `Контрагент_Key` | `Edm.Guid` | `True` |
-| `СтруктурнаяЕдиница` | `Edm.String` | `True` |
-| `ПериодВзаиморасчетов` | `Edm.DateTime` | `True` |
+| `КурсНаДатуПриобретенияРеализацииВалюты` | `Edm.Double` | `True` |
+| `НомерВходящегоДокумента` | `Edm.String` | `True` |
+| `Оплачено` | `Edm.Boolean` | `True` |
 | `Организация_Key` | `Edm.Guid` | `True` |
-| `Налогоплательщик_Key` | `Edm.Guid` | `True` |
-| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
-| `Recorder_Type` | `Edm.String` | `False` |
-| `СтруктурнаяЕдиница_Type` | `Edm.String` | `True` |
+| `Ответственный_Key` | `Edm.Guid` | `True` |
+| `РучнаяКорректировка` | `Edm.Boolean` | `True` |
+| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
+| `СубконтоКтБУ1` | `Edm.String` | `True` |
+| `СубконтоКтБУ2` | `Edm.String` | `True` |
+| `СубконтоКтБУ3` | `Edm.String` | `True` |
+| `СубконтоКтНУ1` | `Edm.String` | `True` |
+| `СубконтоКтНУ2` | `Edm.String` | `True` |
+| `СубконтоКтНУ3` | `Edm.String` | `True` |
+| `СуммаДокумента` | `Edm.Double` | `True` |
+| `СчетБанк_Key` | `Edm.Guid` | `True` |
+| `СчетКонтрагента_Key` | `Edm.Guid` | `True` |
+| `СчетОрганизации_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
+| `ВидВходящегоДокумента` | `Edm.String` | `True` |
+| `УчитыватьКПН` | `Edm.Boolean` | `True` |
+| `СтруктурноеПодразделениеПолучатель_Key` | `Edm.Guid` | `True` |
+| `СтруктурноеПодразделениеОтправитель_Key` | `Edm.Guid` | `True` |
+| `НазначениеПлатежа` | `Edm.String` | `True` |
+| `РасшифровкаПлатежа` | `Collection(StandardODATA.Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа_RowType)` | `True` |
+| `ВозвратПенсионныхВзносов` | `Collection(StandardODATA.Document_ПлатежноеПоручениеВходящее_ВозвратПенсионныхВзносов_RowType)` | `True` |
+| `ВозвратСоциальныхОтчислений` | `Collection(StandardODATA.Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений_RowType)` | `True` |
+| `ВозвратЗаработнойПлаты` | `Collection(StandardODATA.Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты_RowType)` | `True` |
+| `ДокументОснование_Type` | `Edm.String` | `True` |
+| `СубконтоКтБУ1_Type` | `Edm.String` | `True` |
+| `СубконтоКтБУ2_Type` | `Edm.String` | `True` |
+| `СубконтоКтБУ3_Type` | `Edm.String` | `True` |
+| `СубконтоКтНУ1_Type` | `Edm.String` | `True` |
+| `СубконтоКтНУ2_Type` | `Edm.String` | `True` |
+| `СубконтоКтНУ3_Type` | `Edm.String` | `True` |
 
-### `AccumulationRegister_ВзаиморасчетыОрганизацийСПолучателямиИЛ`
+### `Document_ПлатежныйОрдерПоступлениеДенежныхСредств`
 
-- Entity type: `AccumulationRegister_ВзаиморасчетыОрганизацийСПолучателямиИЛ`
-- Possible date field: `None`
-- Possible number field: `None`
-- Possible amount fields: `<none>`
-- Possible counterparty fields: `<none>`
-- Possible warehouse fields: `<none>`
-- Possible currency fields: `<none>`
-- Comments for tool developers:
-  - No strong business mapping identified from metadata only.
-
-| Field | Type | Nullable |
-|---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `RecordSet` | `Collection(StandardODATA.AccumulationRegister_ВзаиморасчетыОрганизацийСПолучателямиИЛ_RowType)` | `False` |
-| `Recorder_Type` | `Edm.String` | `False` |
-
-### `AccumulationRegister_ВзаиморасчетыОрганизацийСПолучателямиИЛ_RecordType`
-
-- Entity type: `AccumulationRegister_ВзаиморасчетыОрганизацийСПолучателямиИЛ_RecordType`
-- Possible date field: `Period`
-- Possible number field: `LineNumber`
-- Possible amount fields: `СуммаВзаиморасчетов`
-- Possible counterparty fields: `Получатель_Key`
-- Possible warehouse fields: `ПодразделениеОрганизации_Key`
-- Possible currency fields: `<none>`
+- Entity type: `Document_ПлатежныйОрдерПоступлениеДенежныхСредств`
+- Possible date field: `Date`
+- Possible number field: `Number`
+- Possible amount fields: `СуммаДокумента`
+- Possible counterparty fields: `Контрагент_Key`
+- Possible warehouse fields: `СтруктурноеПодразделениеПолучатель_Key`
+- Possible currency fields: `ВалютаДокумента_Key`
 - Comments for tool developers:
   - Looks usable for payment or cash/bank movement tools.
+  - Looks usable for sales or customer settlement summaries.
   - Can be considered by document number search tools.
 
 | Field | Type | Nullable |
 |---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `Period` | `Edm.DateTime` | `True` |
-| `LineNumber` | `Edm.Int64` | `False` |
-| `Active` | `Edm.Boolean` | `True` |
-| `RecordType` | `Edm.String` | `True` |
-| `Получатель_Key` | `Edm.Guid` | `True` |
-| `СтруктурнаяЕдиница` | `Edm.String` | `True` |
-| `ДокументОснование_Key` | `Edm.Guid` | `True` |
-| `ПериодВзаиморасчетов` | `Edm.DateTime` | `True` |
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `DataVersion` | `Edm.String` | `True` |
+| `Number` | `Edm.String` | `True` |
+| `Date` | `Edm.DateTime` | `True` |
+| `DeletionMark` | `Edm.Boolean` | `True` |
+| `Posted` | `Edm.Boolean` | `True` |
+| `Автор_Key` | `Edm.Guid` | `True` |
+| `ВалютаДокумента_Key` | `Edm.Guid` | `True` |
+| `ВидОперации` | `Edm.String` | `True` |
+| `ВидУчетаНУ_Key` | `Edm.Guid` | `True` |
+| `ДатаВходящегоДокумента` | `Edm.DateTime` | `True` |
+| `ДатаВыписки` | `Edm.DateTime` | `True` |
+| `ДокументОснование` | `Edm.String` | `True` |
+| `Комментарий` | `Edm.String` | `True` |
+| `Контрагент_Key` | `Edm.Guid` | `True` |
+| `КурсНаДатуПриобретенияРеализацииВалюты` | `Edm.Double` | `True` |
+| `НомерВходящегоДокумента` | `Edm.String` | `True` |
+| `Оплачено` | `Edm.Boolean` | `True` |
 | `Организация_Key` | `Edm.Guid` | `True` |
-| `Налогоплательщик_Key` | `Edm.Guid` | `True` |
-| `ПодразделениеОрганизации_Key` | `Edm.Guid` | `True` |
-| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
-| `СуммаСборов` | `Edm.Double` | `True` |
-| `Recorder_Type` | `Edm.String` | `False` |
-| `СтруктурнаяЕдиница_Type` | `Edm.String` | `True` |
+| `Ответственный_Key` | `Edm.Guid` | `True` |
+| `РучнаяКорректировка` | `Edm.Boolean` | `True` |
+| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
+| `СубконтоКтБУ1` | `Edm.String` | `True` |
+| `СубконтоКтБУ2` | `Edm.String` | `True` |
+| `СубконтоКтБУ3` | `Edm.String` | `True` |
+| `СубконтоКтНУ1` | `Edm.String` | `True` |
+| `СубконтоКтНУ2` | `Edm.String` | `True` |
+| `СубконтоКтНУ3` | `Edm.String` | `True` |
+| `СуммаДокумента` | `Edm.Double` | `True` |
+| `СчетБанк_Key` | `Edm.Guid` | `True` |
+| `СчетКонтрагента_Key` | `Edm.Guid` | `True` |
+| `СчетОрганизации_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
+| `УчитыватьКПН` | `Edm.Boolean` | `True` |
+| `СтруктурноеПодразделениеПолучатель_Key` | `Edm.Guid` | `True` |
+| `СтруктурноеПодразделениеОтправитель_Key` | `Edm.Guid` | `True` |
+| `НазначениеПлатежа` | `Edm.String` | `True` |
+| `РасшифровкаПлатежа` | `Collection(StandardODATA.Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа_RowType)` | `True` |
+| `ДокументОснование_Type` | `Edm.String` | `True` |
+| `СубконтоКтБУ1_Type` | `Edm.String` | `True` |
+| `СубконтоКтБУ2_Type` | `Edm.String` | `True` |
+| `СубконтоКтБУ3_Type` | `Edm.String` | `True` |
+| `СубконтоКтНУ1_Type` | `Edm.String` | `True` |
+| `СубконтоКтНУ2_Type` | `Edm.String` | `True` |
+| `СубконтоКтНУ3_Type` | `Edm.String` | `True` |
 
-### `AccumulationRegister_ВзаиморасчетыСДепонентамиОрганизаций`
+### `Document_ПриходныйКассовыйОрдер`
 
-- Entity type: `AccumulationRegister_ВзаиморасчетыСДепонентамиОрганизаций`
-- Possible date field: `None`
-- Possible number field: `None`
-- Possible amount fields: `<none>`
-- Possible counterparty fields: `<none>`
-- Possible warehouse fields: `<none>`
-- Possible currency fields: `<none>`
-- Comments for tool developers:
-  - No strong business mapping identified from metadata only.
-
-| Field | Type | Nullable |
-|---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `RecordSet` | `Collection(StandardODATA.AccumulationRegister_ВзаиморасчетыСДепонентамиОрганизаций_RowType)` | `False` |
-| `Recorder_Type` | `Edm.String` | `False` |
-
-### `AccumulationRegister_ВзаиморасчетыСДепонентамиОрганизаций_RecordType`
-
-- Entity type: `AccumulationRegister_ВзаиморасчетыСДепонентамиОрганизаций_RecordType`
-- Possible date field: `Period`
-- Possible number field: `LineNumber`
-- Possible amount fields: `СуммаВзаиморасчетов`
-- Possible counterparty fields: `Налогоплательщик_Key`
-- Possible warehouse fields: `ПодразделениеОрганизации_Key`
-- Possible currency fields: `<none>`
+- Entity type: `Document_ПриходныйКассовыйОрдер`
+- Possible date field: `Date`
+- Possible number field: `Number`
+- Possible amount fields: `СуммаДокумента`
+- Possible counterparty fields: `Контрагент`
+- Possible warehouse fields: `СтруктурноеПодразделениеПолучатель_Key`
+- Possible currency fields: `ВалютаДокумента_Key`
 - Comments for tool developers:
   - Looks usable for payment or cash/bank movement tools.
+  - Looks usable for sales or customer settlement summaries.
   - Can be considered by document number search tools.
 
 | Field | Type | Nullable |
 |---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `Period` | `Edm.DateTime` | `True` |
-| `LineNumber` | `Edm.Int64` | `False` |
-| `Active` | `Edm.Boolean` | `True` |
-| `RecordType` | `Edm.String` | `True` |
-| `Физлицо_Key` | `Edm.Guid` | `True` |
-| `СтруктурнаяЕдиница` | `Edm.String` | `True` |
-| `ПериодВзаиморасчетов` | `Edm.DateTime` | `True` |
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `DataVersion` | `Edm.String` | `True` |
+| `Number` | `Edm.String` | `True` |
+| `Date` | `Edm.DateTime` | `True` |
+| `DeletionMark` | `Edm.Boolean` | `True` |
+| `Posted` | `Edm.Boolean` | `True` |
+| `Автор_Key` | `Edm.Guid` | `True` |
+| `ВалютаДокумента_Key` | `Edm.Guid` | `True` |
+| `ВидЗадолженностиПодотчетногоЛица` | `Edm.String` | `True` |
+| `ВидОперации` | `Edm.String` | `True` |
+| `ВидУчетаНУ_Key` | `Edm.Guid` | `True` |
+| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
+| `ДокументОснование` | `Edm.String` | `True` |
+| `Касса_Key` | `Edm.Guid` | `True` |
+| `Комментарий` | `Edm.String` | `True` |
+| `Контрагент` | `Edm.String` | `True` |
 | `Организация_Key` | `Edm.Guid` | `True` |
-| `Налогоплательщик_Key` | `Edm.Guid` | `True` |
-| `ПодразделениеОрганизации_Key` | `Edm.Guid` | `True` |
-| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
-| `СпособВыплаты` | `Edm.String` | `True` |
-| `ВидСтроки` | `Edm.String` | `True` |
-| `Recorder_Type` | `Edm.String` | `False` |
-| `СтруктурнаяЕдиница_Type` | `Edm.String` | `True` |
-
-### `AccumulationRegister_ВзаиморасчетыСРаботникамиОрганизаций`
-
-- Entity type: `AccumulationRegister_ВзаиморасчетыСРаботникамиОрганизаций`
-- Possible date field: `None`
-- Possible number field: `None`
-- Possible amount fields: `<none>`
-- Possible counterparty fields: `<none>`
-- Possible warehouse fields: `<none>`
-- Possible currency fields: `<none>`
-- Comments for tool developers:
-  - No strong business mapping identified from metadata only.
-
-| Field | Type | Nullable |
-|---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `RecordSet` | `Collection(StandardODATA.AccumulationRegister_ВзаиморасчетыСРаботникамиОрганизаций_RowType)` | `False` |
-| `Recorder_Type` | `Edm.String` | `False` |
-
-### `AccumulationRegister_ВзаиморасчетыСРаботникамиОрганизаций_RecordType`
-
-- Entity type: `AccumulationRegister_ВзаиморасчетыСРаботникамиОрганизаций_RecordType`
-- Possible date field: `Period`
-- Possible number field: `LineNumber`
-- Possible amount fields: `СуммаВзаиморасчетов`
-- Possible counterparty fields: `Налогоплательщик_Key`
-- Possible warehouse fields: `ПодразделениеОрганизации_Key`
-- Possible currency fields: `<none>`
-- Comments for tool developers:
-  - Looks usable for payment or cash/bank movement tools.
-  - Can be considered by document number search tools.
-
-| Field | Type | Nullable |
-|---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `Period` | `Edm.DateTime` | `True` |
-| `LineNumber` | `Edm.Int64` | `False` |
-| `Active` | `Edm.Boolean` | `True` |
-| `RecordType` | `Edm.String` | `True` |
-| `Физлицо_Key` | `Edm.Guid` | `True` |
-| `СтруктурнаяЕдиница` | `Edm.String` | `True` |
-| `ПериодВзаиморасчетов` | `Edm.DateTime` | `True` |
-| `Организация_Key` | `Edm.Guid` | `True` |
-| `Налогоплательщик_Key` | `Edm.Guid` | `True` |
-| `ПодразделениеОрганизации_Key` | `Edm.Guid` | `True` |
-| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
-| `СпособВыплаты` | `Edm.String` | `True` |
-| `ВидСтроки` | `Edm.String` | `True` |
-| `Recorder_Type` | `Edm.String` | `False` |
-| `СтруктурнаяЕдиница_Type` | `Edm.String` | `True` |
-
-### `AccumulationRegister_НДСВзаиморасчетыСБюджетом`
-
-- Entity type: `AccumulationRegister_НДСВзаиморасчетыСБюджетом`
-- Possible date field: `None`
-- Possible number field: `None`
-- Possible amount fields: `<none>`
-- Possible counterparty fields: `<none>`
-- Possible warehouse fields: `<none>`
-- Possible currency fields: `<none>`
-- Comments for tool developers:
-  - No strong business mapping identified from metadata only.
-
-| Field | Type | Nullable |
-|---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `RecordSet` | `Collection(StandardODATA.AccumulationRegister_НДСВзаиморасчетыСБюджетом_RowType)` | `False` |
-| `Recorder_Type` | `Edm.String` | `False` |
-
-### `AccumulationRegister_НДСВзаиморасчетыСБюджетом_RecordType`
-
-- Entity type: `AccumulationRegister_НДСВзаиморасчетыСБюджетом_RecordType`
-- Possible date field: `Period`
-- Possible number field: `LineNumber`
-- Possible amount fields: `СуммаНДС`
-- Possible counterparty fields: `Налогоплательщик_Key`
-- Possible warehouse fields: `<none>`
-- Possible currency fields: `<none>`
-- Comments for tool developers:
-  - Looks usable for payment or cash/bank movement tools.
-  - Can be considered by document number search tools.
-
-| Field | Type | Nullable |
-|---|---|---|
-| `Recorder` | `Edm.String` | `False` |
-| `Period` | `Edm.DateTime` | `True` |
-| `LineNumber` | `Edm.Int64` | `False` |
-| `Active` | `Edm.Boolean` | `True` |
-| `RecordType` | `Edm.String` | `True` |
-| `Налогоплательщик_Key` | `Edm.Guid` | `True` |
+| `Основание` | `Edm.String` | `True` |
+| `Ответственный_Key` | `Edm.Guid` | `True` |
+| `Приложение` | `Edm.String` | `True` |
+| `ПринятоОт` | `Edm.String` | `True` |
+| `РучнаяКорректировка` | `Edm.Boolean` | `True` |
+| `СтавкаНДС_Key` | `Edm.Guid` | `True` |
+| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
+| `СубконтоКтБУ1` | `Edm.String` | `True` |
+| `СубконтоКтБУ2` | `Edm.String` | `True` |
+| `СубконтоКтБУ3` | `Edm.String` | `True` |
+| `СубконтоКтНУ1` | `Edm.String` | `True` |
+| `СубконтоКтНУ2` | `Edm.String` | `True` |
+| `СубконтоКтНУ3` | `Edm.String` | `True` |
+| `СуммаДокумента` | `Edm.Double` | `True` |
 | `СуммаНДС` | `Edm.Double` | `True` |
-| `СпособПогашения` | `Edm.String` | `True` |
+| `СчетКасса_Key` | `Edm.Guid` | `True` |
+| `СчетОрганизации_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
+| `УчитыватьКПН` | `Edm.Boolean` | `True` |
+| `СтруктурноеПодразделениеПолучатель_Key` | `Edm.Guid` | `True` |
+| `СтруктурноеПодразделениеОтправитель_Key` | `Edm.Guid` | `True` |
+| `НомерЧекаККМ` | `Edm.Int64` | `True` |
+| `РасшифровкаПлатежа` | `Collection(StandardODATA.Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа_RowType)` | `True` |
+| `ВыдачаВПодотчет` | `Collection(StandardODATA.Document_ПриходныйКассовыйОрдер_ВыдачаВПодотчет_RowType)` | `True` |
+| `ДокументОснование_Type` | `Edm.String` | `True` |
+| `Контрагент_Type` | `Edm.String` | `True` |
+| `СубконтоКтБУ1_Type` | `Edm.String` | `True` |
+| `СубконтоКтБУ2_Type` | `Edm.String` | `True` |
+| `СубконтоКтБУ3_Type` | `Edm.String` | `True` |
+| `СубконтоКтНУ1_Type` | `Edm.String` | `True` |
+| `СубконтоКтНУ2_Type` | `Edm.String` | `True` |
+| `СубконтоКтНУ3_Type` | `Edm.String` | `True` |
+
+### `Document_РеализацияТоваровУслуг`
+
+- Entity type: `Document_РеализацияТоваровУслуг`
+- Possible date field: `Date`
+- Possible number field: `Number`
+- Possible amount fields: `СуммаДокумента, СуммаВключаетАкциз`
+- Possible counterparty fields: `ДоговорКонтрагента_Key, Грузополучатель_Key`
+- Possible warehouse fields: `Склад_Key`
+- Possible currency fields: `ВалютаДокумента_Key`
+- Comments for tool developers:
+  - Looks usable for payment or cash/bank movement tools.
+  - Looks usable for sales or customer settlement summaries.
+  - Can be considered by document number search tools.
+
+| Field | Type | Nullable |
+|---|---|---|
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `DataVersion` | `Edm.String` | `True` |
+| `Number` | `Edm.String` | `True` |
+| `Date` | `Edm.DateTime` | `True` |
+| `DeletionMark` | `Edm.Boolean` | `True` |
+| `Posted` | `Edm.Boolean` | `True` |
+| `Автор_Key` | `Edm.Guid` | `True` |
+| `АдресДоставки` | `Edm.String` | `True` |
+| `БанковскийСчетОрганизации_Key` | `Edm.Guid` | `True` |
+| `ВалютаДокумента_Key` | `Edm.Guid` | `True` |
+| `ВидОперации` | `Edm.String` | `True` |
+| `ВидУчетаНУ_Key` | `Edm.Guid` | `True` |
+| `Грузополучатель_Key` | `Edm.Guid` | `True` |
+| `УдалитьДоверенность` | `Edm.String` | `True` |
+| `ДоверенностьЛицо` | `Edm.String` | `True` |
+| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
+| `ДокументОснование` | `Edm.String` | `True` |
+| `Комментарий` | `Edm.String` | `True` |
+| `Контрагент_Key` | `Edm.Guid` | `True` |
+| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
+| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
 | `Организация_Key` | `Edm.Guid` | `True` |
+| `Ответственный_Key` | `Edm.Guid` | `True` |
+| `РучнаяКорректировка` | `Edm.Boolean` | `True` |
+| `Сделка` | `Edm.String` | `True` |
+| `Склад_Key` | `Edm.Guid` | `True` |
+| `СуммаВключаетАкциз` | `Edm.Boolean` | `True` |
+| `СуммаВключаетНДС` | `Edm.Boolean` | `True` |
+| `СуммаДокумента` | `Edm.Double` | `True` |
+| `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентом_Key` | `Edm.Guid` | `True` |
+| `ТипЦен_Key` | `Edm.Guid` | `True` |
+| `УчитыватьАкциз` | `Edm.Boolean` | `True` |
+| `УчитыватьНДС` | `Edm.Boolean` | `True` |
+| `УчитыватьКПН` | `Edm.Boolean` | `True` |
+| `СтруктурноеПодразделение_Key` | `Edm.Guid` | `True` |
+| `ДатаНачалаОтчетногоПериода` | `Edm.DateTime` | `True` |
+| `ДатаОкончанияОтчетногоПериода` | `Edm.DateTime` | `True` |
+| `ПереченьДокументации` | `Edm.String` | `True` |
+| `ДоверенностьВыдана` | `Edm.String` | `True` |
+| `ДоверенностьДата` | `Edm.DateTime` | `True` |
+| `ДоверенностьНомер` | `Edm.String` | `True` |
+| `НомерДокументаГЗ` | `Edm.String` | `True` |
+| `ДатаДокументаГЗ` | `Edm.DateTime` | `True` |
+| `ДатаПодписанияГЗ` | `Edm.DateTime` | `True` |
+| `СпособВыпискиАктовВыполненныхРабот` | `Edm.String` | `True` |
+| `Товары` | `Collection(StandardODATA.Document_РеализацияТоваровУслуг_Товары_RowType)` | `True` |
+| `Услуги` | `Collection(StandardODATA.Document_РеализацияТоваровУслуг_Услуги_RowType)` | `True` |
+| `УчастникиСовместнойДеятельности` | `Collection(StandardODATA.Document_РеализацияТоваровУслуг_УчастникиСовместнойДеятельности_RowType)` | `True` |
+| `НомераГТД` | `Collection(StandardODATA.Document_РеализацияТоваровУслуг_НомераГТД_RowType)` | `True` |
+| `ДокументОснование_Type` | `Edm.String` | `True` |
+| `Сделка_Type` | `Edm.String` | `True` |
+
+### `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа`
+
+- Entity type: `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа`
+- Possible date field: `None`
+- Possible number field: `LineNumber`
+- Possible amount fields: `СуммаПлатежа`
+- Possible counterparty fields: `ДоговорКонтрагента_Key`
+- Possible warehouse fields: `<none>`
+- Possible currency fields: `<none>`
+- Comments for tool developers:
+  - Looks usable for sales or customer settlement summaries.
+  - Can be considered by document number search tools.
+
+| Field | Type | Nullable |
+|---|---|---|
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `LineNumber` | `Edm.Int64` | `False` |
+| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
+| `Сделка` | `Edm.String` | `True` |
+| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
+| `СуммаПлатежа` | `Edm.Double` | `True` |
+| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
+| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
+| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
+| `СтавкаНДС_Key` | `Edm.Guid` | `True` |
+| `СуммаНДС` | `Edm.Double` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
+| `Сделка_Type` | `Edm.String` | `True` |
+
+### `Document_РеализацияУслугПоПереработке`
+
+- Entity type: `Document_РеализацияУслугПоПереработке`
+- Possible date field: `Date`
+- Possible number field: `Number`
+- Possible amount fields: `СуммаДокумента, СуммаВключаетНДС`
+- Possible counterparty fields: `ДоговорКонтрагента_Key, Грузополучатель_Key`
+- Possible warehouse fields: `СтруктурноеПодразделение_Key`
+- Possible currency fields: `ВалютаДокумента_Key`
+- Comments for tool developers:
+  - Looks usable for payment or cash/bank movement tools.
+  - Looks usable for sales or customer settlement summaries.
+  - Can be considered by document number search tools.
+
+| Field | Type | Nullable |
+|---|---|---|
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `DataVersion` | `Edm.String` | `True` |
+| `Number` | `Edm.String` | `True` |
+| `Date` | `Edm.DateTime` | `True` |
+| `DeletionMark` | `Edm.Boolean` | `True` |
+| `Posted` | `Edm.Boolean` | `True` |
+| `Автор_Key` | `Edm.Guid` | `True` |
+| `АдресДоставки` | `Edm.String` | `True` |
+| `БанковскийСчетОрганизации_Key` | `Edm.Guid` | `True` |
+| `ВалютаДокумента_Key` | `Edm.Guid` | `True` |
+| `ВидУчетаНУ_Key` | `Edm.Guid` | `True` |
+| `Грузополучатель_Key` | `Edm.Guid` | `True` |
+| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
+| `ДокументОснование` | `Edm.String` | `True` |
+| `Комментарий` | `Edm.String` | `True` |
+| `Контрагент_Key` | `Edm.Guid` | `True` |
+| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
+| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
+| `Организация_Key` | `Edm.Guid` | `True` |
+| `Ответственный_Key` | `Edm.Guid` | `True` |
+| `РучнаяКорректировка` | `Edm.Boolean` | `True` |
+| `Сделка` | `Edm.String` | `True` |
+| `СуммаВключаетНДС` | `Edm.Boolean` | `True` |
+| `СуммаДокумента` | `Edm.Double` | `True` |
+| `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентом_Key` | `Edm.Guid` | `True` |
+| `ТипЦен_Key` | `Edm.Guid` | `True` |
+| `УчитыватьНДС` | `Edm.Boolean` | `True` |
+| `УчитыватьКПН` | `Edm.Boolean` | `True` |
+| `СтруктурноеПодразделение_Key` | `Edm.Guid` | `True` |
+| `ДатаНачалаОтчетногоПериода` | `Edm.DateTime` | `True` |
+| `ДатаОкончанияОтчетногоПериода` | `Edm.DateTime` | `True` |
+| `ПереченьДокументации` | `Edm.String` | `True` |
+| `НомерДокументаГЗ` | `Edm.String` | `True` |
+| `ДатаДокументаГЗ` | `Edm.DateTime` | `True` |
+| `ДатаПодписанияГЗ` | `Edm.DateTime` | `True` |
+| `СпособВыпискиАктовВыполненныхРабот` | `Edm.String` | `True` |
+| `Услуги` | `Collection(StandardODATA.Document_РеализацияУслугПоПереработке_Услуги_RowType)` | `True` |
+| `МатериалыЗаказчика` | `Collection(StandardODATA.Document_РеализацияУслугПоПереработке_МатериалыЗаказчика_RowType)` | `True` |
+| `УчастникиСовместнойДеятельности` | `Collection(StandardODATA.Document_РеализацияУслугПоПереработке_УчастникиСовместнойДеятельности_RowType)` | `True` |
+| `ДокументОснование_Type` | `Edm.String` | `True` |
+| `Сделка_Type` | `Edm.String` | `True` |
+
+### `Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа`
+
+- Entity type: `Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа`
+- Possible date field: `None`
+- Possible number field: `LineNumber`
+- Possible amount fields: `СуммаПлатежа`
+- Possible counterparty fields: `ДоговорКонтрагента_Key`
+- Possible warehouse fields: `<none>`
+- Possible currency fields: `<none>`
+- Comments for tool developers:
+  - Looks usable for sales or customer settlement summaries.
+  - Can be considered by document number search tools.
+
+| Field | Type | Nullable |
+|---|---|---|
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `LineNumber` | `Edm.Int64` | `False` |
+| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
+| `Сделка` | `Edm.String` | `True` |
+| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
+| `СуммаПлатежа` | `Edm.Double` | `True` |
+| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
+| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
+| `СтавкаНДС_Key` | `Edm.Guid` | `True` |
+| `СуммаНДС` | `Edm.Double` | `True` |
+| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
+| `КурсНаДатуПриобретенияРеализацииВалюты` | `Edm.Double` | `True` |
+| `Сделка_Type` | `Edm.String` | `True` |
+
+### `Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа`
+
+- Entity type: `Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа`
+- Possible date field: `None`
+- Possible number field: `LineNumber`
+- Possible amount fields: `СуммаПлатежа`
+- Possible counterparty fields: `ДоговорКонтрагента_Key`
+- Possible warehouse fields: `<none>`
+- Possible currency fields: `<none>`
+- Comments for tool developers:
+  - Looks usable for sales or customer settlement summaries.
+  - Can be considered by document number search tools.
+
+| Field | Type | Nullable |
+|---|---|---|
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `LineNumber` | `Edm.Int64` | `False` |
+| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
+| `Сделка` | `Edm.String` | `True` |
+| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
+| `СуммаПлатежа` | `Edm.Double` | `True` |
+| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
+| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
+| `СтавкаНДС_Key` | `Edm.Guid` | `True` |
+| `СуммаНДС` | `Edm.Double` | `True` |
+| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
+| `КурсНаДатуПриобретенияРеализацииВалюты` | `Edm.Double` | `True` |
+| `Сделка_Type` | `Edm.String` | `True` |
+
+### `Document_ЭСФ`
+
+- Entity type: `Document_ЭСФ`
+- Possible date field: `Date`
+- Possible number field: `Number`
+- Possible amount fields: `СуммаДокумента`
+- Possible counterparty fields: `ГрузополучательИдентификатор, Контрагент_Key`
+- Possible warehouse fields: `СтруктурноеПодразделение_Key`
+- Possible currency fields: `ВалютаКод`
+- Comments for tool developers:
+  - Looks usable for payment or cash/bank movement tools.
+  - Looks usable for sales or customer settlement summaries.
+  - Can be considered by document number search tools.
+
+| Field | Type | Nullable |
+|---|---|---|
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `DataVersion` | `Edm.String` | `True` |
+| `Number` | `Edm.String` | `True` |
+| `Date` | `Edm.DateTime` | `True` |
+| `DeletionMark` | `Edm.Boolean` | `True` |
+| `Posted` | `Edm.Boolean` | `True` |
+| `Идентификатор` | `Edm.String` | `True` |
+| `РегистрационныйНомер` | `Edm.String` | `True` |
+| `Направление` | `Edm.String` | `True` |
+| `Статус` | `Edm.String` | `True` |
+| `Состояние` | `Edm.String` | `True` |
+| `ПользовательскийСтатус` | `Edm.String` | `True` |
+| `УполномоченныйСотрудник` | `Edm.String` | `True` |
+| `Автор_Key` | `Edm.Guid` | `True` |
+| `ДополнительныеСведения` | `Edm.String` | `True` |
+| `ДатаОборота` | `Edm.DateTime` | `True` |
+| `Вид` | `Edm.String` | `True` |
+| `СвязанныйЭСФ_Key` | `Edm.Guid` | `True` |
+| `СвязанныйЭСФДата` | `Edm.DateTime` | `True` |
+| `СвязанныйЭСФНомер` | `Edm.String` | `True` |
+| `СвязанныйЭСФРегистрационныйНомер` | `Edm.String` | `True` |
+| `ГрузоотправительИдентификатор` | `Edm.String` | `True` |
+| `ГрузоотправительНаименование` | `Edm.String` | `True` |
+| `Грузоотправитель` | `Edm.String` | `True` |
+| `АдресОтправки` | `Edm.String` | `True` |
+| `ГрузополучательИдентификатор` | `Edm.String` | `True` |
+| `ГрузополучательНаименование` | `Edm.String` | `True` |
+| `Грузополучатель` | `Edm.String` | `True` |
+| `АдресДоставки` | `Edm.String` | `True` |
+| `ДоговорПоставкиНомер` | `Edm.String` | `True` |
+| `ДоговорПоставкиДата` | `Edm.DateTime` | `True` |
+| `ДоговорПоставкиУсловияОплаты` | `Edm.String` | `True` |
+| `ДоговорПоставкиСпособОтправления` | `Edm.String` | `True` |
+| `ДоговорПоставки_Key` | `Edm.Guid` | `True` |
+| `ДоверенностьНаПоставкуНомер` | `Edm.String` | `True` |
+| `ДоверенностьНаПоставкуДата` | `Edm.DateTime` | `True` |
+| `ПунктНазначения` | `Edm.String` | `True` |
+| `ГосучреждениеИИК` | `Edm.String` | `True` |
+| `ГосучреждениеКодТоваров` | `Edm.String` | `True` |
+| `ГосучреждениеНазначениеПлатежа` | `Edm.String` | `True` |
+| `ГосучреждениеБИК` | `Edm.String` | `True` |
+| `ВалютаКод` | `Edm.String` | `True` |
+| `Валюта_Key` | `Edm.Guid` | `True` |
+| `КурсВалюты` | `Edm.Double` | `True` |
+| `ТипПодписи` | `Edm.String` | `True` |
+| `ЭЦП` | `Edm.String` | `True` |
+| `Причина` | `Edm.String` | `True` |
+| `ФайлЭСФ_Key` | `Edm.Guid` | `True` |
+| `Контрагент_Key` | `Edm.Guid` | `True` |
+| `СуммаДокумента` | `Edm.Double` | `True` |
+| `СчетФактура` | `Edm.String` | `True` |
+| `Организация_Key` | `Edm.Guid` | `True` |
+| `СтруктурноеПодразделение_Key` | `Edm.Guid` | `True` |
+| `Комментарий` | `Edm.String` | `True` |
+| `ДатаВыпискиНаБумажномНосителе` | `Edm.DateTime` | `True` |
+| `ГрузополучательКодСтраны` | `Edm.String` | `True` |
+| `СпособОтправленияПоКлассификатору` | `Edm.String` | `True` |
+| `ДоговорПоставкиУсловияПоставки` | `Edm.String` | `True` |
+| `ПоверенныйПоставщикаБИН` | `Edm.String` | `True` |
+| `ПоверенныйПоставщикаНаименование` | `Edm.String` | `True` |
+
+### `Document_СчетНаОплатуПокупателю`
+
+- Entity type: `Document_СчетНаОплатуПокупателю`
+- Possible date field: `Date`
+- Possible number field: `Number`
+- Possible amount fields: `СуммаДокумента, СуммаВключаетАкциз`
+- Possible counterparty fields: `ДоговорКонтрагента_Key`
+- Possible warehouse fields: `Склад_Key`
+- Possible currency fields: `ВалютаДокумента_Key`
+- Comments for tool developers:
+  - Looks usable for payment or cash/bank movement tools.
+  - Looks usable for sales or customer settlement summaries.
+  - Can be considered by document number search tools.
+
+| Field | Type | Nullable |
+|---|---|---|
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `DataVersion` | `Edm.String` | `True` |
+| `Number` | `Edm.String` | `True` |
+| `Date` | `Edm.DateTime` | `True` |
+| `DeletionMark` | `Edm.Boolean` | `True` |
+| `Posted` | `Edm.Boolean` | `True` |
+| `Автор_Key` | `Edm.Guid` | `True` |
+| `АдресДоставки` | `Edm.String` | `True` |
+| `ВалютаДокумента_Key` | `Edm.Guid` | `True` |
+| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
+| `КодНазначенияПлатежа` | `Edm.String` | `True` |
+| `Комментарий` | `Edm.String` | `True` |
+| `Контрагент_Key` | `Edm.Guid` | `True` |
+| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
+| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
+| `Организация_Key` | `Edm.Guid` | `True` |
+| `Ответственный_Key` | `Edm.Guid` | `True` |
+| `Склад_Key` | `Edm.Guid` | `True` |
 | `СтруктурнаяЕдиница` | `Edm.String` | `True` |
-| `Recorder_Type` | `Edm.String` | `False` |
+| `СуммаВключаетАкциз` | `Edm.Boolean` | `True` |
+| `СуммаВключаетНДС` | `Edm.Boolean` | `True` |
+| `СуммаДокумента` | `Edm.Double` | `True` |
+| `ТипЦен_Key` | `Edm.Guid` | `True` |
+| `УчитыватьНДС` | `Edm.Boolean` | `True` |
+| `УчитыватьАкциз` | `Edm.Boolean` | `True` |
+| `СтруктурноеПодразделение_Key` | `Edm.Guid` | `True` |
+| `Товары` | `Collection(StandardODATA.Document_СчетНаОплатуПокупателю_Товары_RowType)` | `True` |
+| `Услуги` | `Collection(StandardODATA.Document_СчетНаОплатуПокупателю_Услуги_RowType)` | `True` |
+| `ОС` | `Collection(StandardODATA.Document_СчетНаОплатуПокупателю_ОС_RowType)` | `True` |
 | `СтруктурнаяЕдиница_Type` | `Edm.String` | `True` |
 
 

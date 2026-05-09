@@ -63,6 +63,52 @@ def build_comments(entity: EntityInfo, payment_map: dict[str, Any], sales_map: d
     return comments
 
 
+def build_settlement_candidates(client: OneCODataClient, entities: list[EntityInfo]) -> list[dict[str, Any]]:
+    candidates: dict[str, dict[str, Any]] = {}
+
+    def add(entity: EntityInfo, score: int, note: str) -> None:
+        current = candidates.get(entity.name)
+        row = serialize_entity(client, entity)
+        row["heuristic_score"] = score
+        row["heuristic_note"] = note
+        if current is None or score > current.get("heuristic_score", -1):
+            candidates[entity.name] = row
+
+    sales_entities = {row["entity"]: row for row in client.discover_sales_sources(limit=20, check_data=False)}
+    incoming_payment_entities = {row["entity"]: row for row in client.discover_payment_sources(direction="incoming", limit=20, check_data=False)}
+
+    entity_map = {entity.name: entity for entity in entities}
+
+    for entity_name, row in sales_entities.items():
+        entity = entity_map.get(entity_name)
+        if entity is None:
+            continue
+        score = int(row.get("score") or 0) + 20
+        add(entity, score, "sales_candidate_for_receivables")
+
+    for entity_name, row in incoming_payment_entities.items():
+        entity = entity_map.get(entity_name)
+        if entity is None:
+            continue
+        score = int(row.get("score") or 0) + 10
+        add(entity, score, "incoming_payment_candidate_for_receivables")
+
+    for entity in entities:
+        haystack = f"{entity.name} {entity.entity_type or ''}".lower()
+        bonus = 0
+        if any(term in haystack for term in ("взаиморасчет", "расчетысконтрагент", "дебитор", "актсверкивзаиморасчетов")):
+            bonus += 50
+        if any(term in haystack for term in ("контрагент", "покупател", "реализац", "счетнаоплатупокупателю")):
+            bonus += 12
+        if "счетфактура" in haystack:
+            bonus -= 12
+        if bonus > 0:
+            add(entity, bonus, "metadata_pattern_candidate_for_receivables")
+
+    ranked = sorted(candidates.values(), key=lambda row: row.get("heuristic_score", 0), reverse=True)
+    return ranked[:20]
+
+
 def render_entity_block(entity: dict[str, Any]) -> list[str]:
     lines = [
         f"### `{entity['entity_set']}`",
@@ -107,12 +153,7 @@ def main() -> int:
     payment_out_candidates = client.discover_payment_sources(direction="outgoing", limit=10, check_data=False)
     sales_candidates = client.discover_sales_sources(limit=20, check_data=False)
 
-    settlement_candidates = []
-    for entity in entities:
-        haystack = f"{entity.name} {entity.entity_type or ''}".lower()
-        if any(term in haystack for term in ("взаиморасчет", "дебитор", "контрагент", "реализац", "покупател")):
-            settlement_candidates.append(entity)
-    settlement_candidates = settlement_candidates[:20]
+    settlement_candidates = build_settlement_candidates(client, entities)
 
     categorized: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for entity in entities:
@@ -129,7 +170,7 @@ def main() -> int:
         "candidate_payment_incoming_entities": payment_in_candidates,
         "candidate_payment_outgoing_entities": payment_out_candidates,
         "candidate_sales_entities": sales_candidates,
-        "candidate_customer_settlement_entities": [serialize_entity(client, entity) for entity in settlement_candidates],
+        "candidate_customer_settlement_entities": settlement_candidates,
         "known_limitations": [
             "Metadata heuristics do not guarantee that a candidate contains business rows.",
             "Some 1C publications expose technical or attachment-related entities that must be filtered by tool logic.",
