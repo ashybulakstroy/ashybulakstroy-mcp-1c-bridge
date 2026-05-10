@@ -184,6 +184,10 @@ class FakeOneCODataClient(OneCODataClient):
                     "СуммаДокумента": "120000",
                     "Номер": "SUP-001",
                     "Валюта": "KZT",
+                    "Товары": [
+                        {"Содержание": "Цемент М400", "Количество": 10, "Сумма": "90000"},
+                        {"Содержание": "Песок", "Количество": 5, "Сумма": "30000"},
+                    ],
                     "Posted": True,
                 },
                 {
@@ -193,6 +197,9 @@ class FakeOneCODataClient(OneCODataClient):
                     "СуммаДокумента": "40000",
                     "Номер": "SUP-002",
                     "Валюта": "KZT",
+                    "Услуги": [
+                        {"Содержание": "Доставка", "Количество": 1, "Сумма": "40000"},
+                    ],
                     "Posted": True,
                 },
                 {
@@ -202,6 +209,9 @@ class FakeOneCODataClient(OneCODataClient):
                     "СуммаДокумента": "60000",
                     "Номер": "SUP-003",
                     "Валюта": "KZT",
+                    "Услуги": [
+                        {"Содержание": "Сервисное обслуживание", "Количество": 1, "Сумма": "60000"},
+                    ],
                     "Posted": False,
                 },
             ]
@@ -800,6 +810,33 @@ def test_get_supplier_settlements_summary_rejects_invalid_min_debt():
         assert False, "Expected ODataError for invalid min_debt"
     except Exception as exc:
         assert "min_debt" in str(exc)
+
+
+def test_get_supplier_debt_document_breakdown_returns_document_reasons():
+    client = FakeOneCODataClient()
+
+    result = client.get_supplier_debt_document_breakdown(date_to="2026-04-30", limit=5, documents_per_supplier=3)
+
+    assert result["count_returned"] == 2
+    top = result["data"][0]
+    assert top["counterparty"] == "ТОО Cement Trade"
+    assert top["documents"][0]["document_number"] == "SUP-001"
+    assert top["documents"][0]["outstanding_amount"] == "70000"
+    assert top["documents"][0]["paid_amount_estimate"] == "50000"
+    assert top["documents"][0]["section_counts"]["goods"] == 2
+    assert top["documents"][0]["line_items_sample"][0]["name"] == "Цемент М400"
+    assert top["documents"][1]["section_counts"]["services"] == 1
+
+
+def test_get_supplier_debt_document_breakdown_handles_missing_sources_gracefully():
+    client = FakeOneCODataClient()
+    client.discover_purchase_sources = lambda limit=1, check_data=True: []  # type: ignore[method-assign]
+
+    result = client.get_supplier_debt_document_breakdown(date_to="2026-04-30", limit=5)
+
+    assert result["count_returned"] == 0
+    assert result["data"] == []
+    assert "purchase_documents" in result["missing_sources"]
 
 
 def test_get_cash_bank_movements_returns_safe_rows():

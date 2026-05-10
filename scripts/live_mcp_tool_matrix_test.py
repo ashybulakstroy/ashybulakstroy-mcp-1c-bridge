@@ -137,6 +137,7 @@ def main() -> int:
         ("search_document_by_number", {"document_number": "0001", "limit": 10}, False),
         ("get_customer_settlements_summary", {"date_from": "2020-01-01", "date_to": "2026-12-31", "limit": 10}, False),
         ("get_supplier_settlements_summary", {"date_from": "2020-01-01", "date_to": "2026-12-31", "limit": 10}, False),
+        ("get_supplier_debt_document_breakdown", {"date_from": "2020-01-01", "date_to": "2026-12-31", "limit": 5, "documents_per_supplier": 3}, False),
         ("get_cash_bank_movements", {"date_from": "2020-01-01", "date_to": "2026-12-31", "movement_type": "all", "account_type": "all", "limit": 10}, False),
         ("query_entity", {"entity_name": entity_name, "top": 1}, True),
         ("post_document_validated", {"document_ref": "TEST-REF", "validation_result": {}}, True),

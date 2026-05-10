@@ -184,6 +184,13 @@ tools:
       - read_supplier_settlements
     auto_approval: true
 
+  get_supplier_debt_document_breakdown:
+    risk: L0
+    capabilities:
+      - read_supplier_settlements
+      - read_documents
+    auto_approval: true
+
   get_cash_bank_movements:
     risk: L0
     capabilities:

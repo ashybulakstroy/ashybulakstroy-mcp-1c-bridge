@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-05-10T20:03:04.079569+05:00",
+  "generated_at": "2026-05-10T20:16:48.451986+05:00",
   "base_url": "http://192.168.1.183/Isatay",
   "service_url": "http://192.168.1.183/Isatay/odata/standard.odata",
-  "total_tools": 27,
-  "passed": 25,
+  "total_tools": 28,
+  "passed": 26,
   "pass_empty": 0,
   "skipped": 0,
   "failed": 0,
@@ -466,6 +466,28 @@
       },
       "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 10, \"data\": [{\"counterparty\": \"Alina Group ТОО Филиал\", \"bin_or_iin\": \"060241015368\", \"debt_amount\": \"19203536\", \"currency\": null, \"last_payment_date\": null, \"overdue_days\": 1087, \"source_document_count\": 27, \"source_entity\": \"Document_ПоступлениеТоваровУслуг\"}, {\"counterparty\": \"ТАРГАН ТУЛ ТОО\", \"bin_or_iin\": \"081140012433\", \"debt_amount\": \"11507095\", \"currency\": null, \"last_payment_date\": null, \"overdue_days\": 1119, \"source_document_count\": 19, \"source_entity\": \"Document_ПоступлениеТоваровУслуг\"}, {\"counterparty\": \"Мир инструмента Алматы ТОО\", \"bin_or_iin\": \"031140003312\", \"debt_amount\": \"11497879\", \"currency\": null, \"last_payment_date\": null, \"overd",
       "row_count": 10,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "get_supplier_debt_document_breakdown",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_supplier_settlements",
+        "read_documents"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "date_from": "2020-01-01",
+        "date_to": "2026-12-31",
+        "limit": 5,
+        "documents_per_supplier": 3
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 5, \"data\": [{\"counterparty\": \"Alina Group ТОО Филиал\", \"bin_or_iin\": \"060241015368\", \"debt_amount\": \"19203536\", \"last_payment_date\": null, \"overdue_days\": 1087, \"source_entity\": \"Document_ПоступлениеТоваровУслуг\", \"documents\": [{\"document_date\": \"2024-01-26T19:35:22\", \"document_number\": \"00000000016\", \"document_total_amount\": \"1417439\", \"outstanding_amount\": \"1417439\", \"paid_amount_estimate\": \"0\", \"currency\": \"KZT\", \"organization\": \"ИП Isatay\", \"overdue_days\": 1070, \"line_items_sample\": [{\"section\": \"goods\", \"name\": \"Затирка AlinEX JOINT, 25 кг (для швов ГКЛ)\", \"quantity\": 3, \"amount\": 16002}, {\"section\": \"goods\", \"name\": \"Наливной пол НАШИ \\\"Нивелир\\\"",
+      "row_count": 5,
       "error_type": null,
       "audit_record_created": true,
       "output_filter_applied": true,

@@ -114,6 +114,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 | `get_customer_payment_behavior_summary` | Typical payment days | L1 | `read_receivables`, `create_local_report` | yes | no | yes |
 | `get_customer_settlements_summary` | Read-only сводка по взаиморасчетам покупателей | L0 | `read_customer_settlements` | yes | no | yes |
 | `get_supplier_settlements_summary` | Read-only сводка по взаиморасчетам с поставщиками | L0 | `read_supplier_settlements` | yes | no | yes |
+| `get_supplier_debt_document_breakdown` | Read-only расшифровка, за что именно должны поставщикам, по документам поступления | L0 | `read_supplier_settlements`, `read_documents` | yes | no | yes |
 | `explain_last_answer` | Объясняет источник и логику последнего ответа | L1 | `explain_results` | yes | no | yes |
 | `parse_inventory_report_text` | Парсит текстовый отчёт 1С | L1 | `create_local_report` | yes | no | yes |
 | `validate_inventory_report_text` | Сверяет результат MCP с отчётом 1С | L1 | `read_inventory`, `create_local_report` | yes | no | yes |
@@ -141,6 +142,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 - `Покажи движения по банку и кассе за неделю`
 - `Покажи взаиморасчеты с покупателями`
 - `Кому мы должны`
+- `За что мы должны поставщикам`
 - `Топ клиенты за этот месяц`
 - `Кто не оплатил`
 - `Кто не оплатил в течение 3 дней`
@@ -222,6 +224,7 @@ Blocked tool call example:
 - `get_cash_bank_movements` — это read-only operational view по published OData payment documents, а не официальная банковская выписка, кассовая книга или бухгалтерский отчет 1С;
 - `get_customer_settlements_summary` — это read-only управленческая оценка по OData, а не официальный бухгалтерский акт сверки и не баланс взаиморасчетов;
 - `get_supplier_settlements_summary` — это read-only управленческая оценка кредиторки по OData, а не официальный бухгалтерский акт сверки и не баланс взаиморасчетов;
+- `get_supplier_debt_document_breakdown` — это read-only управленческая расшифровка кредиторки по документам поступления и их строкам, а не официальный бухгалтерский акт сверки, не баланс взаиморасчетов и не официальный отчет 1С;
 - blocked operations являются feature, а не limitation.
 
 ## Gaps Before Commercial Pilot

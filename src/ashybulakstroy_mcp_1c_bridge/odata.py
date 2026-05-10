@@ -682,6 +682,7 @@ class OneCODataClient:
         counterparty: str | None = None,
         limit: int = 100,
         entity_name: str | None = None,
+        include_sections: bool = False,
     ) -> dict[str, Any]:
         """Read purchase/supplier-invoice-like rows from OData using metadata heuristics."""
         if entity_name:
@@ -704,7 +705,7 @@ class OneCODataClient:
             source = sources[0]
 
         mapped = source.get("mapped_fields") or {}
-        select = self._build_purchase_select(mapped)
+        select = None if include_sections else self._build_purchase_select(mapped)
         effective_from = date or date_from
         effective_to = date or date_to
         filter_expr = self._build_common_text_date_filter(
@@ -1374,6 +1375,161 @@ class OneCODataClient:
             },
             "warnings": warnings,
             "note": "Read-only management estimate only. Не является официальным бухгалтерским актом сверки или балансом взаиморасчетов.",
+        }
+
+    def get_supplier_debt_document_breakdown(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        min_debt: Any = None,
+        limit: int = 10,
+        documents_per_supplier: int = 5,
+    ) -> dict[str, Any]:
+        """Return document-level safe breakdown for supplier payables."""
+        effective_limit = min(max(int(limit), 1), 20)
+        docs_limit = min(max(int(documents_per_supplier), 1), 10)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        as_of = self._parse_date_like(validated_to) or date.today()
+        min_debt_amount = self._parse_decimal_input(min_debt, field_name="min_debt", default=Decimal("0"))
+        fetch_limit = min(max(effective_limit * 10, 200), self.settings.max_top)
+
+        summary = self.get_supplier_settlements_summary(
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty_name=counterparty_name,
+            min_debt=min_debt_amount,
+            limit=effective_limit,
+        )
+        purchase_source = summary.get("purchase_source") or {}
+        outgoing_source = summary.get("outgoing_payments_source") or {}
+        if not purchase_source or not outgoing_source:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "min_debt": str(min_debt_amount),
+                    "limit": effective_limit,
+                    "documents_per_supplier": docs_limit,
+                },
+                "missing_sources": summary.get("missing_sources") or [],
+                "warnings": summary.get("warnings") or [],
+                "note": "Document breakdown не построен, потому что нет безопасных read-only источников закупок или исходящих оплат.",
+            }
+
+        purchases = self.get_purchase_documents(
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty=counterparty_name,
+            limit=fetch_limit,
+            entity_name=purchase_source.get("entity"),
+            include_sections=False,
+        )
+        outgoing = self.get_payments(
+            direction="outgoing",
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty=counterparty_name,
+            limit=fetch_limit,
+            entity_name=outgoing_source.get("entity"),
+        )
+        settlement = self._build_customer_settlement(purchases.get("data") or [], outgoing.get("data") or [], as_of)
+        detail_rows: list[dict[str, Any]] = []
+        warnings = list(summary.get("warnings") or [])
+
+        for supplier_row in summary.get("data") or []:
+            supplier_name = str(supplier_row.get("counterparty") or "")
+            supplier_info = settlement.get(supplier_name)
+            if not supplier_info:
+                continue
+            open_docs = [
+                invoice
+                for invoice in supplier_info.get("open_invoices") or []
+                if (invoice.get("outstanding_amount") or Decimal("0")) > 0
+            ]
+            if not open_docs:
+                continue
+            detailed = self.get_purchase_documents(
+                date_from=validated_from,
+                date_to=validated_to,
+                counterparty=supplier_name,
+                limit=min(max(docs_limit * 4, 20), 100),
+                entity_name=purchase_source.get("entity"),
+                include_sections=True,
+            )
+            warnings.extend(detailed.get("warnings") or [])
+            open_doc_map = {
+                self._purchase_invoice_key(invoice): invoice
+                for invoice in open_docs
+            }
+            document_rows: list[dict[str, Any]] = []
+            for row in detailed.get("data") or []:
+                key = self._purchase_invoice_key(
+                    {
+                        "invoice_number": row.get("number"),
+                        "invoice_date": self._parse_date_like(row.get("date")),
+                        "amount": self._to_decimal(row.get("amount"), default=Decimal("0")) or Decimal("0"),
+                    }
+                )
+                invoice = open_doc_map.get(key)
+                if invoice is None:
+                    continue
+                amount_total = self._to_decimal(row.get("amount"), default=Decimal("0")) or Decimal("0")
+                outstanding_amount = invoice.get("outstanding_amount") or Decimal("0")
+                paid_amount = amount_total - outstanding_amount
+                section_summary = self._summarize_purchase_document_sections(row.get("raw") or {})
+                document_rows.append(
+                    {
+                        "document_date": row.get("date"),
+                        "document_number": row.get("number"),
+                        "document_total_amount": str(amount_total),
+                        "outstanding_amount": str(outstanding_amount),
+                        "paid_amount_estimate": str(paid_amount if paid_amount > 0 else Decimal("0")),
+                        "currency": row.get("currency"),
+                        "organization": row.get("organization"),
+                        "overdue_days": self._calculate_overdue_days([invoice], as_of),
+                        "line_items_sample": section_summary["line_items_sample"],
+                        "section_counts": section_summary["section_counts"],
+                        "line_summary_text": section_summary["line_summary_text"],
+                    }
+                )
+            document_rows.sort(
+                key=lambda item: (
+                    self._to_decimal(item.get("outstanding_amount"), default=Decimal("0")) or Decimal("0"),
+                    self._parse_date_like(item.get("document_date")) or date.min,
+                ),
+                reverse=True,
+            )
+            detail_rows.append(
+                {
+                    "counterparty": supplier_name,
+                    "bin_or_iin": supplier_row.get("bin_or_iin"),
+                    "debt_amount": supplier_row.get("debt_amount"),
+                    "last_payment_date": supplier_row.get("last_payment_date"),
+                    "overdue_days": supplier_row.get("overdue_days"),
+                    "source_entity": supplier_row.get("source_entity"),
+                    "documents": document_rows[:docs_limit],
+                }
+            )
+
+        return {
+            "count_returned": min(len(detail_rows), effective_limit),
+            "data": detail_rows[:effective_limit],
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "min_debt": str(min_debt_amount),
+                "limit": effective_limit,
+                "documents_per_supplier": docs_limit,
+            },
+            "purchase_source": purchase_source,
+            "outgoing_payments_source": outgoing_source,
+            "warnings": warnings,
+            "note": "Read-only document-level management estimate only. Не является официальным бухгалтерским актом сверки или балансом взаиморасчетов.",
         }
 
     def get_cash_bank_movements(
@@ -2826,6 +2982,55 @@ class OneCODataClient:
                 "as_of": as_of.isoformat(),
             }
         return settlement
+
+    def _purchase_invoice_key(self, invoice: dict[str, Any]) -> tuple[str, str | None, str]:
+        invoice_number = str(invoice.get("invoice_number") or invoice.get("number") or "")
+        invoice_date = invoice.get("invoice_date")
+        if isinstance(invoice_date, date):
+            invoice_date_iso = invoice_date.isoformat()
+        else:
+            parsed = self._parse_date_like(invoice.get("date"))
+            invoice_date_iso = parsed.isoformat() if parsed else None
+        amount = self._to_decimal(invoice.get("amount"), default=Decimal("0")) or Decimal("0")
+        return (invoice_number, invoice_date_iso, str(amount))
+
+    def _summarize_purchase_document_sections(self, raw: dict[str, Any], max_lines: int = 5) -> dict[str, Any]:
+        sections = {
+            "Товары": "goods",
+            "Услуги": "services",
+            "ОС": "fixed_assets",
+            "НМА": "intangibles",
+        }
+        section_counts: dict[str, int] = {}
+        line_items_sample: list[dict[str, Any]] = []
+        for source_name, public_name in sections.items():
+            rows = raw.get(source_name)
+            if not isinstance(rows, list) or not rows:
+                continue
+            section_counts[public_name] = len(rows)
+            for row in rows:
+                if len(line_items_sample) >= max_lines:
+                    break
+                name = (
+                    row.get("Содержание")
+                    or row.get("Description")
+                    or self._resolve_reference_value("Номенклатура_Key", row.get("Номенклатура_Key"))
+                    or self._resolve_reference_value("Номенклатура", row.get("Номенклатура"))
+                )
+                line_items_sample.append(
+                    {
+                        "section": public_name,
+                        "name": name,
+                        "quantity": row.get("Количество"),
+                        "amount": row.get("Сумма"),
+                    }
+                )
+        line_summary_parts = [f"{section}={count}" for section, count in section_counts.items()]
+        return {
+            "section_counts": section_counts,
+            "line_items_sample": line_items_sample,
+            "line_summary_text": ", ".join(line_summary_parts) if line_summary_parts else None,
+        }
 
     def _last_payment_dates_by_customer(self, payment_rows: list[dict[str, Any]]) -> dict[str, str]:
         out: dict[str, str] = {}

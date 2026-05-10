@@ -275,7 +275,7 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Низкие остатки рассчитаны детерминированно: сервер взял авто-остатки и отфильтровал позиции, где quantity меньше или равно заданному порогу.")
     elif tool in {"get_outgoing_payments", "get_incoming_payments", "get_cash_bank_movements"}:
         explanation["summary"].append("Платежи получены адаптивно: сервер нашел платежную сущность по metadata, прочитал строки OData и нормализовал дату, контрагента и сумму.")
-    elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty", "get_customer_settlements_summary", "get_supplier_settlements_summary"}:
+    elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty", "get_customer_settlements_summary", "get_supplier_settlements_summary", "get_supplier_debt_document_breakdown"}:
         explanation["summary"].append("Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.")
     elif tool == "search_document_by_number":
         explanation["summary"].append("Поиск документа выполняется через безопасный wrapper: сервер выбирает document-like OData сущности, ищет совпадение по номеру и возвращает только нормализованные поля документа.")
@@ -433,6 +433,24 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
                     "result": result,
                 },
                 tool="get_supplier_settlements_summary",
+            )
+
+        if any(phrase in ql for phrase in ["за что мы должны", "за что должны поставщикам", "расшифруй кредиторку поставщикам", "покажи документы по задолженности поставщикам"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            result = odata.get_supplier_debt_document_breakdown(
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_supplier_debt_document_breakdown",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_supplier_debt_document_breakdown",
             )
 
         if any(phrase in ql for phrase in ["не оплатил в течение 3", "не оплатил за 3 дня", "должники 3 дня", "должники старше 3 дней", "кто не оплатил в течение 3 календарных дней"]):
@@ -961,6 +979,34 @@ def get_supplier_settlements_summary(
             limit=limit,
         )
         return _ok(result, tool="get_supplier_settlements_summary")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_supplier_debt_document_breakdown(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    min_debt: str | None = None,
+    limit: int = 10,
+    documents_per_supplier: int = 5,
+) -> dict[str, Any]:
+    """Показать, за какие документы и поставки мы должны поставщикам.
+
+    Возвращает read-only расшифровку кредиторки по документам поступления и, где возможно,
+    по секциям товаров/услуг внутри документа, без raw OData и без записи в 1С.
+    """
+    try:
+        result = odata.get_supplier_debt_document_breakdown(
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            min_debt=min_debt,
+            limit=limit,
+            documents_per_supplier=documents_per_supplier,
+        )
+        return _ok(result, tool="get_supplier_debt_document_breakdown")
     except Exception as exc:
         return _err(exc)
 
