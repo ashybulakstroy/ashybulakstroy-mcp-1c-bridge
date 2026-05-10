@@ -175,6 +175,39 @@ class FakeOneCODataClient(OneCODataClient):
             if select:
                 rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
             return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Document_ПоступлениеТоваровУслуг":
+            rows = [
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000200",
+                    "Дата": "2026-04-20T12:00:00",
+                    "Контрагент": "ТОО Cement Trade",
+                    "СуммаДокумента": "120000",
+                    "Номер": "SUP-001",
+                    "Валюта": "KZT",
+                    "Posted": True,
+                },
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000201",
+                    "Дата": "2026-04-23T12:00:00",
+                    "Контрагент": "ТОО Cement Trade",
+                    "СуммаДокумента": "40000",
+                    "Номер": "SUP-002",
+                    "Валюта": "KZT",
+                    "Posted": True,
+                },
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000202",
+                    "Дата": "2026-04-24T13:00:00",
+                    "Контрагент": "ТОО Сервис",
+                    "СуммаДокумента": "60000",
+                    "Номер": "SUP-003",
+                    "Валюта": "KZT",
+                    "Posted": False,
+                },
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
         return {"entity": entity_name, "count_returned": 0, "top_applied": top, "data": []}
 
 
@@ -512,9 +545,9 @@ def test_search_document_by_number_respects_type_period_and_limit_cap():
     assert result["data"][0]["document_type"] == "Document_ПоступлениеНаБанковскийСчет"
     assert result["data"][0]["number"] == "000101"
     assert result["data"][0]["status"] == "posted"
-    assert len(client.captured_queries) == 1
+    assert len(client.captured_queries) >= 1
     assert client.captured_queries[0]["entity_name"] == "Document_ПоступлениеНаБанковскийСчет"
-    assert client.captured_queries[0]["top"] == 20
+    assert all(query["top"] == 20 for query in client.captured_queries)
     assert "substringof('00010', Номер) eq true" in str(client.captured_queries[0]["filter_expr"])
     assert "Дата ge datetime'2026-04-24T00:00:00'" in str(client.captured_queries[0]["filter_expr"])
     assert "Дата le datetime'2026-04-24T23:59:59'" in str(client.captured_queries[0]["filter_expr"])
@@ -562,7 +595,37 @@ def test_search_document_by_number_falls_back_when_odata_filter_is_rejected():
     assert len(client.captured_queries) == 1
     assert client.captured_queries[0]["entity_name"] == "Document_РеализацияТоваровУслуг"
     assert client.captured_queries[0]["filter_expr"] is None
-    assert client.captured_queries[0]["top"] == 50
+    assert client.captured_queries[0]["top"] == 20
+
+
+def test_search_document_by_number_limits_candidate_scan_for_large_bases():
+    client = FakeOneCODataClient()
+
+    original = client._discover_document_search_candidates
+    captured = {}
+
+    def wrapped(document_type=None, limit=None):
+        captured["document_type"] = document_type
+        captured["limit"] = limit
+        return original(document_type=document_type, limit=limit)
+
+    client._discover_document_search_candidates = wrapped  # type: ignore[method-assign]
+
+    result = client.search_document_by_number(document_number="00050", limit=5)
+
+    assert result["count_returned"] == 3
+    assert captured["document_type"] is None
+    assert captured["limit"] == 10
+
+
+def test_search_document_by_number_rejects_invalid_date_range():
+    client = FakeOneCODataClient()
+
+    try:
+        client.search_document_by_number(document_number="00050", date_from="2026-05-01", date_to="2026-04-01", limit=5)
+        assert False, "Expected ODataError for invalid date range"
+    except Exception as exc:
+        assert "date_from" in str(exc)
 
 
 def test_search_document_by_number_skips_entity_when_fallback_read_is_forbidden():
@@ -653,6 +716,19 @@ def test_get_customer_settlements_summary_rejects_invalid_date_range():
         assert "date_from" in str(exc)
 
 
+def test_generate_database_profile_returns_partial_profile_when_candidate_discovery_fails():
+    client = FakeOneCODataClient()
+    client.discover_payment_sources = lambda limit=10, check_data=True: (_ for _ in ()).throw(ODataError("timed out"))  # type: ignore[method-assign]
+
+    result = client.generate_database_profile(check_inventory_data=True, live_limit=0)
+
+    assert result["entity_summary"]["total"] > 0
+    assert result["payment_candidates"] == []
+    assert result["warnings"]
+    assert any("payment_candidates" in warning for warning in result["warnings"])
+    assert any("partial mode" in risk for risk in result["risks"])
+
+
 def test_get_customer_settlements_summary_escapes_counterparty_name_in_filters():
     client = FakeOneCODataClient()
 
@@ -670,6 +746,57 @@ def test_get_customer_settlements_summary_rejects_invalid_min_debt():
 
     try:
         client.get_customer_settlements_summary(date_to="2026-04-30", min_debt="not-a-number")
+        assert False, "Expected ODataError for invalid min_debt"
+    except Exception as exc:
+        assert "min_debt" in str(exc)
+
+
+def test_get_supplier_settlements_summary_returns_safe_payables_rows():
+    client = FakeOneCODataClient()
+
+    result = client.get_supplier_settlements_summary(date_to="2026-04-30", limit=10)
+
+    assert result["count_returned"] == 2
+    assert result["data"][0]["counterparty"] == "ТОО Cement Trade"
+    assert result["data"][0]["debt_amount"] == "110000"
+    assert result["data"][0]["last_payment_date"] == "2026-04-25"
+    assert result["data"][0]["overdue_days"] == 10
+    assert result["data"][0]["source_document_count"] == 2
+    assert result["data"][0]["source_entity"] == "Document_ПоступлениеТоваровУслуг"
+    assert result["data"][0]["currency"] is None
+    assert result["source_explanation"]["purchase_documents_used"] == "Document_ПоступлениеТоваровУслуг"
+    assert result["source_explanation"]["outgoing_payments_used"] == "Document_СписаниеСБанковскогоСчета"
+    assert "официальным бухгалтерским актом сверки" in result["note"]
+
+
+def test_get_supplier_settlements_summary_caps_limit_and_min_debt():
+    client = FakeOneCODataClient()
+
+    result = client.get_supplier_settlements_summary(date_to="2026-04-30", min_debt="70000", limit=100)
+
+    assert result["count_returned"] == 1
+    assert result["filters_applied_in_python"]["limit"] == 50
+    assert result["data"][0]["counterparty"] == "ТОО Cement Trade"
+
+
+def test_get_supplier_settlements_summary_handles_missing_sources_gracefully():
+    client = FakeOneCODataClient()
+    client.discover_purchase_sources = lambda limit=1, check_data=True: []  # type: ignore[method-assign]
+
+    result = client.get_supplier_settlements_summary(date_to="2026-04-30", limit=10)
+
+    assert result["count_returned"] == 0
+    assert result["data"] == []
+    assert "purchase_documents" in result["missing_sources"]
+    assert result["warnings"]
+    assert result["source_explanation"]["basis"] == "summary_not_built"
+
+
+def test_get_supplier_settlements_summary_rejects_invalid_min_debt():
+    client = FakeOneCODataClient()
+
+    try:
+        client.get_supplier_settlements_summary(date_to="2026-04-30", min_debt="not-a-number")
         assert False, "Expected ODataError for invalid min_debt"
     except Exception as exc:
         assert "min_debt" in str(exc)

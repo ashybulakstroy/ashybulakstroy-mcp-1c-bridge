@@ -66,6 +66,16 @@
         <Property Name="Номер" Type="Edm.String" />
         <Property Name="Posted" Type="Edm.Boolean" />
       </EntityType>
+      <EntityType Name="Document_ПоступлениеТоваровУслугType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Дата" Type="Edm.DateTime" />
+        <Property Name="Контрагент" Type="Edm.String" />
+        <Property Name="СуммаДокумента" Type="Edm.Decimal" />
+        <Property Name="Номер" Type="Edm.String" />
+        <Property Name="Валюта" Type="Edm.String" />
+        <Property Name="Posted" Type="Edm.Boolean" />
+      </EntityType>
       <EntityContainer Name="FakeContainer">
         <EntitySet Name="AccumulationRegister_ТоварыНаСкладах" EntityType="Fake1C.AccumulationRegister_ТоварыНаСкладахType" />
         <EntitySet Name="Catalog_Номенклатура" EntityType="Fake1C.Catalog_НоменклатураType" />
@@ -74,6 +84,7 @@
         <EntitySet Name="Document_ПриходныйКассовыйОрдер" EntityType="Fake1C.Document_ПриходныйКассовыйОрдерType" />
         <EntitySet Name="Document_РасходныйКассовыйОрдер" EntityType="Fake1C.Document_РасходныйКассовыйОрдерType" />
         <EntitySet Name="Document_РеализацияТоваровУслуг" EntityType="Fake1C.Document_РеализацияТоваровУслугType" />
+        <EntitySet Name="Document_ПоступлениеТоваровУслуг" EntityType="Fake1C.Document_ПоступлениеТоваровУслугType" />
       </EntityContainer>
     </Schema>
   </edmx:DataServices>

@@ -178,6 +178,12 @@ tools:
       - read_customer_settlements
     auto_approval: true
 
+  get_supplier_settlements_summary:
+    risk: L0
+    capabilities:
+      - read_supplier_settlements
+    auto_approval: true
+
   get_cash_bank_movements:
     risk: L0
     capabilities:

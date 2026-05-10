@@ -124,6 +124,25 @@
 Текущий safe path:
 - `get_customer_settlements_summary(date_from="2026-04-01", date_to="2026-04-30", min_debt="50000")`
 
+### Кому мы должны
+
+```text
+Кому мы должны
+```
+
+Текущий safe path:
+- `get_supplier_settlements_summary`
+- это управленческая read-only оценка по OData, а не официальный бухгалтерский акт сверки
+
+С уточнением:
+
+```text
+Покажи задолженность поставщикам за период 2026-04-01 2026-04-30, долг больше 50000
+```
+
+Текущий safe path:
+- `get_supplier_settlements_summary(date_from="2026-04-01", date_to="2026-04-30", min_debt="50000")`
+
 ### Просроченные должники
 
 ```text

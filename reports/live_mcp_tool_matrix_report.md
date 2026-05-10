@@ -1,11 +1,11 @@
 # Live MCP Tool Matrix Report
 
-- Generated: `2026-05-09T17:11:29.208202+05:00`
-- Base URL: `http://192.168.1.183/SaryDala`
-- Service URL: `http://192.168.1.183/SaryDala/odata/standard.odata`
-- Total tools: `26`
-- PASS: `20`
-- PASS_EMPTY: `4`
+- Generated: `2026-05-10T20:03:04.079569+05:00`
+- Base URL: `http://192.168.1.183/Isatay`
+- Service URL: `http://192.168.1.183/Isatay/odata/standard.odata`
+- Total tools: `27`
+- PASS: `25`
+- PASS_EMPTY: `0`
 - SKIP: `0`
 - FAIL: `0`
 - BLOCKED_EXPECTED: `2`
@@ -20,21 +20,22 @@
 | `describe_entity` | `L0` | `PASS` | `0` | `True` | `True` | `False` | Tool returned structured non-tabular summary. |
 | `search_metadata` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
 | `discover_inventory_sources` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
-| `get_inventory_auto` | `L0` | `PASS` | `1` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
-| `get_low_stock_items` | `L0` | `PASS` | `0` | `True` | `True` | `False` | Tool returned structured non-tabular summary. |
+| `get_inventory_auto` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
+| `get_low_stock_items` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
 | `discover_payment_sources` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
-| `get_outgoing_payments` | `L0` | `PASS_EMPTY` | `0` | `True` | `True` | `False` | Tool succeeded but current safe live sources returned no business rows. |
-| `get_incoming_payments` | `L0` | `PASS_EMPTY` | `0` | `True` | `True` | `False` | Tool succeeded but current safe live sources returned no business rows. |
-| `payment_summary_by_counterparty` | `L1` | `PASS_EMPTY` | `0` | `True` | `True` | `False` | Tool succeeded but current safe live sources returned no business rows. |
+| `get_outgoing_payments` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
+| `get_incoming_payments` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
+| `payment_summary_by_counterparty` | `L1` | `PASS` | `5` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
 | `get_unpaid_customers_summary` | `L1` | `PASS` | `1` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
 | `get_overdue_unpaid_customers` | `L1` | `PASS` | `1` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
-| `get_customer_payment_behavior_summary` | `L1` | `PASS` | `1` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
+| `get_customer_payment_behavior_summary` | `L1` | `PASS` | `6` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
 | `explain_last_answer` | `L1` | `PASS` | `0` | `True` | `True` | `False` | Tool returned structured non-tabular summary. |
 | `parse_inventory_report_text` | `L1` | `PASS` | `2` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
 | `validate_inventory_report_text` | `L1` | `PASS` | `0` | `True` | `True` | `False` | Tool returned structured non-tabular summary. |
 | `find_buh_entity` | `L0` | `PASS` | `0` | `True` | `True` | `False` | Tool returned structured non-tabular summary. |
-| `search_document_by_number` | `L0` | `PASS` | `8` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
+| `search_document_by_number` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
 | `get_customer_settlements_summary` | `L0` | `PASS` | `1` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
-| `get_cash_bank_movements` | `L0` | `PASS_EMPTY` | `0` | `True` | `True` | `False` | Tool succeeded but current safe live sources returned no business rows. |
+| `get_supplier_settlements_summary` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
+| `get_cash_bank_movements` | `L0` | `PASS` | `10` | `True` | `True` | `False` | Tool returned non-empty read-only result. |
 | `query_entity` | `None` | `BLOCKED_EXPECTED` | `0` | `True` | `False` | `False` | tool is forbidden by policy denylist |
 | `post_document_validated` | `None` | `BLOCKED_EXPECTED` | `0` | `True` | `False` | `False` | tool is forbidden by policy denylist |

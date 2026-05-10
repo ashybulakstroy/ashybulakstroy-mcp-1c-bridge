@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from time import perf_counter
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -527,6 +527,55 @@ class OneCODataClient:
             reverse=True,
         )[:limit]
 
+    def discover_purchase_sources(
+        self,
+        limit: int = 10,
+        check_data: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Find likely purchase/supplier invoice entities using metadata heuristics."""
+        candidates: list[dict[str, Any]] = []
+        for entity in self.list_entities():
+            score, reasons = self._score_purchase_entity(entity)
+            if score <= 0:
+                continue
+            fields = entity.fields or []
+            field_names = [f.name for f in fields]
+            mapped = self._map_purchase_fields(field_names)
+            row: dict[str, Any] = {
+                "entity": entity.name,
+                "entity_type": entity.entity_type,
+                "score": score,
+                "confidence": self._confidence_from_score(score),
+                "reasons": reasons,
+                "mapped_fields": mapped,
+                "field_count": len(field_names),
+                "sample_fields": field_names[:40],
+            }
+            candidates.append(row)
+
+        ranked = sorted(candidates, key=lambda r: r["score"], reverse=True)
+        if check_data:
+            for row in ranked[: min(max(limit * 3, 10), 20)]:
+                try:
+                    sample = self.query_entity(row["entity"], top=1)
+                    row["has_data"] = bool(sample.get("data"))
+                    row["sample"] = (sample.get("data") or [])[:1]
+                    if row["has_data"]:
+                        row["score"] += 8
+                        row["confidence"] = self._confidence_from_score(row["score"])
+                        row["reasons"].append("entity_has_data")
+                except Exception as exc:
+                    row["has_data"] = None
+                    row["error"] = str(exc)[:300]
+        return sorted(
+            ranked,
+            key=lambda r: (
+                1 if r.get("has_data") is True else 0,
+                r["score"],
+            ),
+            reverse=True,
+        )[:limit]
+
     def get_sales_documents(
         self,
         date: str | None = None,
@@ -625,6 +674,104 @@ class OneCODataClient:
             "note": "Реализации/счета определены по metadata-эвристике OData. Для точного дебиторского учета сверяйте с официальными отчетами 1С.",
         }
 
+    def get_purchase_documents(
+        self,
+        date: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty: str | None = None,
+        limit: int = 100,
+        entity_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Read purchase/supplier-invoice-like rows from OData using metadata heuristics."""
+        if entity_name:
+            entity = self.describe_entity(entity_name)
+            if entity is None:
+                raise ODataError(f"Сущность не найдена: {entity_name}")
+            score, reasons = self._score_purchase_entity(entity)
+            mapped = self._map_purchase_fields([f.name for f in (entity.fields or [])])
+            source = {
+                "entity": entity.name,
+                "score": score,
+                "confidence": self._confidence_from_score(score),
+                "reasons": reasons,
+                "mapped_fields": mapped,
+            }
+        else:
+            sources = self.discover_purchase_sources(limit=1, check_data=True)
+            if not sources:
+                raise ODataError("Не найден кандидат на источник поступлений/счетов поставщика. Запустите discover_purchase_sources для диагностики.")
+            source = sources[0]
+
+        mapped = source.get("mapped_fields") or {}
+        select = self._build_purchase_select(mapped)
+        effective_from = date or date_from
+        effective_to = date or date_to
+        filter_expr = self._build_common_text_date_filter(
+            mapped,
+            date_from=effective_from,
+            date_to=effective_to,
+            text_field_key="counterparty",
+            text_value=counterparty,
+        )
+        query_top = min(max(limit, 50), self.settings.max_top)
+        try:
+            raw = self.query_entity(
+                source["entity"],
+                top=query_top,
+                select=select or None,
+                filter_expr=filter_expr or None,
+            )
+            filter_fallback_used = False
+        except ODataError as exc:
+            if filter_expr and self._is_unsupported_where_filter_error(exc):
+                raw = self.query_entity(
+                    source["entity"],
+                    top=min(max(limit * 3, 100), self.settings.max_top),
+                    select=select or None,
+                    filter_expr=None,
+                )
+                filter_fallback_used = True
+            else:
+                raise
+        rows = raw.get("data") or []
+        normalized = [self._normalize_sales_row(r, mapped) for r in rows]
+
+        warnings: list[str] = []
+        if filter_fallback_used:
+            warnings.append("OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.")
+        if effective_from or effective_to:
+            normalized = [r for r in normalized if self._date_in_range(r.get("date"), effective_from, effective_to)]
+        if counterparty:
+            normalized = [r for r in normalized if self._text_match(r.get("counterparty"), counterparty) or self._text_match(r.get("raw"), counterparty)]
+        if not mapped.get("counterparty"):
+            warnings.append("Не найдено явное поле поставщика/контрагента в источнике поступлений.")
+        if not mapped.get("amount"):
+            warnings.append("Не найдено явное поле суммы в источнике поступлений.")
+        if not mapped.get("date"):
+            warnings.append("Не найдено явное поле даты в источнике поступлений.")
+
+        total_amount = Decimal("0")
+        for row in normalized[:limit]:
+            amount = self._to_decimal(row.get("amount"), default=None)
+            if amount is not None:
+                total_amount += amount
+
+        return {
+            "source": source,
+            "filters_applied_in_python": {
+                "date": date,
+                "date_from": date_from,
+                "date_to": date_to,
+                "counterparty": counterparty,
+            },
+            "count_returned": min(len(normalized), limit),
+            "total_amount": str(total_amount),
+            "data": normalized[:limit],
+            "warnings": warnings,
+            "note": "Поступления/счета поставщика определены по metadata-эвристике OData. Для точного учета кредиторки сверяйте с официальными отчетами 1С.",
+        }
+
     def search_document_by_number(
         self,
         document_number: str,
@@ -639,13 +786,15 @@ class OneCODataClient:
             raise ODataError("document_number не должен быть пустым.")
 
         effective_limit = min(max(int(limit), 1), 20)
-        candidates = self._discover_document_search_candidates(document_type=document_type)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        candidate_limit = self._document_search_candidate_limit(document_type=document_type, result_limit=effective_limit)
+        candidates = self._discover_document_search_candidates(document_type=document_type, limit=candidate_limit)
         if not candidates:
             return self._empty_document_search_result(
                 needle=needle,
                 document_type=document_type,
-                date_from=date_from,
-                date_to=date_to,
+                date_from=validated_from,
+                date_to=validated_to,
                 limit=effective_limit,
                 warnings=[
                     "Не найдено document-like OData сущностей для поиска по номеру. "
@@ -655,18 +804,21 @@ class OneCODataClient:
 
         warnings: list[str] = []
         rows: list[dict[str, Any]] = []
+        checked_candidates = 0
         for candidate in candidates:
             mapped = candidate.get("mapped_fields") or {}
             if not mapped.get("number"):
                 warnings.append(f"Пропущена сущность {candidate['entity']}: не найдено поле номера документа.")
                 continue
+            checked_candidates += 1
             select = self._build_document_select(mapped)
             filter_expr = self._build_document_search_filter(
                 mapped,
                 document_number=needle,
-                date_from=date_from,
-                date_to=date_to,
+                date_from=validated_from,
+                date_to=validated_to,
             )
+            orderby = f"{mapped['date']} desc" if mapped.get("date") else None
             query_top = min(effective_limit, self.settings.max_top)
             filter_fallback_used = False
             try:
@@ -675,15 +827,17 @@ class OneCODataClient:
                     top=query_top,
                     select=select or None,
                     filter_expr=filter_expr or None,
+                    orderby=orderby,
                 )
             except ODataError as exc:
                 if filter_expr and self._is_unsupported_where_filter_error(exc):
                     try:
                         raw = self.query_entity(
                             candidate["entity"],
-                            top=min(max(effective_limit * 5, 50), self.settings.max_top),
+                            top=min(max(effective_limit * 2, 20), 60, self.settings.max_top),
                             select=select or None,
                             filter_expr=None,
+                            orderby=orderby,
                         )
                         filter_fallback_used = True
                     except ODataError as fallback_exc:
@@ -705,9 +859,12 @@ class OneCODataClient:
                 normalized = self._normalize_document_search_row(row, candidate["entity"], mapped)
                 if not self._text_match(normalized.get("number"), needle):
                     continue
-                if (date_from or date_to) and not self._date_in_range(normalized.get("date"), date_from, date_to):
+                if (validated_from or validated_to) and not self._date_in_range(normalized.get("date"), validated_from, validated_to):
                     continue
                 rows.append(normalized)
+            if len(rows) >= effective_limit and (document_type or checked_candidates >= 3):
+                warnings.append("Поиск остановлен после достижения лимита в наиболее релевантных document-like источниках.")
+                break
 
         rows.sort(
             key=lambda item: (
@@ -722,9 +879,10 @@ class OneCODataClient:
             "document_number": needle,
             "document_type_filter": document_type,
             "filters_applied_in_python": {
-                "date_from": date_from,
-                "date_to": date_to,
+                "date_from": validated_from,
+                "date_to": validated_to,
                 "limit": effective_limit,
+                "candidate_limit": candidate_limit,
             },
             "matched_entities": sorted({str(row.get("document_type") or "") for row in rows if row.get("document_type")}),
             "count_returned": min(len(rows), effective_limit),
@@ -1080,6 +1238,139 @@ class OneCODataClient:
                 "incoming_payments_used": incoming_source.get("entity"),
                 "missing_sources": missing_sources,
                 "basis": "sales_documents_minus_incoming_payments_by_counterparty",
+            },
+            "warnings": warnings,
+            "note": "Read-only management estimate only. Не является официальным бухгалтерским актом сверки или балансом взаиморасчетов.",
+        }
+
+    def get_supplier_settlements_summary(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        min_debt: Any = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Return a safe payables-style summary from purchases and outgoing payments."""
+        effective_limit = min(max(int(limit), 1), 50)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        as_of = self._parse_date_like(validated_to) or date.today()
+        min_debt_amount = self._parse_decimal_input(min_debt, field_name="min_debt", default=Decimal("0"))
+        fetch_limit = min(max(effective_limit * 10, 200), self.settings.max_top)
+
+        purchases: dict[str, Any] | None = None
+        outgoing: dict[str, Any] | None = None
+        missing_sources: list[str] = []
+        warnings: list[str] = []
+
+        try:
+            purchases = self.get_purchase_documents(
+                date_from=validated_from,
+                date_to=validated_to,
+                counterparty=counterparty_name,
+                limit=fetch_limit,
+            )
+        except ODataError:
+            missing_sources.append("purchase_documents")
+            warnings.append(
+                "Не найден безопасный источник поступлений/счетов поставщика для расчета кредиторки. "
+                "Источник не опубликован в OData, недоступен по правам или не распознан по metadata."
+            )
+
+        try:
+            outgoing = self.get_payments(
+                direction="outgoing",
+                date_from=validated_from,
+                date_to=validated_to,
+                counterparty=counterparty_name,
+                limit=fetch_limit,
+            )
+        except ODataError:
+            missing_sources.append("outgoing_payments")
+            warnings.append(
+                "Не найден безопасный источник исходящих оплат для расчета кредиторки. "
+                "Источник не опубликован в OData, недоступен по правам или не распознан по metadata."
+            )
+
+        if purchases is None or outgoing is None:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "min_debt": str(min_debt_amount),
+                    "limit": effective_limit,
+                },
+                "missing_sources": missing_sources,
+                "source_explanation": {
+                    "purchase_documents_used": None,
+                    "outgoing_payments_used": None,
+                    "missing_sources": missing_sources,
+                    "basis": "summary_not_built",
+                },
+                "warnings": warnings,
+                "note": "Сводка не построена, потому что в OData не найден один из обязательных read-only источников: поступления/счета поставщика и исходящие оплаты. Это не официальный бухгалтерский акт сверки и не баланс взаиморасчетов.",
+            }
+
+        settlement = self._build_customer_settlement(purchases.get("data") or [], outgoing.get("data") or [], as_of)
+        last_payment_dates = self._last_payment_dates_by_customer(outgoing.get("data") or [])
+        purchase_source = purchases.get("source") or {}
+        outgoing_source = outgoing.get("source") or {}
+
+        rows: list[dict[str, Any]] = []
+        for supplier, info in settlement.items():
+            debt_amount = info["open_amount_total"]
+            if debt_amount <= 0 or debt_amount < min_debt_amount:
+                continue
+            overdue_days = self._calculate_overdue_days(info.get("open_invoices") or [], as_of)
+            rows.append(
+                {
+                    "counterparty": supplier,
+                    "bin_or_iin": info.get("counterparty_bin_or_iin"),
+                    "debt_amount": str(debt_amount),
+                    "currency": None,
+                    "last_payment_date": last_payment_dates.get(supplier),
+                    "overdue_days": overdue_days,
+                    "source_document_count": len(info.get("open_invoices") or []),
+                    "source_entity": purchase_source.get("entity"),
+                }
+            )
+
+        rows.sort(
+            key=lambda row: (
+                self._to_decimal(row.get("debt_amount"), default=Decimal("0")) or Decimal("0"),
+                Decimal(str(row.get("overdue_days") or 0)),
+            ),
+            reverse=True,
+        )
+
+        warnings.extend(purchases.get("warnings") or [])
+        warnings.extend(outgoing.get("warnings") or [])
+        warnings.append(
+            "Это управленческая read-only оценка кредиторки по OData: поступления/счета поставщика минус исходящие оплаты по контрагенту. "
+            "Это не официальный бухгалтерский акт сверки и не баланс взаиморасчетов. Для бухгалтерской точности сверяйте с официальным отчетом 1С по кредиторской задолженности."
+        )
+
+        return {
+            "count_returned": min(len(rows), effective_limit),
+            "data": rows[:effective_limit],
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "min_debt": str(min_debt_amount),
+                "limit": effective_limit,
+            },
+            "purchase_source": purchase_source,
+            "outgoing_payments_source": outgoing_source,
+            "missing_sources": missing_sources,
+            "source_explanation": {
+                "purchase_documents_used": purchase_source.get("entity"),
+                "outgoing_payments_used": outgoing_source.get("entity"),
+                "missing_sources": missing_sources,
+                "basis": "purchase_documents_minus_outgoing_payments_by_counterparty",
             },
             "warnings": warnings,
             "note": "Read-only management estimate only. Не является официальным бухгалтерским актом сверки или балансом взаиморасчетов.",
@@ -1518,12 +1809,28 @@ class OneCODataClient:
             "counterparty_keywords": self._rank_entities_by_terms(entities, ["контрагент", "counterparty", "partner", "поставщик", "покупател"], limit=15),
             "nomenclature_keywords": self._rank_entities_by_terms(entities, ["номенклатур", "товар", "product", "item", "material", "материал"], limit=15),
         }
-        inventory_candidates = self.discover_inventory_sources(limit=10, check_data=check_inventory_data)
-        payment_candidates = self.discover_payment_sources(limit=10, check_data=check_inventory_data)
-        sales_candidates = self.discover_sales_sources(limit=10, check_data=check_inventory_data)
+        warnings: list[str] = []
+        inventory_candidates = self._safe_profile_discovery(
+            "inventory_candidates",
+            lambda: self.discover_inventory_sources(limit=10, check_data=check_inventory_data),
+            warnings,
+        )
+        payment_candidates = self._safe_profile_discovery(
+            "payment_candidates",
+            lambda: self.discover_payment_sources(limit=10, check_data=check_inventory_data),
+            warnings,
+        )
+        sales_candidates = self._safe_profile_discovery(
+            "sales_candidates",
+            lambda: self.discover_sales_sources(limit=10, check_data=check_inventory_data),
+            warnings,
+        )
         live_entities: list[dict[str, Any]] = []
         if live_limit and live_limit > 0:
-            live_entities = self.explore_live_entities(limit=live_limit)
+            try:
+                live_entities = self.explore_live_entities(limit=live_limit)
+            except Exception as exc:
+                warnings.append(f"live_entities_sample: {type(exc).__name__}: {str(exc)[:200]}")
 
         risks: list[str] = []
         if not inventory_candidates:
@@ -1534,6 +1841,8 @@ class OneCODataClient:
             risks.append("Не распознаны OData-сущности. Проверьте $metadata.")
         if live_entities and not any(x.get("has_data") is True for x in live_entities):
             risks.append("В проверенной выборке не найдены сущности с данными. Возможно, нет прав или выбран пустой сегмент metadata.")
+        if warnings:
+            risks.append("Часть profile discovery была деградирована в read-only partial mode. Проверьте warnings.")
 
         return {
             "server": "ashybulakstroy-1c-bridge",
@@ -1545,6 +1854,7 @@ class OneCODataClient:
             "sales_candidates": sales_candidates,
             "live_entities_sample": live_entities[:30],
             "risks": risks,
+            "warnings": warnings,
             "recommended_next_actions": [
                 "Запустите get_inventory_auto с малым limit=20.",
                 "Сформируйте тот же отчет в 1С и вставьте таблицу в validate_inventory_report_text.",
@@ -1858,6 +2168,75 @@ class OneCODataClient:
             reasons.append("penalty:catalog")
         return score, reasons
 
+    def _score_purchase_entity(self, entity: EntityInfo) -> tuple[int, list[str]]:
+        name = self._norm(entity.name)
+        etype = self._norm(entity.entity_type)
+        field_names = [self._norm(f.name) for f in (entity.fields or [])]
+        haystack = " ".join([name, etype, *field_names])
+        score = 0
+        reasons: list[str] = []
+
+        terms = {
+            "document": 6,
+            "документ": 6,
+            "поступлен": 20,
+            "purchase": 18,
+            "supplier": 10,
+            "поставщик": 10,
+            "приобрет": 12,
+            "счетнаоплатупоставщика": 16,
+            "invoice": 10,
+            "контрагент": 10,
+            "amount": 8,
+            "сумма": 8,
+            "date": 4,
+            "дата": 4,
+            "number": 4,
+            "номер": 4,
+        }
+        for term, weight in terms.items():
+            if term in haystack:
+                score += weight
+                reasons.append(f"match:{term}")
+
+        preferred_purchase_terms = {
+            "поступлениетоваровуслуг": 30,
+            "поступлениедопрасходов": 16,
+            "счетнаоплатупоставщика": 24,
+            "поступлениенма": 14,
+            "поступлениеизпереработки": 14,
+        }
+        for term, weight in preferred_purchase_terms.items():
+            if term in haystack:
+                score += weight
+                reasons.append(f"purchase_priority:{term}")
+
+        non_purchase_terms = {
+            "реализациятоваровуслуг": 30,
+            "реализацияуслугпопереработке": 24,
+            "счетнаоплатупокупателю": 24,
+            "платежноепоручение": 30,
+            "платежныйордер": 30,
+            "счетфактуравыданный": 30,
+            "чекккм": 12,
+            "гтдимпорт": 12,
+        }
+        for term, penalty in non_purchase_terms.items():
+            if term in haystack:
+                score -= penalty
+                reasons.append(f"penalty:{term}")
+
+        mapped = self._map_purchase_fields([f.name for f in (entity.fields or [])])
+        for key, weight in {"counterparty": 14, "amount": 15, "date": 12, "number": 4}.items():
+            if mapped.get(key):
+                score += weight
+                reasons.append(f"field:{key}={mapped[key]}")
+
+        if "catalog" in name or "справочник" in name:
+            score -= 14
+            reasons.append("penalty:catalog")
+        return score, reasons
+
     def _map_payment_fields(self, field_names: list[str]) -> dict[str, str | None]:
         patterns: dict[str, list[str]] = {
             "counterparty": ["контрагентkey", "контрагент", "partner", "counterparty", "client", "customer", "supplier", "получательkey", "получатель", "плательщикkey", "плательщик", "договорконтрагентакey"],
@@ -1878,6 +2257,17 @@ class OneCODataClient:
             "date": ["date", "дата", "period", "период", "documentdate"],
             "number": ["number", "номер", "documentnumber"],
             "organization": ["организацияkey", "организация", "organization", "company"],
+        }
+        return self._map_fields_by_patterns(field_names, patterns)
+
+    def _map_purchase_fields(self, field_names: list[str]) -> dict[str, str | None]:
+        patterns: dict[str, list[str]] = {
+            "counterparty": ["контрагентkey", "контрагент", "supplier", "vendor", "поставщик", "получательkey", "договорконтрагентакey"],
+            "amount": ["суммадокумента", "сумма", "amount", "total"],
+            "date": ["date", "дата", "period", "период", "documentdate"],
+            "number": ["number", "номер", "documentnumber"],
+            "organization": ["организацияkey", "организация", "organization", "company"],
+            "currency": ["валютадокументаkey", "валютаkey", "валюта", "currency"],
         }
         return self._map_fields_by_patterns(field_names, patterns)
 
@@ -1936,6 +2326,15 @@ class OneCODataClient:
     def _build_sales_select(mapped: dict[str, str | None]) -> list[str]:
         out: list[str] = []
         for key in ("counterparty", "amount", "date", "number", "organization"):
+            value = mapped.get(key)
+            if value and value not in out:
+                out.append(value)
+        return out
+
+    @staticmethod
+    def _build_purchase_select(mapped: dict[str, str | None]) -> list[str]:
+        out: list[str] = []
+        for key in ("counterparty", "amount", "date", "number", "organization", "currency"):
             value = mapped.get(key)
             if value and value not in out:
                 out.append(value)
@@ -2158,7 +2557,7 @@ class OneCODataClient:
     def _is_guid_like(value: Any) -> bool:
         return isinstance(value, str) and bool(_GUID_RE.fullmatch(value))
 
-    def _discover_document_search_candidates(self, document_type: str | None = None) -> list[dict[str, Any]]:
+    def _discover_document_search_candidates(self, document_type: str | None = None, limit: int | None = None) -> list[dict[str, Any]]:
         requested_type = self._norm(document_type) if document_type else ""
         deduped: dict[str, dict[str, Any]] = {}
         for entity in self.list_entities():
@@ -2197,7 +2596,28 @@ class OneCODataClient:
             current = deduped.get(entity.name)
             if current is None or candidate["score"] > current["score"]:
                 deduped[entity.name] = candidate
-        return sorted(deduped.values(), key=lambda row: row["score"], reverse=True)
+        ranked = sorted(deduped.values(), key=lambda row: row["score"], reverse=True)
+        if limit is None or limit <= 0:
+            return ranked
+        return ranked[:limit]
+
+    @staticmethod
+    def _document_search_candidate_limit(document_type: str | None, result_limit: int) -> int:
+        if document_type and str(document_type).strip():
+            return 6
+        return min(max(result_limit * 2, 8), 12)
+
+    def _safe_profile_discovery(
+        self,
+        label: str,
+        loader: Callable[[], list[dict[str, Any]]],
+        warnings: list[str],
+    ) -> list[dict[str, Any]]:
+        try:
+            return loader()
+        except Exception as exc:
+            warnings.append(f"{label}: {type(exc).__name__}: {str(exc)[:200]}")
+            return []
 
     def _build_document_search_filter(
         self,
