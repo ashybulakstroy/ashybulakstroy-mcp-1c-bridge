@@ -23,6 +23,8 @@
   - `*Сертификаты*`
 - entities that return `401` on row reads despite visible metadata must be treated as restricted
 - payment and settlement heuristics must not assume that a “bank” or “counterparty” term alone means a movement source
+- for this current `SaryDala` publication, top-level bank/cash documents may be visible in metadata but still return zero business rows
+- if candidate availability in `docs/generated/1C_ODATA_SCHEMA_SARYDALA.md` shows `has_data=false`, do not build a new tool assuming that source is useful live
 
 ## Recommended Fields
 
@@ -47,8 +49,9 @@
   - `Склад_Key`
   - `СтруктурноеПодразделение_Key`
 - bank/cash movements:
-  - bank docs: prefer payment/settlement documents, not bank account catalogs
-  - cash docs: `ПриходныйКассовыйОрдер`, `РасходныйКассовыйОрдер`
+  - bank docs: prefer top-level payment documents, not bank account catalogs
+  - cash docs: prefer top-level `ПриходныйКассовыйОрдер`, `РасходныйКассовыйОрдер`
+  - do not use tabular sections like `*_РасшифровкаПлатежа` as primary movement source unless live availability proves they are the only non-empty safe source
 - inventory:
   - prefer accumulation register row types with item + quantity + warehouse
 - payments:
@@ -85,6 +88,7 @@
 - avoid unbounded scans
 - push filters down to OData
 - use metadata discovery first, then read rows only from the best candidates
+- if generated schema says live availability is empty for top-level movement documents, fail honestly with `PASS_EMPTY`/missing-source style output instead of probing dozens of weak candidates
 
 ## Security Rules
 

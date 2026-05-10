@@ -52,6 +52,8 @@ ONEC_ODATA_PASSWORD=<local-only>
 ## If Entity Sources Are Missing
 
 - first inspect `docs/generated/1C_ODATA_SCHEMA_SARYDALA.md`
+- check `has_data=true/false` in candidate sections, not only the entity names
 - check whether the expected document/register is published in OData
 - if metadata exists but row reads return `401`, treat that entity as restricted
 - if no reliable source exists, tool should return `PASS_EMPTY` or a clear missing-source message, not fabricate balances
+- for the current `SaryDala` test base, payment/bank/cash metadata is visible, but published top-level movement documents may still contain zero readable rows

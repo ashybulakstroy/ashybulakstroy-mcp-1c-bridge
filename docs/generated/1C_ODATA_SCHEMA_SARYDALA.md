@@ -1,6 +1,6 @@
 # 1C OData Schema: SaryDala
 
-- Generated: `2026-05-09T16:36:49.764283+05:00`
+- Generated: `2026-05-10T16:32:07.690529+05:00`
 - Base URL: `http://192.168.1.183/SaryDala`
 - Service URL: `http://192.168.1.183/SaryDala/odata/standard.odata`
 - Total entity count: `1192`
@@ -27,29 +27,36 @@
 
 ## Candidate inventory entities
 
-- `Document_ВводНачальныхОстатков_ТоварыОрганизаций` score=`142` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'Количество', 'amount': None, 'period': None}`
-- `Document_ВводНачальныхОстатков_Запасы` score=`132` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'КоличествоБУ', 'amount': 'СуммаБУ', 'period': None}`
-- `AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType` score=`130` mapped_fields=`{'item': 'Номенклатура', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
-- `AccumulationRegister_ТоварыВиртуальногоСкладаВРезерве_RecordType` score=`128` mapped_fields=`{'item': 'Номенклатура', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
-- `AccumulationRegister_ТоварыОрганизацийБУ_RecordType` score=`112` mapped_fields=`{'item': 'Товар_Key', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
-- `Document_ЭСФ_Товары` score=`108` mapped_fields=`{'item': 'Товар', 'warehouse': 'ПризнакУчетаНаВиртуальномСкладе', 'quantity': 'Количество', 'amount': 'Сумма', 'period': None}`
-- `Document_ВводНачальныхОстатков` score=`91` mapped_fields=`{'item': 'ТоварыОрганизаций', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': None, 'amount': None, 'period': 'Date'}`
-- `Document_СписаниеОС_Товары` score=`84` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'Количество', 'amount': 'Сумма', 'period': None}`
-- `Document_АвансовыйОтчет_Товары` score=`76` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': None, 'quantity': 'Количество', 'amount': 'Сумма', 'period': 'ДатаВходящегоДокумента'}`
-- `Document_ЗаявлениеОВвозеТоваровИУплатеКосвенныхНалогов_Товары` score=`76` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': None, 'quantity': 'Количество', 'amount': 'Сумма', 'period': 'ДатаТранспортногоДокумента'}`
+- `Document_ВводНачальныхОстатков_Запасы` score=`142` has_data=`True` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'КоличествоБУ', 'amount': 'СуммаБУ', 'period': None}`
+- `Document_ВводНачальныхОстатков` score=`101` has_data=`True` mapped_fields=`{'item': 'ТоварыОрганизаций', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': None, 'amount': None, 'period': 'Date'}`
+- `Document_ВводНачальныхОстатков_ТоварыОрганизаций` score=`142` has_data=`False` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'Количество', 'amount': None, 'period': None}`
+- `AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType` score=`130` has_data=`False` mapped_fields=`{'item': 'Номенклатура', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
+- `AccumulationRegister_ТоварыВиртуальногоСкладаВРезерве_RecordType` score=`128` has_data=`False` mapped_fields=`{'item': 'Номенклатура', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
+- `AccumulationRegister_ТоварыОрганизацийБУ_RecordType` score=`112` has_data=`False` mapped_fields=`{'item': 'Товар_Key', 'warehouse': 'СтруктурноеПодразделение_Key', 'quantity': 'Количество', 'amount': None, 'period': 'Period'}`
+- `Document_ЭСФ_Товары` score=`108` has_data=`False` mapped_fields=`{'item': 'Товар', 'warehouse': 'ПризнакУчетаНаВиртуальномСкладе', 'quantity': 'Количество', 'amount': 'Сумма', 'period': None}`
+- `Document_СписаниеОС_Товары` score=`84` has_data=`False` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': 'Склад_Key', 'quantity': 'Количество', 'amount': 'Сумма', 'period': None}`
+- `Document_АвансовыйОтчет_Товары` score=`76` has_data=`False` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': None, 'quantity': 'Количество', 'amount': 'Сумма', 'period': 'ДатаВходящегоДокумента'}`
+- `Document_ЗаявлениеОВвозеТоваровИУплатеКосвенныхНалогов_Товары` score=`76` has_data=`False` mapped_fields=`{'item': 'Номенклатура_Key', 'warehouse': None, 'quantity': 'Количество', 'amount': 'Сумма', 'period': 'ДатаТранспортногоДокумента'}`
 
 ## Candidate payment entities
 
-- `Document_ПлатежноеПоручениеВходящее` direction=`incoming` account_type=`bank` score=`177`
-- `Document_ПлатежныйОрдерПоступлениеДенежныхСредств` direction=`incoming` account_type=`bank` score=`177`
-- `Document_ПлатежныйОрдерСписаниеДенежныхСредств` direction=`outgoing` account_type=`bank` score=`177`
-- `Document_ПриходныйКассовыйОрдер` direction=`incoming` account_type=`cash` score=`171`
-- `Document_РасходныйКассовыйОрдер` direction=`outgoing` account_type=`cash` score=`171`
-- `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа` direction=`incoming` account_type=`cash` score=`149`
-- `Document_РасходныйКассовыйОрдер_РасшифровкаПлатежа` direction=`outgoing` account_type=`cash` score=`149`
-- `Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа` direction=`incoming` account_type=`bank` score=`141`
-- `Document_ПлатежноеПоручениеИсходящее_ПеречислениеНДССИзмененнымСрокомУплаты` direction=`outgoing` account_type=`bank` score=`141`
-- `Document_ПлатежноеПоручениеИсходящее_РасшифровкаПлатежа` direction=`outgoing` account_type=`bank` score=`141`
+- `Document_ПлатежноеПоручениеВходящее` direction=`incoming` account_type=`bank` score=`177` has_data=`False`
+- `Document_ПлатежныйОрдерПоступлениеДенежныхСредств` direction=`incoming` account_type=`bank` score=`177` has_data=`False`
+- `Document_ПлатежныйОрдерСписаниеДенежныхСредств` direction=`outgoing` account_type=`bank` score=`177` has_data=`False`
+- `Document_ПриходныйКассовыйОрдер` direction=`incoming` account_type=`cash` score=`171` has_data=`False`
+- `Document_РасходныйКассовыйОрдер` direction=`outgoing` account_type=`cash` score=`171` has_data=`False`
+- `Document_ПлатежноеПоручениеИсходящее` direction=`None` account_type=`bank` score=`149` has_data=`False`
+- `Document_ОплатаОтПокупателяПлатежнойКартой` direction=`None` account_type=`unknown` score=`123` has_data=`False`
+- `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа` direction=`incoming` account_type=`cash` score=`135` has_data=`False`
+- `Document_РасходныйКассовыйОрдер_РасшифровкаПлатежа` direction=`outgoing` account_type=`cash` score=`135` has_data=`False`
+- `Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа` direction=`incoming` account_type=`bank` score=`127` has_data=`False`
+
+## Candidate payment availability summary
+
+- all payment candidates: `{'total': 20, 'has_data_true': 0, 'has_data_false': 20, 'has_data_unknown': 0}`
+- incoming payment candidates: `{'total': 10, 'has_data_true': 0, 'has_data_false': 10, 'has_data_unknown': 0}`
+- outgoing payment candidates: `{'total': 10, 'has_data_true': 0, 'has_data_false': 10, 'has_data_unknown': 0}`
+- sales candidates: `{'total': 20, 'has_data_true': 1, 'has_data_false': 19, 'has_data_unknown': 0}`
 
 ## Candidate customer settlement entities
 
@@ -255,8 +262,8 @@
 - Entity type: `Document_РеализацияТоваровУслуг`
 - Possible date field: `Date`
 - Possible number field: `Number`
-- Possible amount fields: `СуммаДокумента, СуммаВключаетАкциз`
-- Possible counterparty fields: `Грузополучатель_Key, Контрагент_Key`
+- Possible amount fields: `СуммаВключаетАкциз, СуммаДокумента`
+- Possible counterparty fields: `Контрагент_Key, Грузополучатель_Key`
 - Possible warehouse fields: `Склад_Key`
 - Possible currency fields: `ВалютаДокумента_Key`
 - Comments for tool developers:
@@ -319,44 +326,13 @@
 | `ДокументОснование_Type` | `Edm.String` | `True` |
 | `Сделка_Type` | `Edm.String` | `True` |
 
-### `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа`
-
-- Entity type: `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа`
-- Possible date field: `None`
-- Possible number field: `LineNumber`
-- Possible amount fields: `СуммаПлатежа`
-- Possible counterparty fields: `ДоговорКонтрагента_Key`
-- Possible warehouse fields: `<none>`
-- Possible currency fields: `<none>`
-- Comments for tool developers:
-  - Looks usable for sales or customer settlement summaries.
-  - Can be considered by document number search tools.
-
-| Field | Type | Nullable |
-|---|---|---|
-| `Ref_Key` | `Edm.Guid` | `False` |
-| `LineNumber` | `Edm.Int64` | `False` |
-| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
-| `Сделка` | `Edm.String` | `True` |
-| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
-| `СуммаПлатежа` | `Edm.Double` | `True` |
-| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
-| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
-| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
-| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
-| `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
-| `СтавкаНДС_Key` | `Edm.Guid` | `True` |
-| `СуммаНДС` | `Edm.Double` | `True` |
-| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
-| `Сделка_Type` | `Edm.String` | `True` |
-
 ### `Document_РеализацияУслугПоПереработке`
 
 - Entity type: `Document_РеализацияУслугПоПереработке`
 - Possible date field: `Date`
 - Possible number field: `Number`
-- Possible amount fields: `СуммаДокумента, СуммаВключаетНДС`
-- Possible counterparty fields: `Грузополучатель_Key, Контрагент_Key`
+- Possible amount fields: `СуммаВключаетНДС, СуммаДокумента`
+- Possible counterparty fields: `Контрагент_Key, Грузополучатель_Key`
 - Possible warehouse fields: `СтруктурноеПодразделение_Key`
 - Possible currency fields: `ВалютаДокумента_Key`
 - Comments for tool developers:
@@ -409,9 +385,9 @@
 | `ДокументОснование_Type` | `Edm.String` | `True` |
 | `Сделка_Type` | `Edm.String` | `True` |
 
-### `Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа`
+### `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа`
 
-- Entity type: `Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа`
+- Entity type: `Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа`
 - Possible date field: `None`
 - Possible number field: `LineNumber`
 - Possible amount fields: `СуммаПлатежа`
@@ -432,45 +408,12 @@
 | `СуммаПлатежа` | `Edm.Double` | `True` |
 | `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
 | `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
-| `СтавкаНДС_Key` | `Edm.Guid` | `True` |
-| `СуммаНДС` | `Edm.Double` | `True` |
 | `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
 | `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
 | `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
-| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
-| `КурсНаДатуПриобретенияРеализацииВалюты` | `Edm.Double` | `True` |
-| `Сделка_Type` | `Edm.String` | `True` |
-
-### `Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа`
-
-- Entity type: `Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа`
-- Possible date field: `None`
-- Possible number field: `LineNumber`
-- Possible amount fields: `СуммаПлатежа`
-- Possible counterparty fields: `ДоговорКонтрагента_Key`
-- Possible warehouse fields: `<none>`
-- Possible currency fields: `<none>`
-- Comments for tool developers:
-  - Looks usable for sales or customer settlement summaries.
-  - Can be considered by document number search tools.
-
-| Field | Type | Nullable |
-|---|---|---|
-| `Ref_Key` | `Edm.Guid` | `False` |
-| `LineNumber` | `Edm.Int64` | `False` |
-| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
-| `Сделка` | `Edm.String` | `True` |
-| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
-| `СуммаПлатежа` | `Edm.Double` | `True` |
-| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
-| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
 | `СтавкаНДС_Key` | `Edm.Guid` | `True` |
 | `СуммаНДС` | `Edm.Double` | `True` |
-| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
-| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
-| `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
 | `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
-| `КурсНаДатуПриобретенияРеализацииВалюты` | `Edm.Double` | `True` |
 | `Сделка_Type` | `Edm.String` | `True` |
 
 ### `Document_ЭСФ`
@@ -555,7 +498,7 @@
 - Entity type: `Document_СчетНаОплатуПокупателю`
 - Possible date field: `Date`
 - Possible number field: `Number`
-- Possible amount fields: `СуммаДокумента, СуммаВключаетАкциз`
+- Possible amount fields: `СуммаВключаетАкциз, СуммаДокумента`
 - Possible counterparty fields: `Контрагент_Key`
 - Possible warehouse fields: `Склад_Key`
 - Possible currency fields: `ВалютаДокумента_Key`
@@ -596,6 +539,70 @@
 | `Услуги` | `Collection(StandardODATA.Document_СчетНаОплатуПокупателю_Услуги_RowType)` | `True` |
 | `ОС` | `Collection(StandardODATA.Document_СчетНаОплатуПокупателю_ОС_RowType)` | `True` |
 | `СтруктурнаяЕдиница_Type` | `Edm.String` | `True` |
+
+### `Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа`
+
+- Entity type: `Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа`
+- Possible date field: `None`
+- Possible number field: `LineNumber`
+- Possible amount fields: `СуммаПлатежа`
+- Possible counterparty fields: `ДоговорКонтрагента_Key`
+- Possible warehouse fields: `<none>`
+- Possible currency fields: `<none>`
+- Comments for tool developers:
+  - Looks usable for sales or customer settlement summaries.
+  - Can be considered by document number search tools.
+
+| Field | Type | Nullable |
+|---|---|---|
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `LineNumber` | `Edm.Int64` | `False` |
+| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
+| `Сделка` | `Edm.String` | `True` |
+| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
+| `СуммаПлатежа` | `Edm.Double` | `True` |
+| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
+| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
+| `СтавкаНДС_Key` | `Edm.Guid` | `True` |
+| `СуммаНДС` | `Edm.Double` | `True` |
+| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
+| `КурсНаДатуПриобретенияРеализацииВалюты` | `Edm.Double` | `True` |
+| `Сделка_Type` | `Edm.String` | `True` |
+
+### `Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа`
+
+- Entity type: `Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа`
+- Possible date field: `None`
+- Possible number field: `LineNumber`
+- Possible amount fields: `СуммаПлатежа`
+- Possible counterparty fields: `ДоговорКонтрагента_Key`
+- Possible warehouse fields: `<none>`
+- Possible currency fields: `<none>`
+- Comments for tool developers:
+  - Looks usable for sales or customer settlement summaries.
+  - Can be considered by document number search tools.
+
+| Field | Type | Nullable |
+|---|---|---|
+| `Ref_Key` | `Edm.Guid` | `False` |
+| `LineNumber` | `Edm.Int64` | `False` |
+| `ДоговорКонтрагента_Key` | `Edm.Guid` | `True` |
+| `Сделка` | `Edm.String` | `True` |
+| `КурсВзаиморасчетов` | `Edm.Double` | `True` |
+| `СуммаПлатежа` | `Edm.Double` | `True` |
+| `КратностьВзаиморасчетов` | `Edm.Int64` | `True` |
+| `СуммаВзаиморасчетов` | `Edm.Double` | `True` |
+| `СтавкаНДС_Key` | `Edm.Guid` | `True` |
+| `СуммаНДС` | `Edm.Double` | `True` |
+| `СтатьяДвиженияДенежныхСредств_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомБУ_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовПоАвансам_Key` | `Edm.Guid` | `True` |
+| `СчетУчетаРасчетовСКонтрагентомНУ_Key` | `Edm.Guid` | `True` |
+| `КурсНаДатуПриобретенияРеализацииВалюты` | `Edm.Double` | `True` |
+| `Сделка_Type` | `Edm.String` | `True` |
 
 
 ## Known limitations

@@ -109,6 +109,24 @@ def build_settlement_candidates(client: OneCODataClient, entities: list[EntityIn
     return ranked[:20]
 
 
+def summarize_candidate_availability(rows: list[dict[str, Any]]) -> dict[str, int]:
+    summary = {
+        "total": len(rows),
+        "has_data_true": 0,
+        "has_data_false": 0,
+        "has_data_unknown": 0,
+    }
+    for row in rows:
+        value = row.get("has_data")
+        if value is True:
+            summary["has_data_true"] += 1
+        elif value is False:
+            summary["has_data_false"] += 1
+        else:
+            summary["has_data_unknown"] += 1
+    return summary
+
+
 def render_entity_block(entity: dict[str, Any]) -> list[str]:
     lines = [
         f"### `{entity['entity_set']}`",
@@ -147,13 +165,18 @@ def main() -> int:
     settings = load_settings()
     client = OneCODataClient(settings)
     entities = client.list_entities(refresh=True)
-    inventory_candidates = client.discover_inventory_sources(limit=20, check_data=False)
-    payment_candidates = client.discover_payment_sources(direction=None, limit=20, check_data=False)
-    payment_in_candidates = client.discover_payment_sources(direction="incoming", limit=10, check_data=False)
-    payment_out_candidates = client.discover_payment_sources(direction="outgoing", limit=10, check_data=False)
-    sales_candidates = client.discover_sales_sources(limit=20, check_data=False)
+    inventory_candidates = client.discover_inventory_sources(limit=20, check_data=True)
+    payment_candidates = client.discover_payment_sources(direction=None, limit=20, check_data=True)
+    payment_in_candidates = client.discover_payment_sources(direction="incoming", limit=10, check_data=True)
+    payment_out_candidates = client.discover_payment_sources(direction="outgoing", limit=10, check_data=True)
+    sales_candidates = client.discover_sales_sources(limit=20, check_data=True)
 
     settlement_candidates = build_settlement_candidates(client, entities)
+    inventory_availability = summarize_candidate_availability(inventory_candidates)
+    payment_availability = summarize_candidate_availability(payment_candidates)
+    payment_in_availability = summarize_candidate_availability(payment_in_candidates)
+    payment_out_availability = summarize_candidate_availability(payment_out_candidates)
+    sales_availability = summarize_candidate_availability(sales_candidates)
 
     categorized: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for entity in entities:
@@ -166,10 +189,15 @@ def main() -> int:
         "entity_count": len(entities),
         "categories": {name: items for name, items in categorized.items()},
         "candidate_inventory_entities": inventory_candidates,
+        "candidate_inventory_availability": inventory_availability,
         "candidate_payment_entities": payment_candidates,
+        "candidate_payment_availability": payment_availability,
         "candidate_payment_incoming_entities": payment_in_candidates,
+        "candidate_payment_incoming_availability": payment_in_availability,
         "candidate_payment_outgoing_entities": payment_out_candidates,
+        "candidate_payment_outgoing_availability": payment_out_availability,
         "candidate_sales_entities": sales_candidates,
+        "candidate_sales_availability": sales_availability,
         "candidate_customer_settlement_entities": settlement_candidates,
         "known_limitations": [
             "Metadata heuristics do not guarantee that a candidate contains business rows.",
@@ -217,10 +245,18 @@ def main() -> int:
         "",
     ]
     for row in inventory_candidates[:10]:
-        md_lines.append(f"- `{row['entity']}` score=`{row['score']}` mapped_fields=`{row.get('mapped_fields')}`")
+        md_lines.append(f"- `{row['entity']}` score=`{row['score']}` has_data=`{row.get('has_data')}` mapped_fields=`{row.get('mapped_fields')}`")
     md_lines.extend(["", "## Candidate payment entities", ""])
     for row in payment_candidates[:10]:
-        md_lines.append(f"- `{row['entity']}` direction=`{row.get('direction')}` account_type=`{row.get('account_type')}` score=`{row['score']}`")
+        md_lines.append(
+            f"- `{row['entity']}` direction=`{row.get('direction')}` account_type=`{row.get('account_type')}` "
+            f"score=`{row['score']}` has_data=`{row.get('has_data')}`"
+        )
+    md_lines.extend(["", "## Candidate payment availability summary", ""])
+    md_lines.append(f"- all payment candidates: `{payment_availability}`")
+    md_lines.append(f"- incoming payment candidates: `{payment_in_availability}`")
+    md_lines.append(f"- outgoing payment candidates: `{payment_out_availability}`")
+    md_lines.append(f"- sales candidates: `{sales_availability}`")
     md_lines.extend(["", "## Candidate customer settlement entities", ""])
     for row in payload["candidate_customer_settlement_entities"][:10]:
         md_lines.extend(render_entity_block(row))
@@ -238,6 +274,9 @@ def main() -> int:
         f"- Inventory candidates: `{len(inventory_candidates)}`",
         f"- Payment candidates: `{len(payment_candidates)}`",
         f"- Customer settlement candidates: `{len(payload['candidate_customer_settlement_entities'])}`",
+        f"- Payment candidate availability: `{payment_availability}`",
+        f"- Incoming payment candidate availability: `{payment_in_availability}`",
+        f"- Outgoing payment candidate availability: `{payment_out_availability}`",
         "",
         "| Artifact | Path |",
         "|---|---|",

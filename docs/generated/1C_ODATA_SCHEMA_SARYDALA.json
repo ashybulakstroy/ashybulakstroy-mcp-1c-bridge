@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-09T16:36:49.764283+05:00",
+  "generated_at": "2026-05-10T16:32:07.690529+05:00",
   "base_url": "http://192.168.1.183/SaryDala",
   "service_url": "http://192.168.1.183/SaryDala/odata/standard.odata",
   "entity_count": 1192,
@@ -53252,8 +53252,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "СуммаКОплате",
-          "СуммаПлатежа"
+          "СуммаПлатежа",
+          "СуммаКОплате"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -54311,12 +54311,12 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "УдалитьНДСВключенВСтоимость"
+          "УдалитьНДСВключенВСтоимость",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "Грузополучатель_Key",
-          "Контрагент_Key"
+          "Контрагент_Key",
+          "Грузополучатель_Key"
         ],
         "possible_warehouse_fields": [
           "ПодразделениеОрганизации_Key"
@@ -56902,8 +56902,8 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетАкциз"
+          "СуммаВключаетАкциз",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
           "Контрагент_Key"
@@ -57699,8 +57699,8 @@
           "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "Грузополучатель_Key",
-          "Контрагент_Key"
+          "Контрагент_Key",
+          "Грузополучатель_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -58938,8 +58938,8 @@
         "possible_date_field": null,
         "possible_number_field": "НомерРаздела",
         "possible_amount_fields": [
-          "СуммаПошлины",
-          "ФактурнаяСтоимость"
+          "ФактурнаяСтоимость",
+          "СуммаПошлины"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [
@@ -59028,8 +59028,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "СуммаПошлины",
-          "ТаможеннаяСтоимость"
+          "ТаможеннаяСтоимость",
+          "СуммаПошлины"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -59181,8 +59181,8 @@
         "possible_date_field": null,
         "possible_number_field": "НомерРаздела",
         "possible_amount_fields": [
-          "СуммаПошлины",
-          "ФактурнаяСтоимость"
+          "ФактурнаяСтоимость",
+          "СуммаПошлины"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -65205,8 +65205,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "СтоимостьБУ",
-          "СуммаМодернизацииБУ"
+          "СуммаМодернизацииБУ",
+          "СтоимостьБУ"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -67823,8 +67823,8 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетАкциз"
+          "СуммаВключаетАкциз",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
           "Контрагент_Key"
@@ -68632,8 +68632,8 @@
         "possible_date_field": null,
         "possible_number_field": "НомерГТД_Key",
         "possible_amount_fields": [
-          "ПлановаяСтоимость",
-          "СуммаПлановая"
+          "СуммаПлановая",
+          "ПлановаяСтоимость"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -68756,8 +68756,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "ПлановаяСтоимость",
-          "СуммаПлановая"
+          "СуммаПлановая",
+          "ПлановаяСтоимость"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -69591,12 +69591,12 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетНДС"
+          "СуммаВключаетНДС",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "Грузополучатель_Key",
-          "Контрагент_Key"
+          "Контрагент_Key",
+          "Грузополучатель_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -72129,8 +72129,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "СуммаКПеречислению",
-          "СуммаПлатежа"
+          "СуммаПлатежа",
+          "СуммаКПеречислению"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -78934,12 +78934,12 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетАкциз"
+          "СуммаВключаетАкциз",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "Грузополучатель_Key",
-          "Контрагент_Key"
+          "Контрагент_Key",
+          "Грузополучатель_Key"
         ],
         "possible_warehouse_fields": [
           "Склад_Key"
@@ -79653,12 +79653,12 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетНДС"
+          "СуммаВключаетНДС",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "Грузополучатель_Key",
-          "Контрагент_Key"
+          "Контрагент_Key",
+          "Грузополучатель_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -80755,8 +80755,8 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетНДС"
+          "СуммаВключаетНДС",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
           "Контрагент_Key"
@@ -81311,8 +81311,8 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетНДС"
+          "СуммаВключаетНДС",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
           "Контрагент_Key"
@@ -84346,8 +84346,8 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетАкциз"
+          "СуммаВключаетАкциз",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
           "Контрагент_Key"
@@ -84860,12 +84860,12 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетАкциз"
+          "СуммаВключаетАкциз",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
-          "Грузополучатель_Key",
-          "Контрагент_Key"
+          "Контрагент_Key",
+          "Грузополучатель_Key"
         ],
         "possible_warehouse_fields": [
           "СтруктурноеПодразделение_Key"
@@ -85492,8 +85492,8 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетНДС"
+          "СуммаВключаетНДС",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
           "Контрагент_Key"
@@ -87744,8 +87744,8 @@
         "possible_date_field": "Date",
         "possible_number_field": "Number",
         "possible_amount_fields": [
-          "СуммаДокумента",
-          "СуммаВключаетНДС"
+          "СуммаВключаетНДС",
+          "СуммаДокумента"
         ],
         "possible_counterparty_fields": [
           "Контрагент_Key"
@@ -91021,8 +91021,8 @@
         "possible_date_field": null,
         "possible_number_field": "LineNumber",
         "possible_amount_fields": [
-          "СтоимостьБезУчетаКосвенныхНалогов",
-          "СуммаНДС"
+          "СуммаНДС",
+          "СтоимостьБезУчетаКосвенныхНалогов"
         ],
         "possible_counterparty_fields": [],
         "possible_warehouse_fields": [],
@@ -92257,6 +92257,175 @@
   },
   "candidate_inventory_entities": [
     {
+      "entity": "Document_ВводНачальныхОстатков_Запасы",
+      "entity_type": "Document_ВводНачальныхОстатков_Запасы",
+      "score": 142,
+      "confidence": "high",
+      "reasons": [
+        "match:остат",
+        "match:номенклатур",
+        "match:склад",
+        "match:количество",
+        "match:сумма",
+        "inventory_priority:остатк",
+        "inventory_priority:запасы",
+        "field:item=Номенклатура_Key",
+        "field:warehouse=Склад_Key",
+        "field:quantity=КоличествоБУ",
+        "field:amount=СуммаБУ",
+        "penalty:document",
+        "entity_has_data"
+      ],
+      "mapped_fields": {
+        "item": "Номенклатура_Key",
+        "warehouse": "Склад_Key",
+        "quantity": "КоличествоБУ",
+        "amount": "СуммаБУ",
+        "period": null
+      },
+      "field_count": 13,
+      "sample_fields": [
+        "Ref_Key",
+        "LineNumber",
+        "СчетУчетаБУ_Key",
+        "Номенклатура_Key",
+        "Склад_Key",
+        "Партия_Key",
+        "КоличествоБУ",
+        "СуммаБУ",
+        "Контрагент_Key",
+        "СчетУчетаНУ_Key",
+        "КоличествоНУ",
+        "СуммаНУ",
+        "ВидУчетаНУ_Key"
+      ],
+      "has_data": true,
+      "sample": [
+        {
+          "Ref_Key": "4601dee3-03d9-11ec-8ce2-5c3a45e64368",
+          "LineNumber": "1",
+          "СчетУчетаБУ_Key": "dd1a5850-30d1-11eb-9947-a08cfde924ea",
+          "Номенклатура_Key": "4601dee2-03d9-11ec-8ce2-5c3a45e64368",
+          "Склад_Key": "dd1a5a33-30d1-11eb-9947-a08cfde924ea",
+          "Партия_Key": "00000000-0000-0000-0000-000000000000",
+          "КоличествоБУ": 100,
+          "СуммаБУ": 55000,
+          "Контрагент_Key": "00000000-0000-0000-0000-000000000000",
+          "СчетУчетаНУ_Key": "dd1a59a4-30d1-11eb-9947-a08cfde924ea",
+          "КоличествоНУ": 100,
+          "СуммаНУ": 55000,
+          "ВидУчетаНУ_Key": "c35dab23-30d1-11eb-9947-a08cfde924ea",
+          "Номенклатура@navigationLinkUrl": "Document_ВводНачальныхОстатков_Запасы(Ref_Key=guid'4601dee3-03d9-11ec-8ce2-5c3a45e64368', LineNumber=1)/Номенклатура",
+          "Склад@navigationLinkUrl": "Document_ВводНачальныхОстатков_Запасы(Ref_Key=guid'4601dee3-03d9-11ec-8ce2-5c3a45e64368', LineNumber=1)/Склад",
+          "ВидУчетаНУ@navigationLinkUrl": "Document_ВводНачальныхОстатков_Запасы(Ref_Key=guid'4601dee3-03d9-11ec-8ce2-5c3a45e64368', LineNumber=1)/ВидУчетаНУ"
+        }
+      ]
+    },
+    {
+      "entity": "Document_ВводНачальныхОстатков",
+      "entity_type": "Document_ВводНачальныхОстатков",
+      "score": 101,
+      "confidence": "high",
+      "reasons": [
+        "match:остат",
+        "match:товар",
+        "inventory_priority:товарыорганизаций",
+        "inventory_priority:остатк",
+        "inventory_priority:запасы",
+        "penalty:корректировк",
+        "field:item=ТоварыОрганизаций",
+        "field:warehouse=СтруктурноеПодразделение_Key",
+        "field:period=Date",
+        "penalty:document",
+        "entity_has_data"
+      ],
+      "mapped_fields": {
+        "item": "ТоварыОрганизаций",
+        "warehouse": "СтруктурноеПодразделение_Key",
+        "quantity": null,
+        "amount": null,
+        "period": "Date"
+      },
+      "field_count": 26,
+      "sample_fields": [
+        "Ref_Key",
+        "DataVersion",
+        "Number",
+        "Date",
+        "DeletionMark",
+        "Posted",
+        "Комментарий",
+        "Организация_Key",
+        "Ответственный_Key",
+        "РазделУчета",
+        "Автор_Key",
+        "РучнаяКорректировка",
+        "ОтражатьВБухгалтерскомУчете",
+        "УчитыватьКПН",
+        "СтруктурноеПодразделение_Key",
+        "ПоказыватьДанныеБУ",
+        "СписокСчетовБУПрочихРазделов_Base64Data",
+        "ОтражатьПоСпециальнымРегистрам",
+        "РасчетыСКонтрагентами",
+        "РасчетыПоНалогамИСборам",
+        "БухСправка",
+        "РасчетыСПодотчетнымиЛицами",
+        "Запасы",
+        "ТоварыОрганизаций",
+        "СписокСчетовБУПрочихРазделов_Type",
+        "СписокСчетовБУПрочихРазделов"
+      ],
+      "has_data": true,
+      "sample": [
+        {
+          "Ref_Key": "4601dee3-03d9-11ec-8ce2-5c3a45e64368",
+          "DataVersion": "AAAAAQAAAAA=",
+          "DeletionMark": false,
+          "Number": "00000000001",
+          "Date": "2021-08-23T16:38:51",
+          "Posted": true,
+          "Комментарий": "",
+          "Организация_Key": "4601dede-03d9-11ec-8ce2-5c3a45e64368",
+          "Ответственный_Key": "d4dba7f3-30d1-11eb-9947-a08cfde924ea",
+          "РазделУчета": "Запасы",
+          "Автор_Key": "d4dba7f3-30d1-11eb-9947-a08cfde924ea",
+          "РучнаяКорректировка": false,
+          "ОтражатьВБухгалтерскомУчете": true,
+          "УчитыватьКПН": true,
+          "СтруктурноеПодразделение_Key": "00000000-0000-0000-0000-000000000000",
+          "ПоказыватьДанныеБУ": false,
+          "СписокСчетовБУПрочихРазделов_Type": "application/xml+xdto",
+          "СписокСчетовБУПрочихРазделов_Base64Data": "PFZhbHVlTGlzdCB4bWxucz0iaHR0cDovL3Y4LjFjLnJ1LzguMS9kYXRhL2NvcmUi\r\nIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1s\r\nbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5j\r\nZSI+DQoJPHZhbHVlVHlwZT4NCgkJPFR5cGUgeG1sbnM6ZDNwMT0iaHR0cDovL3Y4\r\nLjFjLnJ1LzguMS9kYXRhL2VudGVycHJpc2UvY3VycmVudC1jb25maWciPmQzcDE6\r\nQ2hhcnRPZkFjY291bnRzUmVmLtCi0LjQv9C+0LLQvtC5PC9UeXBlPg0KCTwvdmFs\r\ndWVUeXBlPg0KCTxsYXN0SWQgeHNpOnR5cGU9InhzOmRlY2ltYWwiPi0xPC9sYXN0\r\nSWQ+DQo8L1ZhbHVlTGlzdD4=",
+          "ОтражатьПоСпециальнымРегистрам": true,
+          "РасчетыСКонтрагентами": [],
+          "РасчетыПоНалогамИСборам": [],
+          "БухСправка": [],
+          "РасчетыСПодотчетнымиЛицами": [],
+          "Запасы": [
+            {
+              "Ref_Key": "4601dee3-03d9-11ec-8ce2-5c3a45e64368",
+              "LineNumber": "1",
+              "СчетУчетаБУ_Key": "dd1a5850-30d1-11eb-9947-a08cfde924ea",
+              "Номенклатура_Key": "4601dee2-03d9-11ec-8ce2-5c3a45e64368",
+              "Склад_Key": "dd1a5a33-30d1-11eb-9947-a08cfde924ea",
+              "Партия_Key": "00000000-0000-0000-0000-000000000000",
+              "КоличествоБУ": 100,
+              "СуммаБУ": 55000,
+              "Контрагент_Key": "00000000-0000-0000-0000-000000000000",
+              "СчетУчетаНУ_Key": "dd1a59a4-30d1-11eb-9947-a08cfde924ea",
+              "КоличествоНУ": 100,
+              "СуммаНУ": 55000,
+              "ВидУчетаНУ_Key": "c35dab23-30d1-11eb-9947-a08cfde924ea"
+            }
+          ],
+          "ТоварыОрганизаций": [],
+          "Организация@navigationLinkUrl": "Document_ВводНачальныхОстатков(guid'4601dee3-03d9-11ec-8ce2-5c3a45e64368')/Организация",
+          "Ответственный@navigationLinkUrl": "Document_ВводНачальныхОстатков(guid'4601dee3-03d9-11ec-8ce2-5c3a45e64368')/Ответственный",
+          "Автор@navigationLinkUrl": "Document_ВводНачальныхОстатков(guid'4601dee3-03d9-11ec-8ce2-5c3a45e64368')/Автор"
+        }
+      ]
+    },
+    {
       "entity": "Document_ВводНачальныхОстатков_ТоварыОрганизаций",
       "entity_type": "Document_ВводНачальныхОстатков_ТоварыОрганизаций",
       "score": 142,
@@ -92289,50 +92458,9 @@
         "НомерГТД_Key",
         "Количество",
         "Склад_Key"
-      ]
-    },
-    {
-      "entity": "Document_ВводНачальныхОстатков_Запасы",
-      "entity_type": "Document_ВводНачальныхОстатков_Запасы",
-      "score": 132,
-      "confidence": "high",
-      "reasons": [
-        "match:остат",
-        "match:номенклатур",
-        "match:склад",
-        "match:количество",
-        "match:сумма",
-        "inventory_priority:остатк",
-        "inventory_priority:запасы",
-        "field:item=Номенклатура_Key",
-        "field:warehouse=Склад_Key",
-        "field:quantity=КоличествоБУ",
-        "field:amount=СуммаБУ",
-        "penalty:document"
       ],
-      "mapped_fields": {
-        "item": "Номенклатура_Key",
-        "warehouse": "Склад_Key",
-        "quantity": "КоличествоБУ",
-        "amount": "СуммаБУ",
-        "period": null
-      },
-      "field_count": 13,
-      "sample_fields": [
-        "Ref_Key",
-        "LineNumber",
-        "СчетУчетаБУ_Key",
-        "Номенклатура_Key",
-        "Склад_Key",
-        "Партия_Key",
-        "КоличествоБУ",
-        "СуммаБУ",
-        "Контрагент_Key",
-        "СчетУчетаНУ_Key",
-        "КоличествоНУ",
-        "СуммаНУ",
-        "ВидУчетаНУ_Key"
-      ]
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType",
@@ -92379,7 +92507,9 @@
         "Recorder_Type",
         "Номенклатура_Type",
         "ДокументПартии_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "AccumulationRegister_ТоварыВиртуальногоСкладаВРезерве_RecordType",
@@ -92425,7 +92555,9 @@
         "Recorder_Type",
         "Номенклатура_Type",
         "ДокументПартии_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "AccumulationRegister_ТоварыОрганизацийБУ_RecordType",
@@ -92465,7 +92597,9 @@
         "Склад_Key",
         "Количество",
         "Recorder_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ЭСФ_Товары",
@@ -92529,61 +92663,9 @@
         "ДополнительныйИдентификатор",
         "ПризнакУчетаНаВиртуальномСкладе",
         "Товар_Type"
-      ]
-    },
-    {
-      "entity": "Document_ВводНачальныхОстатков",
-      "entity_type": "Document_ВводНачальныхОстатков",
-      "score": 91,
-      "confidence": "high",
-      "reasons": [
-        "match:остат",
-        "match:товар",
-        "inventory_priority:товарыорганизаций",
-        "inventory_priority:остатк",
-        "inventory_priority:запасы",
-        "penalty:корректировк",
-        "field:item=ТоварыОрганизаций",
-        "field:warehouse=СтруктурноеПодразделение_Key",
-        "field:period=Date",
-        "penalty:document"
       ],
-      "mapped_fields": {
-        "item": "ТоварыОрганизаций",
-        "warehouse": "СтруктурноеПодразделение_Key",
-        "quantity": null,
-        "amount": null,
-        "period": "Date"
-      },
-      "field_count": 26,
-      "sample_fields": [
-        "Ref_Key",
-        "DataVersion",
-        "Number",
-        "Date",
-        "DeletionMark",
-        "Posted",
-        "Комментарий",
-        "Организация_Key",
-        "Ответственный_Key",
-        "РазделУчета",
-        "Автор_Key",
-        "РучнаяКорректировка",
-        "ОтражатьВБухгалтерскомУчете",
-        "УчитыватьКПН",
-        "СтруктурноеПодразделение_Key",
-        "ПоказыватьДанныеБУ",
-        "СписокСчетовБУПрочихРазделов_Base64Data",
-        "ОтражатьПоСпециальнымРегистрам",
-        "РасчетыСКонтрагентами",
-        "РасчетыПоНалогамИСборам",
-        "БухСправка",
-        "РасчетыСПодотчетнымиЛицами",
-        "Запасы",
-        "ТоварыОрганизаций",
-        "СписокСчетовБУПрочихРазделов_Type",
-        "СписокСчетовБУПрочихРазделов"
-      ]
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_СписаниеОС_Товары",
@@ -92624,7 +92706,9 @@
         "СчетУчетаБУ_Key",
         "СчетУчетаНУ_Key",
         "НомерГТД_Key"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_АвансовыйОтчет_Товары",
@@ -92675,7 +92759,9 @@
         "НомерСФ",
         "ПредъявленСФ",
         "НомерГТД_Key"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ЗаявлениеОВвозеТоваровИУплатеКосвенныхНалогов_Товары",
@@ -92733,7 +92819,9 @@
         "СтранаПроисхождения_Key",
         "ПризнакПроисхождения",
         "НДСВидПоступления_Key"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_СчетФактураВыданный_Товары",
@@ -92775,7 +92863,9 @@
         "ОборотПоРеализации",
         "КлючСвязи",
         "ДатаОборота"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_СчетФактураПолученный_Товары",
@@ -92815,7 +92905,9 @@
         "ОборотПоРеализации",
         "НомерГТД_Key",
         "ДатаОборота"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "InformationRegister_РасчетСписанияРБП_RecordType",
@@ -92861,7 +92953,9 @@
         "Recorder_Type",
         "СчетУчета_Type",
         "СчетСписания_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "InformationRegister_СведенияОНоменклатуреГСВС",
@@ -92896,7 +92990,9 @@
         "ПризнакАктивности",
         "ДействиеЗаписиНачальнаяДата",
         "ДействиеЗаписиКонечнаяДата"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ИнвентаризацияТоваровНаСкладе_Товары",
@@ -92935,7 +93031,9 @@
         "СуммаУчет",
         "СчетУчетаБУ_Key",
         "Цена"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "AccumulationRegister_РеализацияТМЗ_RecordType",
@@ -92985,7 +93083,9 @@
         "Акциз",
         "Recorder_Type",
         "Партия_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_АвансовыйОтчет",
@@ -93054,7 +93154,9 @@
         "ПеречислениеПенсионныхВзносов",
         "ПеречислениеСоциальныхОтчислений",
         "Прочее"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ВозвратТоваровОтПокупателя_Товары",
@@ -93120,7 +93222,9 @@
         "СубконтоДоходовБУ2_Type",
         "СубконтоДоходовБУ3_Type",
         "СубконтоСписанияСебестоимостиБУ1_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ВозвратТоваровОтПокупателя_Услуги",
@@ -93171,7 +93275,9 @@
         "СубконтоДоходовНУ1_Type",
         "СубконтоДоходовНУ2_Type",
         "СубконтоДоходовНУ3_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ВозвратТоваровПоставщику_Товары",
@@ -93213,9 +93319,17 @@
         "НДСВидОборота",
         "НДСВидПоступления_Key",
         "НомерГТД_Key"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     }
   ],
+  "candidate_inventory_availability": {
+    "total": 20,
+    "has_data_true": 2,
+    "has_data_false": 18,
+    "has_data_unknown": 0
+  },
   "candidate_payment_entities": [
     {
       "entity": "Document_ПлатежноеПоручениеВходящее",
@@ -93293,7 +93407,9 @@
         "СтруктурноеПодразделениеОтправитель_Key",
         "НазначениеПлатежа",
         "РасшифровкаПлатежа"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств",
@@ -93371,7 +93487,9 @@
         "НазначениеПлатежа",
         "РасшифровкаПлатежа",
         "ДокументОснование_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежныйОрдерСписаниеДенежныхСредств",
@@ -93449,7 +93567,9 @@
         "ТекстПлательщика",
         "ТекстПолучателя",
         "ВключатьКомиссиюБанка"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПриходныйКассовыйОрдер",
@@ -93526,7 +93646,9 @@
         "СтруктурноеПодразделениеПолучатель_Key",
         "СтруктурноеПодразделениеОтправитель_Key",
         "НомерЧекаККМ"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_РасходныйКассовыйОрдер",
@@ -93603,14 +93725,168 @@
         "НомерЧекаККМ",
         "ВыплатаЗаработнойПлаты",
         "РасшифровкаПлатежа"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
+    },
+    {
+      "entity": "Document_ПлатежноеПоручениеИсходящее",
+      "entity_type": "Document_ПлатежноеПоручениеИсходящее",
+      "direction": null,
+      "account_type": "bank",
+      "score": 149,
+      "confidence": "high",
+      "reasons": [
+        "match:document",
+        "match:документ",
+        "match:платеж",
+        "match:банк",
+        "match:счет",
+        "match:контрагент",
+        "match:сумма",
+        "match:date",
+        "match:дата",
+        "account:bank_priority",
+        "field:counterparty=Контрагент_Key",
+        "field:amount=СуммаДокумента",
+        "field:date=Date",
+        "field:number=Number",
+        "penalty:unknown_direction"
+      ],
+      "mapped_fields": {
+        "counterparty": "Контрагент_Key",
+        "amount": "СуммаДокумента",
+        "date": "Date",
+        "number": "Number",
+        "organization": "Организация_Key",
+        "bank_account": "СчетБанк_Key",
+        "currency": "ВалютаДокумента_Key",
+        "purpose": "Комментарий"
+      },
+      "field_count": 67,
+      "sample_fields": [
+        "Ref_Key",
+        "DataVersion",
+        "Number",
+        "Date",
+        "DeletionMark",
+        "Posted",
+        "Автор_Key",
+        "БанкПосредник",
+        "ВалютаДокумента_Key",
+        "ВидНалога_Key",
+        "ВидОперации",
+        "ВидПлатежа",
+        "ВидУчетаНУ_Key",
+        "ВключатьКомиссиюБанка",
+        "ДатаВалютирования",
+        "ДатаВыписки",
+        "ДатаПолученияТовара",
+        "ДокументОснование",
+        "КодБК",
+        "КодНазначенияПлатежа",
+        "Комментарий",
+        "Контрагент_Key",
+        "НазначениеПлатежа",
+        "Оплачено",
+        "Организация_Key",
+        "Ответственный_Key",
+        "РННПлательщика",
+        "РННПолучателя",
+        "РучнаяКорректировка",
+        "СтатьяДвиженияДенежныхСредств_Key",
+        "СубконтоДтБУ1",
+        "СубконтоДтБУ2",
+        "СубконтоДтБУ3",
+        "СубконтоДтНУ1",
+        "СубконтоДтНУ2",
+        "СубконтоДтНУ3",
+        "СуммаДокумента",
+        "СчетБанк_Key",
+        "СчетБанкаПосредника_Key",
+        "СчетКонтрагента_Key"
+      ],
+      "has_data": false,
+      "sample": []
+    },
+    {
+      "entity": "Document_ОплатаОтПокупателяПлатежнойКартой",
+      "entity_type": "Document_ОплатаОтПокупателяПлатежнойКартой",
+      "direction": null,
+      "account_type": "unknown",
+      "score": 123,
+      "confidence": "high",
+      "reasons": [
+        "match:document",
+        "match:документ",
+        "match:платеж",
+        "match:оплат",
+        "match:банк",
+        "match:счет",
+        "match:контрагент",
+        "match:сумма",
+        "match:date",
+        "field:counterparty=Контрагент_Key",
+        "field:amount=СуммаДокумента",
+        "field:date=Date",
+        "field:number=Number",
+        "penalty:unknown_direction"
+      ],
+      "mapped_fields": {
+        "counterparty": "Контрагент_Key",
+        "amount": "СуммаДокумента",
+        "date": "Date",
+        "number": "Number",
+        "organization": "Организация_Key",
+        "bank_account": null,
+        "currency": "ВалютаДокумента_Key",
+        "purpose": "Комментарий"
+      },
+      "field_count": 33,
+      "sample_fields": [
+        "Ref_Key",
+        "DataVersion",
+        "Number",
+        "Date",
+        "DeletionMark",
+        "Posted",
+        "Автор_Key",
+        "ВалютаДокумента_Key",
+        "ВидОперации",
+        "ДоговорЭквайринга_Key",
+        "ДоговорВзаиморасчетовЭквайрера_Key",
+        "ДокументОснование",
+        "Комментарий",
+        "Контрагент_Key",
+        "Организация_Key",
+        "Ответственный_Key",
+        "РучнаяКорректировка",
+        "СуммаДокумента",
+        "Эквайрер_Key",
+        "СчетУчетаРасчетовСЭквайрером_Key",
+        "УчитыватьКПН",
+        "ВидУчетаНУ_Key",
+        "СтруктурноеПодразделение_Key",
+        "ВидОплаты_Key",
+        "ПроцентТорговойУступки",
+        "СуммаТорговойУступки",
+        "НомерЧекаККМ",
+        "НомерПлатежнойКарты",
+        "СсылочныйНомер",
+        "НомерЧекаЭТ",
+        "ДанныеПереданыВБанк",
+        "РасшифровкаПлатежа",
+        "ДокументОснование_Type"
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа",
       "entity_type": "Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа",
       "direction": "incoming",
       "account_type": "cash",
-      "score": 149,
+      "score": 135,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -93623,7 +93899,8 @@
         "account:cash_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -93652,14 +93929,16 @@
         "СуммаНДС",
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_РасходныйКассовыйОрдер_РасшифровкаПлатежа",
       "entity_type": "Document_РасходныйКассовыйОрдер_РасшифровкаПлатежа",
       "direction": "outgoing",
       "account_type": "cash",
-      "score": 149,
+      "score": 135,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -93672,7 +93951,8 @@
         "account:cash_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -93699,14 +93979,16 @@
         "Сделка",
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа",
       "entity_type": "Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа",
       "direction": "incoming",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -93718,7 +94000,8 @@
         "account:bank_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -93748,14 +94031,16 @@
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "КурсНаДатуПриобретенияРеализацииВалюты",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеНДССИзмененнымСрокомУплаты",
       "entity_type": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеНДССИзмененнымСрокомУплаты",
       "direction": "outgoing",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -93767,7 +94052,8 @@
         "account:bank_priority",
         "field:counterparty=Контрагент_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "Контрагент_Key",
@@ -93793,14 +94079,16 @@
         "ГТД_Key",
         "СрокПлатежа",
         "СуммаПлатежа"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеИсходящее_РасшифровкаПлатежа",
       "entity_type": "Document_ПлатежноеПоручениеИсходящее_РасшифровкаПлатежа",
       "direction": "outgoing",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -93812,7 +94100,8 @@
         "account:bank_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -93841,14 +94130,16 @@
         "СчетУчетаРасчетовПоАвансам_Key",
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа",
       "entity_type": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа",
       "direction": "incoming",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -93860,7 +94151,8 @@
         "account:bank_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -93890,14 +94182,16 @@
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "КурсНаДатуПриобретенияРеализацииВалюты",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежныйОрдерСписаниеДенежныхСредств_РасшифровкаПлатежа",
       "entity_type": "Document_ПлатежныйОрдерСписаниеДенежныхСредств_РасшифровкаПлатежа",
       "direction": "outgoing",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -93909,7 +94203,8 @@
         "account:bank_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -93938,14 +94233,97 @@
         "СчетУчетаРасчетовПоАвансам_Key",
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
+    },
+    {
+      "entity": "Document_СчетФактураВыданный",
+      "entity_type": "Document_СчетФактураВыданный",
+      "direction": "outgoing",
+      "account_type": "unknown",
+      "score": 117,
+      "confidence": "high",
+      "reasons": [
+        "match:document",
+        "match:документ",
+        "match:платеж",
+        "match:оплат",
+        "match:счет",
+        "match:счета",
+        "match:контрагент",
+        "match:сумма",
+        "match:date",
+        "match:дата",
+        "direction:outgoing",
+        "field:counterparty=Контрагент_Key",
+        "field:amount=СуммаДокумента",
+        "field:date=Date",
+        "field:number=Number",
+        "penalty:not_payment_document"
+      ],
+      "mapped_fields": {
+        "counterparty": "Контрагент_Key",
+        "amount": "СуммаДокумента",
+        "date": "Date",
+        "number": "Number",
+        "organization": "Организация_Key",
+        "bank_account": "СчетОрганизации_Key",
+        "currency": "ВалютаДокумента_Key",
+        "purpose": "Комментарий"
+      },
+      "field_count": 60,
+      "sample_fields": [
+        "Ref_Key",
+        "DataVersion",
+        "Number",
+        "Date",
+        "DeletionMark",
+        "Posted",
+        "Автор_Key",
+        "ВалютаДокумента_Key",
+        "Грузоотправитель",
+        "Грузополучатель_Key",
+        "УдалитьДоверенность",
+        "ДоверенностьЛицо",
+        "ДоговорКонтрагента_Key",
+        "ДокументОснование",
+        "Комментарий",
+        "Контрагент_Key",
+        "КратностьВзаиморасчетов",
+        "КурсВзаиморасчетов",
+        "Организация_Key",
+        "ОсновнойСчетФактура_Key",
+        "Ответственный_Key",
+        "ПодтвержденДокументамиОтгрузки",
+        "ПунктНазначения",
+        "СпособОтправления",
+        "СуммаВключаетАкциз",
+        "СуммаВключаетНДС",
+        "СуммаДокумента",
+        "СчетКонтрагента_Key",
+        "СчетОрганизации_Key",
+        "ТипЦен_Key",
+        "УсловияОплаты",
+        "УчитыватьАкциз",
+        "УчитыватьНДС",
+        "СтруктурноеПодразделение_Key",
+        "Поставщик_Key",
+        "Покупатель_Key",
+        "СтранаНазначения_Key",
+        "РучнаяКорректировка",
+        "ВидСчетаФактуры",
+        "СпособВыставления"
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеВПодотчет",
       "entity_type": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеВПодотчет",
       "direction": "outgoing",
       "account_type": "bank",
-      "score": 127,
+      "score": 113,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -93956,7 +94334,8 @@
         "direction:outgoing",
         "account:bank_priority",
         "field:amount=СуммаПлатежа",
-        "field:number=НомерКартСчета_Key"
+        "field:number=НомерКартСчета_Key",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -93978,14 +94357,93 @@
         "СуммаПлатежа",
         "СчетУчета_Key",
         "НомерКартСчета_Key"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
+    },
+    {
+      "entity": "Document_ПоступлениеДопРасходов",
+      "entity_type": "Document_ПоступлениеДопРасходов",
+      "direction": "outgoing",
+      "account_type": "unknown",
+      "score": 109,
+      "confidence": "high",
+      "reasons": [
+        "match:document",
+        "match:документ",
+        "match:счет",
+        "match:контрагент",
+        "match:сумма",
+        "match:date",
+        "match:дата",
+        "direction:outgoing",
+        "field:counterparty=Контрагент_Key",
+        "field:amount=Сумма",
+        "field:date=Date",
+        "field:number=Number"
+      ],
+      "mapped_fields": {
+        "counterparty": "Контрагент_Key",
+        "amount": "Сумма",
+        "date": "Date",
+        "number": "Number",
+        "organization": "Организация_Key",
+        "bank_account": null,
+        "currency": "ВалютаДокумента_Key",
+        "purpose": "Комментарий"
+      },
+      "field_count": 58,
+      "sample_fields": [
+        "Ref_Key",
+        "DataVersion",
+        "Number",
+        "Date",
+        "DeletionMark",
+        "Posted",
+        "Автор_Key",
+        "ВалютаДокумента_Key",
+        "ВидВходящегоДокумента",
+        "ВидОперации",
+        "ВидУчетаНУ_Key",
+        "ДатаВходящегоДокумента",
+        "ДоговорКонтрагента_Key",
+        "ДокументОснование",
+        "Комментарий",
+        "Контрагент_Key",
+        "КратностьВзаиморасчетов",
+        "КурсВзаиморасчетов",
+        "НДСВключенВСтоимость",
+        "НомерВходящегоДокумента",
+        "Организация_Key",
+        "Ответственный_Key",
+        "РучнаяКорректировка",
+        "Сделка",
+        "Содержание",
+        "СпособРаспределения",
+        "СтавкаНДС_Key",
+        "Сумма",
+        "СуммаВключаетНДС",
+        "СуммаДокумента",
+        "СуммаНДС",
+        "СчетУчетаРасчетовПоАвансам_Key",
+        "СчетУчетаРасчетовСКонтрагентом_Key",
+        "УчитыватьНДС",
+        "СубконтоБУ1",
+        "СубконтоБУ2",
+        "СубконтоБУ3",
+        "СубконтоНУ1",
+        "СубконтоНУ2",
+        "СубконтоНУ3"
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПриходныйКассовыйОрдер_ВыдачаВПодотчет",
       "entity_type": "Document_ПриходныйКассовыйОрдер_ВыдачаВПодотчет",
       "direction": "incoming",
       "account_type": "cash",
-      "score": 119,
+      "score": 105,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -93995,7 +94453,8 @@
         "direction:incoming",
         "account:cash_priority",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -94014,14 +94473,16 @@
         "ВидЗадолженностиПодотчетногоЛица",
         "СтатьяДвиженияДенежныхСредств_Key",
         "СуммаПлатежа"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_РасходныйКассовыйОрдер_ВыдачаВПодотчет",
       "entity_type": "Document_РасходныйКассовыйОрдер_ВыдачаВПодотчет",
       "direction": "outgoing",
       "account_type": "cash",
-      "score": 119,
+      "score": 105,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94031,7 +94492,8 @@
         "direction:outgoing",
         "account:cash_priority",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -94050,14 +94512,16 @@
         "ВидЗадолженностиПодотчетногоЛица",
         "СтатьяДвиженияДенежныхСредств_Key",
         "СуммаПлатежа"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты",
       "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты",
       "direction": "incoming",
       "account_type": "bank",
-      "score": 117,
+      "score": 103,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94067,7 +94531,8 @@
         "direction:incoming",
         "account:bank_priority",
         "field:amount=СуммаВозврата",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -94085,151 +94550,17 @@
         "LineNumber",
         "Документ_Key",
         "СуммаВозврата"
-      ]
-    },
-    {
-      "entity": "Document_ПлатежноеПоручениеВходящее_ВозвратПенсионныхВзносов",
-      "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратПенсионныхВзносов",
-      "direction": "incoming",
-      "account_type": "bank",
-      "score": 117,
-      "confidence": "high",
-      "reasons": [
-        "match:document",
-        "match:документ",
-        "match:платеж",
-        "match:сумма",
-        "direction:incoming",
-        "account:bank_priority",
-        "field:amount=СуммаВозврата",
-        "field:number=LineNumber"
       ],
-      "mapped_fields": {
-        "counterparty": null,
-        "amount": "СуммаВозврата",
-        "date": null,
-        "number": "LineNumber",
-        "organization": null,
-        "bank_account": null,
-        "currency": null,
-        "purpose": null
-      },
-      "field_count": 4,
-      "sample_fields": [
-        "Ref_Key",
-        "LineNumber",
-        "Документ_Key",
-        "СуммаВозврата"
-      ]
-    },
-    {
-      "entity": "Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений",
-      "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений",
-      "direction": "incoming",
-      "account_type": "bank",
-      "score": 117,
-      "confidence": "high",
-      "reasons": [
-        "match:document",
-        "match:документ",
-        "match:платеж",
-        "match:сумма",
-        "direction:incoming",
-        "account:bank_priority",
-        "field:amount=СуммаВозврата",
-        "field:number=LineNumber"
-      ],
-      "mapped_fields": {
-        "counterparty": null,
-        "amount": "СуммаВозврата",
-        "date": null,
-        "number": "LineNumber",
-        "organization": null,
-        "bank_account": null,
-        "currency": null,
-        "purpose": null
-      },
-      "field_count": 4,
-      "sample_fields": [
-        "Ref_Key",
-        "LineNumber",
-        "Документ_Key",
-        "СуммаВозврата"
-      ]
-    },
-    {
-      "entity": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеПенсионныхВзносов",
-      "entity_type": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеПенсионныхВзносов",
-      "direction": "outgoing",
-      "account_type": "bank",
-      "score": 117,
-      "confidence": "high",
-      "reasons": [
-        "match:document",
-        "match:документ",
-        "match:платеж",
-        "match:сумма",
-        "direction:outgoing",
-        "account:bank_priority",
-        "field:amount=СуммаКПеречислению",
-        "field:number=LineNumber"
-      ],
-      "mapped_fields": {
-        "counterparty": null,
-        "amount": "СуммаКПеречислению",
-        "date": null,
-        "number": "LineNumber",
-        "organization": null,
-        "bank_account": null,
-        "currency": null,
-        "purpose": null
-      },
-      "field_count": 4,
-      "sample_fields": [
-        "Ref_Key",
-        "LineNumber",
-        "Документ_Key",
-        "СуммаКПеречислению"
-      ]
-    },
-    {
-      "entity": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеПоИсполнительнымЛистам",
-      "entity_type": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеПоИсполнительнымЛистам",
-      "direction": "outgoing",
-      "account_type": "bank",
-      "score": 117,
-      "confidence": "high",
-      "reasons": [
-        "match:document",
-        "match:документ",
-        "match:платеж",
-        "match:сумма",
-        "direction:outgoing",
-        "account:bank_priority",
-        "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
-      ],
-      "mapped_fields": {
-        "counterparty": null,
-        "amount": "СуммаПлатежа",
-        "date": null,
-        "number": "LineNumber",
-        "organization": null,
-        "bank_account": null,
-        "currency": null,
-        "purpose": null
-      },
-      "field_count": 6,
-      "sample_fields": [
-        "Ref_Key",
-        "LineNumber",
-        "Документ_Key",
-        "СуммаКПеречислению",
-        "СуммаСборов",
-        "СуммаПлатежа"
-      ]
+      "has_data": false,
+      "sample": []
     }
   ],
+  "candidate_payment_availability": {
+    "total": 20,
+    "has_data_true": 0,
+    "has_data_false": 20,
+    "has_data_unknown": 0
+  },
   "candidate_payment_incoming_entities": [
     {
       "entity": "Document_ПлатежноеПоручениеВходящее",
@@ -94307,7 +94638,9 @@
         "СтруктурноеПодразделениеОтправитель_Key",
         "НазначениеПлатежа",
         "РасшифровкаПлатежа"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств",
@@ -94385,7 +94718,9 @@
         "НазначениеПлатежа",
         "РасшифровкаПлатежа",
         "ДокументОснование_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПриходныйКассовыйОрдер",
@@ -94462,14 +94797,16 @@
         "СтруктурноеПодразделениеПолучатель_Key",
         "СтруктурноеПодразделениеОтправитель_Key",
         "НомерЧекаККМ"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа",
       "entity_type": "Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа",
       "direction": "incoming",
       "account_type": "cash",
-      "score": 149,
+      "score": 135,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94482,7 +94819,8 @@
         "account:cash_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -94511,14 +94849,16 @@
         "СуммаНДС",
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа",
       "entity_type": "Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа",
       "direction": "incoming",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94530,7 +94870,8 @@
         "account:bank_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -94560,14 +94901,16 @@
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "КурсНаДатуПриобретенияРеализацииВалюты",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа",
       "entity_type": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа",
       "direction": "incoming",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94579,7 +94922,8 @@
         "account:bank_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -94609,14 +94953,16 @@
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "КурсНаДатуПриобретенияРеализацииВалюты",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПриходныйКассовыйОрдер_ВыдачаВПодотчет",
       "entity_type": "Document_ПриходныйКассовыйОрдер_ВыдачаВПодотчет",
       "direction": "incoming",
       "account_type": "cash",
-      "score": 119,
+      "score": 105,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94626,7 +94972,8 @@
         "direction:incoming",
         "account:cash_priority",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -94645,14 +94992,16 @@
         "ВидЗадолженностиПодотчетногоЛица",
         "СтатьяДвиженияДенежныхСредств_Key",
         "СуммаПлатежа"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты",
       "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты",
       "direction": "incoming",
       "account_type": "bank",
-      "score": 117,
+      "score": 103,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94662,7 +95011,8 @@
         "direction:incoming",
         "account:bank_priority",
         "field:amount=СуммаВозврата",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -94680,14 +95030,16 @@
         "LineNumber",
         "Документ_Key",
         "СуммаВозврата"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеВходящее_ВозвратПенсионныхВзносов",
       "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратПенсионныхВзносов",
       "direction": "incoming",
       "account_type": "bank",
-      "score": 117,
+      "score": 103,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94697,7 +95049,8 @@
         "direction:incoming",
         "account:bank_priority",
         "field:amount=СуммаВозврата",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -94715,14 +95068,16 @@
         "LineNumber",
         "Документ_Key",
         "СуммаВозврата"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений",
       "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений",
       "direction": "incoming",
       "account_type": "bank",
-      "score": 117,
+      "score": 103,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94732,7 +95087,8 @@
         "direction:incoming",
         "account:bank_priority",
         "field:amount=СуммаВозврата",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -94750,9 +95106,17 @@
         "LineNumber",
         "Документ_Key",
         "СуммаВозврата"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     }
   ],
+  "candidate_payment_incoming_availability": {
+    "total": 10,
+    "has_data_true": 0,
+    "has_data_false": 10,
+    "has_data_unknown": 0
+  },
   "candidate_payment_outgoing_entities": [
     {
       "entity": "Document_ПлатежныйОрдерСписаниеДенежныхСредств",
@@ -94830,7 +95194,9 @@
         "ТекстПлательщика",
         "ТекстПолучателя",
         "ВключатьКомиссиюБанка"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_РасходныйКассовыйОрдер",
@@ -94907,14 +95273,16 @@
         "НомерЧекаККМ",
         "ВыплатаЗаработнойПлаты",
         "РасшифровкаПлатежа"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_РасходныйКассовыйОрдер_РасшифровкаПлатежа",
       "entity_type": "Document_РасходныйКассовыйОрдер_РасшифровкаПлатежа",
       "direction": "outgoing",
       "account_type": "cash",
-      "score": 149,
+      "score": 135,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94927,7 +95295,8 @@
         "account:cash_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -94954,14 +95323,16 @@
         "Сделка",
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеНДССИзмененнымСрокомУплаты",
       "entity_type": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеНДССИзмененнымСрокомУплаты",
       "direction": "outgoing",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -94973,7 +95344,8 @@
         "account:bank_priority",
         "field:counterparty=Контрагент_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "Контрагент_Key",
@@ -94999,14 +95371,16 @@
         "ГТД_Key",
         "СрокПлатежа",
         "СуммаПлатежа"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеИсходящее_РасшифровкаПлатежа",
       "entity_type": "Document_ПлатежноеПоручениеИсходящее_РасшифровкаПлатежа",
       "direction": "outgoing",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -95018,7 +95392,8 @@
         "account:bank_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -95047,14 +95422,16 @@
         "СчетУчетаРасчетовПоАвансам_Key",
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежныйОрдерСписаниеДенежныхСредств_РасшифровкаПлатежа",
       "entity_type": "Document_ПлатежныйОрдерСписаниеДенежныхСредств_РасшифровкаПлатежа",
       "direction": "outgoing",
       "account_type": "bank",
-      "score": 141,
+      "score": 127,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -95066,7 +95443,8 @@
         "account:bank_priority",
         "field:counterparty=ДоговорКонтрагента_Key",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": "ДоговорКонтрагента_Key",
@@ -95095,14 +95473,97 @@
         "СчетУчетаРасчетовПоАвансам_Key",
         "СчетУчетаРасчетовСКонтрагентомНУ_Key",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
+    },
+    {
+      "entity": "Document_СчетФактураВыданный",
+      "entity_type": "Document_СчетФактураВыданный",
+      "direction": "outgoing",
+      "account_type": "unknown",
+      "score": 117,
+      "confidence": "high",
+      "reasons": [
+        "match:document",
+        "match:документ",
+        "match:платеж",
+        "match:оплат",
+        "match:счет",
+        "match:счета",
+        "match:контрагент",
+        "match:сумма",
+        "match:date",
+        "match:дата",
+        "direction:outgoing",
+        "field:counterparty=Контрагент_Key",
+        "field:amount=СуммаДокумента",
+        "field:date=Date",
+        "field:number=Number",
+        "penalty:not_payment_document"
+      ],
+      "mapped_fields": {
+        "counterparty": "Контрагент_Key",
+        "amount": "СуммаДокумента",
+        "date": "Date",
+        "number": "Number",
+        "organization": "Организация_Key",
+        "bank_account": "СчетОрганизации_Key",
+        "currency": "ВалютаДокумента_Key",
+        "purpose": "Комментарий"
+      },
+      "field_count": 60,
+      "sample_fields": [
+        "Ref_Key",
+        "DataVersion",
+        "Number",
+        "Date",
+        "DeletionMark",
+        "Posted",
+        "Автор_Key",
+        "ВалютаДокумента_Key",
+        "Грузоотправитель",
+        "Грузополучатель_Key",
+        "УдалитьДоверенность",
+        "ДоверенностьЛицо",
+        "ДоговорКонтрагента_Key",
+        "ДокументОснование",
+        "Комментарий",
+        "Контрагент_Key",
+        "КратностьВзаиморасчетов",
+        "КурсВзаиморасчетов",
+        "Организация_Key",
+        "ОсновнойСчетФактура_Key",
+        "Ответственный_Key",
+        "ПодтвержденДокументамиОтгрузки",
+        "ПунктНазначения",
+        "СпособОтправления",
+        "СуммаВключаетАкциз",
+        "СуммаВключаетНДС",
+        "СуммаДокумента",
+        "СчетКонтрагента_Key",
+        "СчетОрганизации_Key",
+        "ТипЦен_Key",
+        "УсловияОплаты",
+        "УчитыватьАкциз",
+        "УчитыватьНДС",
+        "СтруктурноеПодразделение_Key",
+        "Поставщик_Key",
+        "Покупатель_Key",
+        "СтранаНазначения_Key",
+        "РучнаяКорректировка",
+        "ВидСчетаФактуры",
+        "СпособВыставления"
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеВПодотчет",
       "entity_type": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеВПодотчет",
       "direction": "outgoing",
       "account_type": "bank",
-      "score": 127,
+      "score": 113,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -95113,7 +95574,8 @@
         "direction:outgoing",
         "account:bank_priority",
         "field:amount=СуммаПлатежа",
-        "field:number=НомерКартСчета_Key"
+        "field:number=НомерКартСчета_Key",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -95135,14 +95597,93 @@
         "СуммаПлатежа",
         "СчетУчета_Key",
         "НомерКартСчета_Key"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
+    },
+    {
+      "entity": "Document_ПоступлениеДопРасходов",
+      "entity_type": "Document_ПоступлениеДопРасходов",
+      "direction": "outgoing",
+      "account_type": "unknown",
+      "score": 109,
+      "confidence": "high",
+      "reasons": [
+        "match:document",
+        "match:документ",
+        "match:счет",
+        "match:контрагент",
+        "match:сумма",
+        "match:date",
+        "match:дата",
+        "direction:outgoing",
+        "field:counterparty=Контрагент_Key",
+        "field:amount=Сумма",
+        "field:date=Date",
+        "field:number=Number"
+      ],
+      "mapped_fields": {
+        "counterparty": "Контрагент_Key",
+        "amount": "Сумма",
+        "date": "Date",
+        "number": "Number",
+        "organization": "Организация_Key",
+        "bank_account": null,
+        "currency": "ВалютаДокумента_Key",
+        "purpose": "Комментарий"
+      },
+      "field_count": 58,
+      "sample_fields": [
+        "Ref_Key",
+        "DataVersion",
+        "Number",
+        "Date",
+        "DeletionMark",
+        "Posted",
+        "Автор_Key",
+        "ВалютаДокумента_Key",
+        "ВидВходящегоДокумента",
+        "ВидОперации",
+        "ВидУчетаНУ_Key",
+        "ДатаВходящегоДокумента",
+        "ДоговорКонтрагента_Key",
+        "ДокументОснование",
+        "Комментарий",
+        "Контрагент_Key",
+        "КратностьВзаиморасчетов",
+        "КурсВзаиморасчетов",
+        "НДСВключенВСтоимость",
+        "НомерВходящегоДокумента",
+        "Организация_Key",
+        "Ответственный_Key",
+        "РучнаяКорректировка",
+        "Сделка",
+        "Содержание",
+        "СпособРаспределения",
+        "СтавкаНДС_Key",
+        "Сумма",
+        "СуммаВключаетНДС",
+        "СуммаДокумента",
+        "СуммаНДС",
+        "СчетУчетаРасчетовПоАвансам_Key",
+        "СчетУчетаРасчетовСКонтрагентом_Key",
+        "УчитыватьНДС",
+        "СубконтоБУ1",
+        "СубконтоБУ2",
+        "СубконтоБУ3",
+        "СубконтоНУ1",
+        "СубконтоНУ2",
+        "СубконтоНУ3"
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_РасходныйКассовыйОрдер_ВыдачаВПодотчет",
       "entity_type": "Document_РасходныйКассовыйОрдер_ВыдачаВПодотчет",
       "direction": "outgoing",
       "account_type": "cash",
-      "score": 119,
+      "score": 105,
       "confidence": "high",
       "reasons": [
         "match:document",
@@ -95152,7 +95693,8 @@
         "direction:outgoing",
         "account:cash_priority",
         "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
+        "field:number=LineNumber",
+        "penalty:nested_document_section"
       ],
       "mapped_fields": {
         "counterparty": null,
@@ -95171,82 +95713,177 @@
         "ВидЗадолженностиПодотчетногоЛица",
         "СтатьяДвиженияДенежныхСредств_Key",
         "СуммаПлатежа"
-      ]
-    },
-    {
-      "entity": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеПенсионныхВзносов",
-      "entity_type": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеПенсионныхВзносов",
-      "direction": "outgoing",
-      "account_type": "bank",
-      "score": 117,
-      "confidence": "high",
-      "reasons": [
-        "match:document",
-        "match:документ",
-        "match:платеж",
-        "match:сумма",
-        "direction:outgoing",
-        "account:bank_priority",
-        "field:amount=СуммаКПеречислению",
-        "field:number=LineNumber"
       ],
-      "mapped_fields": {
-        "counterparty": null,
-        "amount": "СуммаКПеречислению",
-        "date": null,
-        "number": "LineNumber",
-        "organization": null,
-        "bank_account": null,
-        "currency": null,
-        "purpose": null
-      },
-      "field_count": 4,
-      "sample_fields": [
-        "Ref_Key",
-        "LineNumber",
-        "Документ_Key",
-        "СуммаКПеречислению"
-      ]
-    },
-    {
-      "entity": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеПоИсполнительнымЛистам",
-      "entity_type": "Document_ПлатежноеПоручениеИсходящее_ПеречислениеПоИсполнительнымЛистам",
-      "direction": "outgoing",
-      "account_type": "bank",
-      "score": 117,
-      "confidence": "high",
-      "reasons": [
-        "match:document",
-        "match:документ",
-        "match:платеж",
-        "match:сумма",
-        "direction:outgoing",
-        "account:bank_priority",
-        "field:amount=СуммаПлатежа",
-        "field:number=LineNumber"
-      ],
-      "mapped_fields": {
-        "counterparty": null,
-        "amount": "СуммаПлатежа",
-        "date": null,
-        "number": "LineNumber",
-        "organization": null,
-        "bank_account": null,
-        "currency": null,
-        "purpose": null
-      },
-      "field_count": 6,
-      "sample_fields": [
-        "Ref_Key",
-        "LineNumber",
-        "Документ_Key",
-        "СуммаКПеречислению",
-        "СуммаСборов",
-        "СуммаПлатежа"
-      ]
+      "has_data": false,
+      "sample": []
     }
   ],
+  "candidate_payment_outgoing_availability": {
+    "total": 10,
+    "has_data_true": 0,
+    "has_data_false": 10,
+    "has_data_unknown": 0
+  },
   "candidate_sales_entities": [
+    {
+      "entity": "Document_СчетНаОплатуПокупателю",
+      "entity_type": "Document_СчетНаОплатуПокупателю",
+      "score": 125,
+      "confidence": "high",
+      "reasons": [
+        "match:document",
+        "match:документ",
+        "match:покупател",
+        "match:контрагент",
+        "match:сумма",
+        "match:date",
+        "match:number",
+        "sales_priority:счетнаоплатупокупателю",
+        "field:counterparty=Контрагент_Key",
+        "field:amount=СуммаДокумента",
+        "field:date=Date",
+        "field:number=Number",
+        "entity_has_data"
+      ],
+      "mapped_fields": {
+        "counterparty": "Контрагент_Key",
+        "amount": "СуммаДокумента",
+        "date": "Date",
+        "number": "Number",
+        "organization": "Организация_Key"
+      },
+      "field_count": 30,
+      "sample_fields": [
+        "Ref_Key",
+        "DataVersion",
+        "Number",
+        "Date",
+        "DeletionMark",
+        "Posted",
+        "Автор_Key",
+        "АдресДоставки",
+        "ВалютаДокумента_Key",
+        "ДоговорКонтрагента_Key",
+        "КодНазначенияПлатежа",
+        "Комментарий",
+        "Контрагент_Key",
+        "КратностьВзаиморасчетов",
+        "КурсВзаиморасчетов",
+        "Организация_Key",
+        "Ответственный_Key",
+        "Склад_Key",
+        "СтруктурнаяЕдиница",
+        "СуммаВключаетАкциз",
+        "СуммаВключаетНДС",
+        "СуммаДокумента",
+        "ТипЦен_Key",
+        "УчитыватьНДС",
+        "УчитыватьАкциз",
+        "СтруктурноеПодразделение_Key",
+        "Товары",
+        "Услуги",
+        "ОС",
+        "СтруктурнаяЕдиница_Type"
+      ],
+      "has_data": true,
+      "sample": [
+        {
+          "Ref_Key": "4601dee4-03d9-11ec-8ce2-5c3a45e64368",
+          "DataVersion": "AAAABAAAAAA=",
+          "DeletionMark": false,
+          "Number": "00000000001",
+          "Date": "2021-08-23T16:39:05",
+          "Posted": false,
+          "Автор_Key": "d4dba7f3-30d1-11eb-9947-a08cfde924ea",
+          "АдресДоставки": "",
+          "ВалютаДокумента_Key": "dd1a581e-30d1-11eb-9947-a08cfde924ea",
+          "ДоговорКонтрагента_Key": "00000000-0000-0000-0000-000000000000",
+          "КодНазначенияПлатежа": "19",
+          "Комментарий": "",
+          "Контрагент_Key": "33959134-98e5-11eb-8c47-5c3a45e64368",
+          "КратностьВзаиморасчетов": "0",
+          "КурсВзаиморасчетов": 0,
+          "Организация_Key": "4601dede-03d9-11ec-8ce2-5c3a45e64368",
+          "Ответственный_Key": "d4dba7f3-30d1-11eb-9947-a08cfde924ea",
+          "Склад_Key": "dd1a5a33-30d1-11eb-9947-a08cfde924ea",
+          "СтруктурнаяЕдиница": "4601dee0-03d9-11ec-8ce2-5c3a45e64368",
+          "СтруктурнаяЕдиница_Type": "StandardODATA.Catalog_БанковскиеСчета",
+          "СуммаВключаетАкциз": false,
+          "СуммаВключаетНДС": false,
+          "СуммаДокумента": 87725,
+          "ТипЦен_Key": "00000000-0000-0000-0000-000000000000",
+          "УчитыватьНДС": false,
+          "УчитыватьАкциз": false,
+          "СтруктурноеПодразделение_Key": "00000000-0000-0000-0000-000000000000",
+          "Товары": [
+            {
+              "Ref_Key": "4601dee4-03d9-11ec-8ce2-5c3a45e64368",
+              "LineNumber": "1",
+              "Номенклатура_Key": "5027a33d-e455-11eb-8cc6-5c3a45e64368",
+              "ЕдиницаИзмерения_Key": "dd1a5a53-30d1-11eb-9947-a08cfde924ea",
+              "Цена": 1500,
+              "Сумма": 3000,
+              "СтавкаНДС_Key": "dd1a5803-30d1-11eb-9947-a08cfde924ea",
+              "СуммаНДС": 0,
+              "СтавкаАкциза_Key": "00000000-0000-0000-0000-000000000000",
+              "СуммаАкциза": 0,
+              "Коэффициент": 1,
+              "Количество": 2
+            },
+            {
+              "Ref_Key": "4601dee4-03d9-11ec-8ce2-5c3a45e64368",
+              "LineNumber": "2",
+              "Номенклатура_Key": "4c138619-ba07-11eb-8c80-5c3a45e64368",
+              "ЕдиницаИзмерения_Key": "dd1a5a53-30d1-11eb-9947-a08cfde924ea",
+              "Цена": 275,
+              "Сумма": 64625,
+              "СтавкаНДС_Key": "dd1a5803-30d1-11eb-9947-a08cfde924ea",
+              "СуммаНДС": 0,
+              "СтавкаАкциза_Key": "00000000-0000-0000-0000-000000000000",
+              "СуммаАкциза": 0,
+              "Коэффициент": 1,
+              "Количество": 235
+            },
+            {
+              "Ref_Key": "4601dee4-03d9-11ec-8ce2-5c3a45e64368",
+              "LineNumber": "3",
+              "Номенклатура_Key": "85827ddf-e47b-11eb-8cc6-5c3a45e64368",
+              "ЕдиницаИзмерения_Key": "dd1a5a53-30d1-11eb-9947-a08cfde924ea",
+              "Цена": 600,
+              "Сумма": 3600,
+              "СтавкаНДС_Key": "dd1a5803-30d1-11eb-9947-a08cfde924ea",
+              "СуммаНДС": 0,
+              "СтавкаАкциза_Key": "00000000-0000-0000-0000-000000000000",
+              "СуммаАкциза": 0,
+              "Коэффициент": 1,
+              "Количество": 6
+            },
+            {
+              "Ref_Key": "4601dee4-03d9-11ec-8ce2-5c3a45e64368",
+              "LineNumber": "4",
+              "Номенклатура_Key": "4601dee2-03d9-11ec-8ce2-5c3a45e64368",
+              "ЕдиницаИзмерения_Key": "dd1a5a53-30d1-11eb-9947-a08cfde924ea",
+              "Цена": 550,
+              "Сумма": 16500,
+              "СтавкаНДС_Key": "dd1a5803-30d1-11eb-9947-a08cfde924ea",
+              "СуммаНДС": 0,
+              "СтавкаАкциза_Key": "00000000-0000-0000-0000-000000000000",
+              "СуммаАкциза": 0,
+              "Коэффициент": 1,
+              "Количество": 30
+            }
+          ],
+          "Услуги": [],
+          "ОС": [],
+          "Автор@navigationLinkUrl": "Document_СчетНаОплатуПокупателю(guid'4601dee4-03d9-11ec-8ce2-5c3a45e64368')/Автор",
+          "ВалютаДокумента@navigationLinkUrl": "Document_СчетНаОплатуПокупателю(guid'4601dee4-03d9-11ec-8ce2-5c3a45e64368')/ВалютаДокумента",
+          "Контрагент@navigationLinkUrl": "Document_СчетНаОплатуПокупателю(guid'4601dee4-03d9-11ec-8ce2-5c3a45e64368')/Контрагент",
+          "Организация@navigationLinkUrl": "Document_СчетНаОплатуПокупателю(guid'4601dee4-03d9-11ec-8ce2-5c3a45e64368')/Организация",
+          "Ответственный@navigationLinkUrl": "Document_СчетНаОплатуПокупателю(guid'4601dee4-03d9-11ec-8ce2-5c3a45e64368')/Ответственный",
+          "Склад@navigationLinkUrl": "Document_СчетНаОплатуПокупателю(guid'4601dee4-03d9-11ec-8ce2-5c3a45e64368')/Склад"
+        }
+      ]
+    },
     {
       "entity": "Document_РеализацияТоваровУслуг",
       "entity_type": "Document_РеализацияТоваровУслуг",
@@ -95317,7 +95954,9 @@
         "ДатаОкончанияОтчетногоПериода",
         "ПереченьДокументации",
         "ДоверенностьВыдана"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_РеализацияУслугПоПереработке",
@@ -95389,7 +96028,9 @@
         "Услуги",
         "МатериалыЗаказчика",
         "УчастникиСовместнойДеятельности"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ЭСФ",
@@ -95461,67 +96102,9 @@
         "ГосучреждениеИИК",
         "ГосучреждениеКодТоваров",
         "ГосучреждениеНазначениеПлатежа"
-      ]
-    },
-    {
-      "entity": "Document_СчетНаОплатуПокупателю",
-      "entity_type": "Document_СчетНаОплатуПокупателю",
-      "score": 117,
-      "confidence": "high",
-      "reasons": [
-        "match:document",
-        "match:документ",
-        "match:покупател",
-        "match:контрагент",
-        "match:сумма",
-        "match:date",
-        "match:number",
-        "sales_priority:счетнаоплатупокупателю",
-        "field:counterparty=Контрагент_Key",
-        "field:amount=СуммаДокумента",
-        "field:date=Date",
-        "field:number=Number"
       ],
-      "mapped_fields": {
-        "counterparty": "Контрагент_Key",
-        "amount": "СуммаДокумента",
-        "date": "Date",
-        "number": "Number",
-        "organization": "Организация_Key"
-      },
-      "field_count": 30,
-      "sample_fields": [
-        "Ref_Key",
-        "DataVersion",
-        "Number",
-        "Date",
-        "DeletionMark",
-        "Posted",
-        "Автор_Key",
-        "АдресДоставки",
-        "ВалютаДокумента_Key",
-        "ДоговорКонтрагента_Key",
-        "КодНазначенияПлатежа",
-        "Комментарий",
-        "Контрагент_Key",
-        "КратностьВзаиморасчетов",
-        "КурсВзаиморасчетов",
-        "Организация_Key",
-        "Ответственный_Key",
-        "Склад_Key",
-        "СтруктурнаяЕдиница",
-        "СуммаВключаетАкциз",
-        "СуммаВключаетНДС",
-        "СуммаДокумента",
-        "ТипЦен_Key",
-        "УчитыватьНДС",
-        "УчитыватьАкциз",
-        "СтруктурноеПодразделение_Key",
-        "Товары",
-        "Услуги",
-        "ОС",
-        "СтруктурнаяЕдиница_Type"
-      ]
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПередачаНМА",
@@ -95592,7 +96175,9 @@
         "СуммаДокумента",
         "СуммаНДС",
         "СчетДоходовБУ_Key"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ЧекККМ",
@@ -95659,7 +96244,9 @@
         "Товары",
         "Оплата",
         "Услуги"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ОплатаОтПокупателяПлатежнойКартой",
@@ -95723,7 +96310,9 @@
         "ДанныеПереданыВБанк",
         "РасшифровкаПлатежа",
         "ДокументОснование_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ВозвратТоваровОтПокупателя",
@@ -95794,7 +96383,9 @@
         "Товары",
         "Услуги",
         "УчастникиСовместнойДеятельности"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ГТДИмпорт",
@@ -95866,7 +96457,9 @@
         "ВидНалогаНДСПоИмпорту_Key",
         "Товары",
         "Разделы"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "AccumulationRegister_СведенияСчетовФактурВыданных_RecordType",
@@ -95919,7 +96512,9 @@
         "Recorder_Type",
         "СтруктурнаяЕдиница_Type",
         "ТМЗ_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_СчетФактураВыданный",
@@ -95992,7 +96587,9 @@
         "РучнаяКорректировка",
         "ВидСчетаФактуры",
         "СпособВыставления"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_АктОбОказанииПроизводственныхУслуг",
@@ -96062,7 +96659,9 @@
         "ДатаОкончанияОтчетногоПериода",
         "ПереченьДокументации",
         "НомерДокументаГЗ"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ВозвратТоваровПоставщику",
@@ -96132,7 +96731,9 @@
         "УчитыватьКПН",
         "СчетОтнесенияСебестоимостиНУ_Key",
         "СубконтоОтнесенияСебестоимостиНУ1"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПередачаОС",
@@ -96202,7 +96803,9 @@
         "ДоверенностьДата",
         "ДоверенностьВыдана",
         "ОС"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПоступлениеДопРасходов",
@@ -96272,7 +96875,9 @@
         "СубконтоНУ1",
         "СубконтоНУ2",
         "СубконтоНУ3"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПоступлениеИзПереработки",
@@ -96342,7 +96947,9 @@
         "СтруктурноеПодразделение_Key",
         "ОтложитьПринятиеНДСКЗачету",
         "Продукция"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПоступлениеНМА",
@@ -96408,7 +97015,9 @@
         "УчастникиСовместнойДеятельности",
         "ДокументОснование_Type",
         "Сделка_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_ПоступлениеТоваровУслуг",
@@ -96478,7 +97087,9 @@
         "ОС",
         "УчастникиСовместнойДеятельности",
         "ДокументОснование_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_РегистрацияПрочихОперацийПоПриобретеннымТоварамВЦеляхНДС",
@@ -96548,7 +97159,9 @@
         "ДатаВходящегоДокумента",
         "УчитыватьКПН",
         "СтруктурноеПодразделение_Key"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     },
     {
       "entity": "Document_СчетФактураПолученный",
@@ -96621,9 +97234,17 @@
         "ДокументыОснования",
         "УчастникиСовместнойДеятельности",
         "ДокументОснование_Type"
-      ]
+      ],
+      "has_data": false,
+      "sample": []
     }
   ],
+  "candidate_sales_availability": {
+    "total": 20,
+    "has_data_true": 1,
+    "has_data_false": 19,
+    "has_data_unknown": 0
+  },
   "candidate_customer_settlement_entities": [
     {
       "entity_set": "Document_ПлатежноеПоручениеВходящее",
@@ -97704,12 +98325,12 @@
       "possible_date_field": "Date",
       "possible_number_field": "Number",
       "possible_amount_fields": [
-        "СуммаДокумента",
-        "СуммаВключаетАкциз"
+        "СуммаВключаетАкциз",
+        "СуммаДокумента"
       ],
       "possible_counterparty_fields": [
-        "Грузополучатель_Key",
-        "Контрагент_Key"
+        "Контрагент_Key",
+        "Грузополучатель_Key"
       ],
       "possible_warehouse_fields": [
         "Склад_Key"
@@ -97724,103 +98345,6 @@
       ],
       "heuristic_score": 161,
       "heuristic_note": "sales_candidate_for_receivables"
-    },
-    {
-      "entity_set": "Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа",
-      "entity_type": "Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа",
-      "fields": [
-        {
-          "name": "Ref_Key",
-          "type": "Edm.Guid",
-          "nullable": false
-        },
-        {
-          "name": "LineNumber",
-          "type": "Edm.Int64",
-          "nullable": false
-        },
-        {
-          "name": "ДоговорКонтрагента_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "Сделка",
-          "type": "Edm.String",
-          "nullable": true
-        },
-        {
-          "name": "КурсВзаиморасчетов",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
-          "name": "СуммаПлатежа",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
-          "name": "КратностьВзаиморасчетов",
-          "type": "Edm.Int64",
-          "nullable": true
-        },
-        {
-          "name": "СуммаВзаиморасчетов",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
-          "name": "СтатьяДвиженияДенежныхСредств_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СчетУчетаРасчетовСКонтрагентомБУ_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СчетУчетаРасчетовПоАвансам_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СтавкаНДС_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СуммаНДС",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
-          "name": "СчетУчетаРасчетовСКонтрагентомНУ_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "Сделка_Type",
-          "type": "Edm.String",
-          "nullable": true
-        }
-      ],
-      "possible_date_field": null,
-      "possible_number_field": "LineNumber",
-      "possible_amount_fields": [
-        "СуммаПлатежа"
-      ],
-      "possible_counterparty_fields": [
-        "ДоговорКонтрагента_Key"
-      ],
-      "possible_warehouse_fields": [],
-      "possible_currency_fields": [],
-      "comments_for_tool_developers": [
-        "Looks usable for sales or customer settlement summaries.",
-        "Can be considered by document number search tools."
-      ],
-      "heuristic_score": 159,
-      "heuristic_note": "incoming_payment_candidate_for_receivables"
     },
     {
       "entity_set": "Document_РеализацияУслугПоПереработке",
@@ -98040,12 +98564,12 @@
       "possible_date_field": "Date",
       "possible_number_field": "Number",
       "possible_amount_fields": [
-        "СуммаДокумента",
-        "СуммаВключаетНДС"
+        "СуммаВключаетНДС",
+        "СуммаДокумента"
       ],
       "possible_counterparty_fields": [
-        "Грузополучатель_Key",
-        "Контрагент_Key"
+        "Контрагент_Key",
+        "Грузополучатель_Key"
       ],
       "possible_warehouse_fields": [
         "СтруктурноеПодразделение_Key"
@@ -98062,8 +98586,8 @@
       "heuristic_note": "sales_candidate_for_receivables"
     },
     {
-      "entity_set": "Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа",
-      "entity_type": "Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа",
+      "entity_set": "Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа",
+      "entity_type": "Document_ПриходныйКассовыйОрдер_РасшифровкаПлатежа",
       "fields": [
         {
           "name": "Ref_Key",
@@ -98106,16 +98630,6 @@
           "nullable": true
         },
         {
-          "name": "СтавкаНДС_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СуммаНДС",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
           "name": "СтатьяДвиженияДенежныхСредств_Key",
           "type": "Edm.Guid",
           "nullable": true
@@ -98131,13 +98645,18 @@
           "nullable": true
         },
         {
-          "name": "СчетУчетаРасчетовСКонтрагентомНУ_Key",
+          "name": "СтавкаНДС_Key",
           "type": "Edm.Guid",
           "nullable": true
         },
         {
-          "name": "КурсНаДатуПриобретенияРеализацииВалюты",
+          "name": "СуммаНДС",
           "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "СчетУчетаРасчетовСКонтрагентомНУ_Key",
+          "type": "Edm.Guid",
           "nullable": true
         },
         {
@@ -98160,109 +98679,7 @@
         "Looks usable for sales or customer settlement summaries.",
         "Can be considered by document number search tools."
       ],
-      "heuristic_score": 151,
-      "heuristic_note": "incoming_payment_candidate_for_receivables"
-    },
-    {
-      "entity_set": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа",
-      "entity_type": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа",
-      "fields": [
-        {
-          "name": "Ref_Key",
-          "type": "Edm.Guid",
-          "nullable": false
-        },
-        {
-          "name": "LineNumber",
-          "type": "Edm.Int64",
-          "nullable": false
-        },
-        {
-          "name": "ДоговорКонтрагента_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "Сделка",
-          "type": "Edm.String",
-          "nullable": true
-        },
-        {
-          "name": "КурсВзаиморасчетов",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
-          "name": "СуммаПлатежа",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
-          "name": "КратностьВзаиморасчетов",
-          "type": "Edm.Int64",
-          "nullable": true
-        },
-        {
-          "name": "СуммаВзаиморасчетов",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
-          "name": "СтавкаНДС_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СуммаНДС",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
-          "name": "СтатьяДвиженияДенежныхСредств_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СчетУчетаРасчетовСКонтрагентомБУ_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СчетУчетаРасчетовПоАвансам_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СчетУчетаРасчетовСКонтрагентомНУ_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "КурсНаДатуПриобретенияРеализацииВалюты",
-          "type": "Edm.Double",
-          "nullable": true
-        },
-        {
-          "name": "Сделка_Type",
-          "type": "Edm.String",
-          "nullable": true
-        }
-      ],
-      "possible_date_field": null,
-      "possible_number_field": "LineNumber",
-      "possible_amount_fields": [
-        "СуммаПлатежа"
-      ],
-      "possible_counterparty_fields": [
-        "ДоговорКонтрагента_Key"
-      ],
-      "possible_warehouse_fields": [],
-      "possible_currency_fields": [],
-      "comments_for_tool_developers": [
-        "Looks usable for sales or customer settlement summaries.",
-        "Can be considered by document number search tools."
-      ],
-      "heuristic_score": 151,
+      "heuristic_score": 145,
       "heuristic_note": "incoming_payment_candidate_for_receivables"
     },
     {
@@ -98876,8 +99293,8 @@
       "possible_date_field": "Date",
       "possible_number_field": "Number",
       "possible_amount_fields": [
-        "СуммаДокумента",
-        "СуммаВключаетАкциз"
+        "СуммаВключаетАкциз",
+        "СуммаДокумента"
       ],
       "possible_counterparty_fields": [
         "Контрагент_Key"
@@ -98895,6 +99312,210 @@
       ],
       "heuristic_score": 137,
       "heuristic_note": "sales_candidate_for_receivables"
+    },
+    {
+      "entity_set": "Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа",
+      "entity_type": "Document_ПлатежноеПоручениеВходящее_РасшифровкаПлатежа",
+      "fields": [
+        {
+          "name": "Ref_Key",
+          "type": "Edm.Guid",
+          "nullable": false
+        },
+        {
+          "name": "LineNumber",
+          "type": "Edm.Int64",
+          "nullable": false
+        },
+        {
+          "name": "ДоговорКонтрагента_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "Сделка",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "КурсВзаиморасчетов",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "СуммаПлатежа",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "КратностьВзаиморасчетов",
+          "type": "Edm.Int64",
+          "nullable": true
+        },
+        {
+          "name": "СуммаВзаиморасчетов",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "СтавкаНДС_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СуммаНДС",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "СтатьяДвиженияДенежныхСредств_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СчетУчетаРасчетовСКонтрагентомБУ_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СчетУчетаРасчетовПоАвансам_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СчетУчетаРасчетовСКонтрагентомНУ_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "КурсНаДатуПриобретенияРеализацииВалюты",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "Сделка_Type",
+          "type": "Edm.String",
+          "nullable": true
+        }
+      ],
+      "possible_date_field": null,
+      "possible_number_field": "LineNumber",
+      "possible_amount_fields": [
+        "СуммаПлатежа"
+      ],
+      "possible_counterparty_fields": [
+        "ДоговорКонтрагента_Key"
+      ],
+      "possible_warehouse_fields": [],
+      "possible_currency_fields": [],
+      "comments_for_tool_developers": [
+        "Looks usable for sales or customer settlement summaries.",
+        "Can be considered by document number search tools."
+      ],
+      "heuristic_score": 137,
+      "heuristic_note": "incoming_payment_candidate_for_receivables"
+    },
+    {
+      "entity_set": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа",
+      "entity_type": "Document_ПлатежныйОрдерПоступлениеДенежныхСредств_РасшифровкаПлатежа",
+      "fields": [
+        {
+          "name": "Ref_Key",
+          "type": "Edm.Guid",
+          "nullable": false
+        },
+        {
+          "name": "LineNumber",
+          "type": "Edm.Int64",
+          "nullable": false
+        },
+        {
+          "name": "ДоговорКонтрагента_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "Сделка",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "КурсВзаиморасчетов",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "СуммаПлатежа",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "КратностьВзаиморасчетов",
+          "type": "Edm.Int64",
+          "nullable": true
+        },
+        {
+          "name": "СуммаВзаиморасчетов",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "СтавкаНДС_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СуммаНДС",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "СтатьяДвиженияДенежныхСредств_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СчетУчетаРасчетовСКонтрагентомБУ_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СчетУчетаРасчетовПоАвансам_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СчетУчетаРасчетовСКонтрагентомНУ_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "КурсНаДатуПриобретенияРеализацииВалюты",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "Сделка_Type",
+          "type": "Edm.String",
+          "nullable": true
+        }
+      ],
+      "possible_date_field": null,
+      "possible_number_field": "LineNumber",
+      "possible_amount_fields": [
+        "СуммаПлатежа"
+      ],
+      "possible_counterparty_fields": [
+        "ДоговорКонтрагента_Key"
+      ],
+      "possible_warehouse_fields": [],
+      "possible_currency_fields": [],
+      "comments_for_tool_developers": [
+        "Looks usable for sales or customer settlement summaries.",
+        "Can be considered by document number search tools."
+      ],
+      "heuristic_score": 137,
+      "heuristic_note": "incoming_payment_candidate_for_receivables"
     },
     {
       "entity_set": "Document_ПередачаНМА",
@@ -99441,8 +100062,8 @@
       "possible_date_field": "Date",
       "possible_number_field": "Number",
       "possible_amount_fields": [
-        "СуммаДокумента",
-        "СуммаВключаетНДС"
+        "СуммаВключаетНДС",
+        "СуммаДокумента"
       ],
       "possible_counterparty_fields": [
         "Контрагент_Key"
@@ -99460,167 +100081,6 @@
       ],
       "heuristic_score": 131,
       "heuristic_note": "sales_candidate_for_receivables"
-    },
-    {
-      "entity_set": "Document_ПриходныйКассовыйОрдер_ВыдачаВПодотчет",
-      "entity_type": "Document_ПриходныйКассовыйОрдер_ВыдачаВПодотчет",
-      "fields": [
-        {
-          "name": "Ref_Key",
-          "type": "Edm.Guid",
-          "nullable": false
-        },
-        {
-          "name": "LineNumber",
-          "type": "Edm.Int64",
-          "nullable": false
-        },
-        {
-          "name": "ВидЗадолженностиПодотчетногоЛица",
-          "type": "Edm.String",
-          "nullable": true
-        },
-        {
-          "name": "СтатьяДвиженияДенежныхСредств_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СуммаПлатежа",
-          "type": "Edm.Double",
-          "nullable": true
-        }
-      ],
-      "possible_date_field": null,
-      "possible_number_field": "LineNumber",
-      "possible_amount_fields": [
-        "СуммаПлатежа"
-      ],
-      "possible_counterparty_fields": [],
-      "possible_warehouse_fields": [],
-      "possible_currency_fields": [],
-      "comments_for_tool_developers": [
-        "Can be considered by document number search tools."
-      ],
-      "heuristic_score": 129,
-      "heuristic_note": "incoming_payment_candidate_for_receivables"
-    },
-    {
-      "entity_set": "Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты",
-      "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты",
-      "fields": [
-        {
-          "name": "Ref_Key",
-          "type": "Edm.Guid",
-          "nullable": false
-        },
-        {
-          "name": "LineNumber",
-          "type": "Edm.Int64",
-          "nullable": false
-        },
-        {
-          "name": "Документ_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СуммаВозврата",
-          "type": "Edm.Double",
-          "nullable": true
-        }
-      ],
-      "possible_date_field": null,
-      "possible_number_field": "LineNumber",
-      "possible_amount_fields": [
-        "СуммаВозврата"
-      ],
-      "possible_counterparty_fields": [],
-      "possible_warehouse_fields": [],
-      "possible_currency_fields": [],
-      "comments_for_tool_developers": [
-        "Can be considered by document number search tools."
-      ],
-      "heuristic_score": 127,
-      "heuristic_note": "incoming_payment_candidate_for_receivables"
-    },
-    {
-      "entity_set": "Document_ПлатежноеПоручениеВходящее_ВозвратПенсионныхВзносов",
-      "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратПенсионныхВзносов",
-      "fields": [
-        {
-          "name": "Ref_Key",
-          "type": "Edm.Guid",
-          "nullable": false
-        },
-        {
-          "name": "LineNumber",
-          "type": "Edm.Int64",
-          "nullable": false
-        },
-        {
-          "name": "Документ_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СуммаВозврата",
-          "type": "Edm.Double",
-          "nullable": true
-        }
-      ],
-      "possible_date_field": null,
-      "possible_number_field": "LineNumber",
-      "possible_amount_fields": [
-        "СуммаВозврата"
-      ],
-      "possible_counterparty_fields": [],
-      "possible_warehouse_fields": [],
-      "possible_currency_fields": [],
-      "comments_for_tool_developers": [
-        "Can be considered by document number search tools."
-      ],
-      "heuristic_score": 127,
-      "heuristic_note": "incoming_payment_candidate_for_receivables"
-    },
-    {
-      "entity_set": "Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений",
-      "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратСоциальныхОтчислений",
-      "fields": [
-        {
-          "name": "Ref_Key",
-          "type": "Edm.Guid",
-          "nullable": false
-        },
-        {
-          "name": "LineNumber",
-          "type": "Edm.Int64",
-          "nullable": false
-        },
-        {
-          "name": "Документ_Key",
-          "type": "Edm.Guid",
-          "nullable": true
-        },
-        {
-          "name": "СуммаВозврата",
-          "type": "Edm.Double",
-          "nullable": true
-        }
-      ],
-      "possible_date_field": null,
-      "possible_number_field": "LineNumber",
-      "possible_amount_fields": [
-        "СуммаВозврата"
-      ],
-      "possible_counterparty_fields": [],
-      "possible_warehouse_fields": [],
-      "possible_currency_fields": [],
-      "comments_for_tool_developers": [
-        "Can be considered by document number search tools."
-      ],
-      "heuristic_score": 127,
-      "heuristic_note": "incoming_payment_candidate_for_receivables"
     },
     {
       "entity_set": "Document_ОплатаОтПокупателяПлатежнойКартой",
@@ -100037,8 +100497,8 @@
       "possible_date_field": "Date",
       "possible_number_field": "Number",
       "possible_amount_fields": [
-        "СуммаДокумента",
-        "СуммаВключаетАкциз"
+        "СуммаВключаетАкциз",
+        "СуммаДокумента"
       ],
       "possible_counterparty_fields": [
         "Контрагент_Key"
@@ -100442,6 +100902,457 @@
       ],
       "heuristic_score": 117,
       "heuristic_note": "sales_candidate_for_receivables"
+    },
+    {
+      "entity_set": "Document_СчетФактураВыданный",
+      "entity_type": "Document_СчетФактураВыданный",
+      "fields": [
+        {
+          "name": "Ref_Key",
+          "type": "Edm.Guid",
+          "nullable": false
+        },
+        {
+          "name": "DataVersion",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "Number",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "Date",
+          "type": "Edm.DateTime",
+          "nullable": true
+        },
+        {
+          "name": "DeletionMark",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "Posted",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "Автор_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "ВалютаДокумента_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "Грузоотправитель",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "Грузополучатель_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "УдалитьДоверенность",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "ДоверенностьЛицо",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "ДоговорКонтрагента_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "ДокументОснование",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "Комментарий",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "Контрагент_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "КратностьВзаиморасчетов",
+          "type": "Edm.Int64",
+          "nullable": true
+        },
+        {
+          "name": "КурсВзаиморасчетов",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "Организация_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "ОсновнойСчетФактура_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "Ответственный_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "ПодтвержденДокументамиОтгрузки",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "ПунктНазначения",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "СпособОтправления",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "СуммаВключаетАкциз",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "СуммаВключаетНДС",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "СуммаДокумента",
+          "type": "Edm.Double",
+          "nullable": true
+        },
+        {
+          "name": "СчетКонтрагента_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СчетОрганизации_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "ТипЦен_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "УсловияОплаты",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "УчитыватьАкциз",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "УчитыватьНДС",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "СтруктурноеПодразделение_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "Поставщик_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "Покупатель_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СтранаНазначения_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "РучнаяКорректировка",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "ВидСчетаФактуры",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "СпособВыставления",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "ДатаСовершенияОборотаПоРеализации",
+          "type": "Edm.DateTime",
+          "nullable": true
+        },
+        {
+          "name": "ГосучреждениеКодТоваров",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "ГосучреждениеНазначениеПлатежа",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "УдалитьДополнительная",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "ДоверенностьВыдана",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "ДоверенностьДата",
+          "type": "Edm.DateTime",
+          "nullable": true
+        },
+        {
+          "name": "ДоверенностьНомер",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "АдресДоставки",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "УсловияПоставки",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "СпособОтправленияПоКлассификатору",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "ДатаОборотаВТабличнойЧасти",
+          "type": "Edm.Boolean",
+          "nullable": true
+        },
+        {
+          "name": "Товары",
+          "type": "Collection(StandardODATA.Document_СчетФактураВыданный_Товары_RowType)",
+          "nullable": true
+        },
+        {
+          "name": "Услуги",
+          "type": "Collection(StandardODATA.Document_СчетФактураВыданный_Услуги_RowType)",
+          "nullable": true
+        },
+        {
+          "name": "ОС",
+          "type": "Collection(StandardODATA.Document_СчетФактураВыданный_ОС_RowType)",
+          "nullable": true
+        },
+        {
+          "name": "НМА",
+          "type": "Collection(StandardODATA.Document_СчетФактураВыданный_НМА_RowType)",
+          "nullable": true
+        },
+        {
+          "name": "ДокументыОснования",
+          "type": "Collection(StandardODATA.Document_СчетФактураВыданный_ДокументыОснования_RowType)",
+          "nullable": true
+        },
+        {
+          "name": "УчастникиСовместнойДеятельности",
+          "type": "Collection(StandardODATA.Document_СчетФактураВыданный_УчастникиСовместнойДеятельности_RowType)",
+          "nullable": true
+        },
+        {
+          "name": "НомераГТД",
+          "type": "Collection(StandardODATA.Document_СчетФактураВыданный_НомераГТД_RowType)",
+          "nullable": true
+        },
+        {
+          "name": "Грузоотправитель_Type",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "ДокументОснование_Type",
+          "type": "Edm.String",
+          "nullable": true
+        }
+      ],
+      "possible_date_field": "Date",
+      "possible_number_field": "Number",
+      "possible_amount_fields": [
+        "СуммаВключаетАкциз",
+        "СуммаДокумента"
+      ],
+      "possible_counterparty_fields": [
+        "Контрагент_Key",
+        "Грузополучатель_Key"
+      ],
+      "possible_warehouse_fields": [
+        "СтруктурноеПодразделение_Key"
+      ],
+      "possible_currency_fields": [
+        "ВалютаДокумента_Key"
+      ],
+      "comments_for_tool_developers": [
+        "Looks usable for payment or cash/bank movement tools.",
+        "Looks usable for sales or customer settlement summaries.",
+        "Can be considered by document number search tools."
+      ],
+      "heuristic_score": 117,
+      "heuristic_note": "sales_candidate_for_receivables"
+    },
+    {
+      "entity_set": "Document_ПриходныйКассовыйОрдер_ВыдачаВПодотчет",
+      "entity_type": "Document_ПриходныйКассовыйОрдер_ВыдачаВПодотчет",
+      "fields": [
+        {
+          "name": "Ref_Key",
+          "type": "Edm.Guid",
+          "nullable": false
+        },
+        {
+          "name": "LineNumber",
+          "type": "Edm.Int64",
+          "nullable": false
+        },
+        {
+          "name": "ВидЗадолженностиПодотчетногоЛица",
+          "type": "Edm.String",
+          "nullable": true
+        },
+        {
+          "name": "СтатьяДвиженияДенежныхСредств_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СуммаПлатежа",
+          "type": "Edm.Double",
+          "nullable": true
+        }
+      ],
+      "possible_date_field": null,
+      "possible_number_field": "LineNumber",
+      "possible_amount_fields": [
+        "СуммаПлатежа"
+      ],
+      "possible_counterparty_fields": [],
+      "possible_warehouse_fields": [],
+      "possible_currency_fields": [],
+      "comments_for_tool_developers": [
+        "Can be considered by document number search tools."
+      ],
+      "heuristic_score": 115,
+      "heuristic_note": "incoming_payment_candidate_for_receivables"
+    },
+    {
+      "entity_set": "Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты",
+      "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратЗаработнойПлаты",
+      "fields": [
+        {
+          "name": "Ref_Key",
+          "type": "Edm.Guid",
+          "nullable": false
+        },
+        {
+          "name": "LineNumber",
+          "type": "Edm.Int64",
+          "nullable": false
+        },
+        {
+          "name": "Документ_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СуммаВозврата",
+          "type": "Edm.Double",
+          "nullable": true
+        }
+      ],
+      "possible_date_field": null,
+      "possible_number_field": "LineNumber",
+      "possible_amount_fields": [
+        "СуммаВозврата"
+      ],
+      "possible_counterparty_fields": [],
+      "possible_warehouse_fields": [],
+      "possible_currency_fields": [],
+      "comments_for_tool_developers": [
+        "Can be considered by document number search tools."
+      ],
+      "heuristic_score": 113,
+      "heuristic_note": "incoming_payment_candidate_for_receivables"
+    },
+    {
+      "entity_set": "Document_ПлатежноеПоручениеВходящее_ВозвратПенсионныхВзносов",
+      "entity_type": "Document_ПлатежноеПоручениеВходящее_ВозвратПенсионныхВзносов",
+      "fields": [
+        {
+          "name": "Ref_Key",
+          "type": "Edm.Guid",
+          "nullable": false
+        },
+        {
+          "name": "LineNumber",
+          "type": "Edm.Int64",
+          "nullable": false
+        },
+        {
+          "name": "Документ_Key",
+          "type": "Edm.Guid",
+          "nullable": true
+        },
+        {
+          "name": "СуммаВозврата",
+          "type": "Edm.Double",
+          "nullable": true
+        }
+      ],
+      "possible_date_field": null,
+      "possible_number_field": "LineNumber",
+      "possible_amount_fields": [
+        "СуммаВозврата"
+      ],
+      "possible_counterparty_fields": [],
+      "possible_warehouse_fields": [],
+      "possible_currency_fields": [],
+      "comments_for_tool_developers": [
+        "Can be considered by document number search tools."
+      ],
+      "heuristic_score": 113,
+      "heuristic_note": "incoming_payment_candidate_for_receivables"
     }
   ],
   "known_limitations": [
