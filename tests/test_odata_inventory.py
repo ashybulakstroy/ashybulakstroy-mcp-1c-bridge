@@ -153,6 +153,10 @@ class FakeOneCODataClient(OneCODataClient):
                     "Контрагент": "ТОО Альфа Строй",
                     "СуммаДокумента": "100000",
                     "Номер": "000500",
+                    "Товары": [
+                        {"Содержание": "Цемент М400", "Количество": 8, "Сумма": "80000"},
+                        {"Содержание": "Песок", "Количество": 2, "Сумма": "20000"},
+                    ],
                     "Posted": True,
                 },
                 {
@@ -161,6 +165,10 @@ class FakeOneCODataClient(OneCODataClient):
                     "Контрагент": "ТОО Альфа Строй",
                     "СуммаДокумента": "300000",
                     "Номер": "000501",
+                    "Товары": [
+                        {"Содержание": "Цемент М400", "Количество": 5, "Сумма": "50000"},
+                        {"Содержание": "Бокорез", "Количество": 3, "Сумма": "30000"},
+                    ],
                     "Posted": True,
                 },
                 {
@@ -169,6 +177,9 @@ class FakeOneCODataClient(OneCODataClient):
                     "Контрагент": "ТОО БетонПром",
                     "СуммаДокумента": "90000",
                     "Номер": "000502",
+                    "Товары": [
+                        {"Содержание": "Песок", "Количество": 4, "Сумма": "40000"},
+                    ],
                     "Posted": False,
                 },
             ]
@@ -217,6 +228,100 @@ class FakeOneCODataClient(OneCODataClient):
             ]
             if select:
                 rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Document_АктСверкиВзаиморасчетов":
+            rows = [
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000300",
+                    "Number": "SV-001",
+                    "Date": "2026-04-30T12:00:00",
+                    "Контрагент_Key": "ТОО Cement Trade",
+                    "Организация_Key": "ИП Demo",
+                    "ДатаНачала": "2026-04-01T00:00:00",
+                    "ДатаОкончания": "2026-04-30T00:00:00",
+                    "ОстатокНаНачало": "20000",
+                    "Расхождение": "0",
+                    "СверкаСогласована": True,
+                    "ПоДаннымОрганизации": [
+                        {
+                            "Дата": "2026-04-20T00:00:00",
+                            "Документ": "00000000-0000-0000-0000-000000000200",
+                            "Документ_Type": "StandardODATA.Document_ПоступлениеТоваровУслуг",
+                            "Дебет": 0,
+                            "Кредит": 120000,
+                        },
+                        {
+                            "Дата": "2026-04-23T00:00:00",
+                            "Документ": "00000000-0000-0000-0000-000000000201",
+                            "Документ_Type": "StandardODATA.Document_ПоступлениеТоваровУслуг",
+                            "Дебет": 0,
+                            "Кредит": 40000,
+                        },
+                        {
+                            "Дата": "2026-04-25T00:00:00",
+                            "Документ": "00000000-0000-0000-0000-000000000002",
+                            "Документ_Type": "StandardODATA.Document_СписаниеСБанковскогоСчета",
+                            "Дебет": 50000,
+                            "Кредит": 0,
+                        },
+                    ],
+                    "ПоДаннымКонтрагента": [
+                        {
+                            "Дата": "2026-04-20T00:00:00",
+                            "Документ": "00000000-0000-0000-0000-000000000200",
+                            "Документ_Type": "StandardODATA.Document_ПоступлениеТоваровУслуг",
+                            "Дебет": 120000,
+                            "Кредит": 0,
+                        },
+                        {
+                            "Дата": "2026-04-23T00:00:00",
+                            "Документ": "00000000-0000-0000-0000-000000000201",
+                            "Документ_Type": "StandardODATA.Document_ПоступлениеТоваровУслуг",
+                            "Дебет": 40000,
+                            "Кредит": 0,
+                        },
+                        {
+                            "Дата": "2026-04-25T00:00:00",
+                            "Документ": "00000000-0000-0000-0000-000000000002",
+                            "Документ_Type": "StandardODATA.Document_СписаниеСБанковскогоСчета",
+                            "Дебет": 0,
+                            "Кредит": 50000,
+                        },
+                    ],
+                },
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000301",
+                    "Number": "SV-002",
+                    "Date": "2026-04-30T13:00:00",
+                    "Контрагент_Key": "ТОО Альфа Строй",
+                    "Организация_Key": "ИП Demo",
+                    "ДатаНачала": "2026-04-01T00:00:00",
+                    "ДатаОкончания": "2026-04-30T00:00:00",
+                    "ОстатокНаНачало": "0",
+                    "Расхождение": "0",
+                    "СверкаСогласована": True,
+                    "ПоДаннымОрганизации": [
+                        {
+                            "Дата": "2026-04-20T00:00:00",
+                            "Документ": "00000000-0000-0000-0000-000000000100",
+                            "Документ_Type": "StandardODATA.Document_РеализацияТоваровУслуг",
+                            "Дебет": 100000,
+                            "Кредит": 0,
+                        },
+                        {
+                            "Дата": "2026-04-24T00:00:00",
+                            "Документ": "00000000-0000-0000-0000-000000000011",
+                            "Документ_Type": "StandardODATA.Document_ПоступлениеНаБанковскийСчет",
+                            "Дебет": 0,
+                            "Кредит": 220000,
+                        },
+                    ],
+                    "ПоДаннымКонтрагента": [],
+                },
+            ]
+            if select:
+                allowed = set(select)
+                rows = [{k: v for k, v in row.items() if k in allowed} for row in rows]
             return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
         return {"entity": entity_name, "count_returned": 0, "top_applied": top, "data": []}
 
@@ -837,6 +942,95 @@ def test_get_supplier_debt_document_breakdown_handles_missing_sources_gracefully
     assert result["count_returned"] == 0
     assert result["data"] == []
     assert "purchase_documents" in result["missing_sources"]
+
+
+def test_get_supplier_reconciliation_documents_returns_published_act_rows():
+    client = FakeOneCODataClient()
+
+    result = client.get_supplier_reconciliation_documents(date_to="2026-04-30", limit=10)
+
+    assert result["count_returned"] == 1
+    row = result["data"][0]
+    assert row["counterparty"] == "ТОО Cement Trade"
+    assert row["reconciliation_number"] == "SV-001"
+    assert row["purchase_document_count"] == 2
+    assert row["outgoing_payment_count"] == 1
+    assert row["purchase_amount_total"] == "160000"
+    assert row["outgoing_payment_amount_total"] == "50000"
+    assert row["balance_estimate_by_organization_view"] == "130000"
+    assert row["source_entity"] == "Document_АктСверкиВзаиморасчетов"
+    assert row["organization_view_lines_sample"][0]["document_type"] == "StandardODATA.Document_ПоступлениеТоваровУслуг"
+    assert result["source_explanation"]["basis"] == "published_reconciliation_documents_from_1c"
+
+
+def test_get_supplier_reconciliation_documents_filters_by_counterparty_and_caps_limit():
+    client = FakeOneCODataClient()
+
+    result = client.get_supplier_reconciliation_documents(
+        date_to="2026-04-30",
+        counterparty_name="Cement Trade",
+        limit=100,
+        lines_per_document=100,
+    )
+
+    assert result["count_returned"] == 1
+    assert result["filters_applied_in_python"]["limit"] == 20
+    assert result["filters_applied_in_python"]["lines_per_document"] == 10
+
+
+def test_get_supplier_reconciliation_documents_handles_missing_source_gracefully():
+    client = FakeOneCODataClient()
+    client._entities_cache = [entity for entity in client.list_entities() if entity.name != "Document_АктСверкиВзаиморасчетов"]
+
+    result = client.get_supplier_reconciliation_documents(date_to="2026-04-30", limit=10)
+
+    assert result["count_returned"] == 0
+    assert "supplier_reconciliation_documents" in result["missing_sources"]
+    assert result["source_explanation"]["basis"] == "source_missing"
+
+
+def test_get_supplier_reconciliation_documents_rejects_invalid_date_range():
+    client = FakeOneCODataClient()
+
+    try:
+        client.get_supplier_reconciliation_documents(date_from="2026-05-01", date_to="2026-04-01")
+        assert False, "Expected ODataError for invalid date range"
+    except Exception as exc:
+        assert "date_from" in str(exc)
+
+
+def test_get_procurement_recommendations_uses_sales_30_days_and_current_stock():
+    client = FakeOneCODataClient()
+
+    result = client.get_procurement_recommendations(days=30, as_of_date="2026-04-30", limit=10)
+
+    assert result["count_returned"] >= 2
+    top = result["data"][0]
+    assert top["item"] == "Цемент М400"
+    assert top["sold_quantity_last_days"] == "13"
+    assert top["current_stock"] == "3"
+    assert top["recommended_purchase_qty"] == "10"
+    assert top["sales_document_count"] == 2
+    assert result["source_explanation"]["basis"] == "recent_sales_and_current_stock"
+
+
+def test_get_procurement_recommendations_caps_limit_and_infers_as_of():
+    client = FakeOneCODataClient()
+
+    result = client.get_procurement_recommendations(limit=100)
+
+    assert result["filters_applied_in_python"]["limit"] == 30
+    assert result["filters_applied_in_python"]["as_of_date"] == "2026-04-24"
+
+
+def test_get_procurement_recommendations_rejects_invalid_as_of_date():
+    client = FakeOneCODataClient()
+
+    try:
+        client.get_procurement_recommendations(as_of_date="not-a-date")
+        assert False, "Expected ODataError for invalid as_of_date"
+    except Exception as exc:
+        assert "as_of_date" in str(exc)
 
 
 def test_get_cash_bank_movements_returns_safe_rows():

@@ -273,9 +273,11 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Остатки получены адаптивно: найден кандидат источника, строки прочитаны через OData и нормализованы в item/warehouse/quantity/amount.")
     elif tool == "get_low_stock_items":
         explanation["summary"].append("Низкие остатки рассчитаны детерминированно: сервер взял авто-остатки и отфильтровал позиции, где quantity меньше или равно заданному порогу.")
+    elif tool == "get_procurement_recommendations":
+        explanation["summary"].append("Рекомендации закупа рассчитаны из read-only данных: продажи за период сопоставлены с текущим остатком, после чего сервер оценил потребность на следующий период покрытия.")
     elif tool in {"get_outgoing_payments", "get_incoming_payments", "get_cash_bank_movements"}:
         explanation["summary"].append("Платежи получены адаптивно: сервер нашел платежную сущность по metadata, прочитал строки OData и нормализовал дату, контрагента и сумму.")
-    elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty", "get_customer_settlements_summary", "get_supplier_settlements_summary", "get_supplier_debt_document_breakdown"}:
+    elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty", "get_customer_settlements_summary", "get_supplier_settlements_summary", "get_supplier_debt_document_breakdown", "get_supplier_reconciliation_documents"}:
         explanation["summary"].append("Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.")
     elif tool == "search_document_by_number":
         explanation["summary"].append("Поиск документа выполняется через безопасный wrapper: сервер выбирает document-like OData сущности, ищет совпадение по номеру и возвращает только нормализованные поля документа.")
@@ -451,6 +453,47 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
                     "result": result,
                 },
                 tool="get_supplier_debt_document_breakdown",
+            )
+
+        if any(phrase in ql for phrase in ["акт сверки поставщика", "акты сверки поставщиков", "покажи акт сверки поставщика", "сверка с поставщиком", "официальнее проверь долг поставщика"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            result = odata.get_supplier_reconciliation_documents(
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_supplier_reconciliation_documents",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_supplier_reconciliation_documents",
+            )
+
+        if any(phrase in ql for phrase in ["что нужно закупить", "что надо закупить", "что докупить", "что нужно купить", "закуп на 30 дней", "закупка по продажам", "что закупать"]):
+            warehouse = _extract_warehouse(q)
+            item = _extract_after_keywords(q, ["товар", "товары", "номенклатура", "закупить", "докупить", "купить"])
+            days_match = re.search(r"(\d{1,3})\s*дн", ql)
+            days = int(days_match.group(1)) if days_match else 30
+            date_from, date_to = _extract_date_range(q)
+            as_of = _normalize_relative_date(date_to)
+            result = odata.get_procurement_recommendations(
+                days=days,
+                as_of_date=as_of,
+                warehouse=warehouse,
+                item=item,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_procurement_recommendations",
+                    "parsed": {"days": days, "as_of_date": as_of, "warehouse": warehouse, "item": item, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_procurement_recommendations",
             )
 
         if any(phrase in ql for phrase in ["не оплатил в течение 3", "не оплатил за 3 дня", "должники 3 дня", "должники старше 3 дней", "кто не оплатил в течение 3 календарных дней"]):
@@ -760,6 +803,33 @@ def get_low_stock_items(
 
 
 @secure_tool()
+def get_procurement_recommendations(
+    days: int = 30,
+    as_of_date: str | None = None,
+    warehouse: str | None = None,
+    item: str | None = None,
+    limit: int = 20,
+    coverage_days: int | None = None,
+) -> dict[str, Any]:
+    """Показать, что нужно закупить по продажам за период и текущим остаткам.
+
+    Это read-only управленческая рекомендация, а не официальный расчет MRP/плана закупа 1С.
+    """
+    try:
+        result = odata.get_procurement_recommendations(
+            days=days,
+            as_of_date=as_of_date,
+            warehouse=warehouse,
+            item=item,
+            limit=limit,
+            coverage_days=coverage_days,
+        )
+        return _ok(result, tool="get_procurement_recommendations")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
 def get_outgoing_payments(
     date: str | None = None,
     date_from: str | None = None,
@@ -1007,6 +1077,32 @@ def get_supplier_debt_document_breakdown(
             documents_per_supplier=documents_per_supplier,
         )
         return _ok(result, tool="get_supplier_debt_document_breakdown")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_supplier_reconciliation_documents(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    limit: int = 20,
+    lines_per_document: int = 6,
+) -> dict[str, Any]:
+    """Показать опубликованные в 1С акты сверки поставщиков.
+
+    Возвращает read-only view уже существующих Document_АктСверкиВзаиморасчетов,
+    если они опубликованы в OData, без записи в 1С и без raw OData для агента.
+    """
+    try:
+        result = odata.get_supplier_reconciliation_documents(
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            limit=limit,
+            lines_per_document=lines_per_document,
+        )
+        return _ok(result, tool="get_supplier_reconciliation_documents")
     except Exception as exc:
         return _err(exc)
 

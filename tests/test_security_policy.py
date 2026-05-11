@@ -113,6 +113,24 @@ def test_main_policy_covers_supplier_debt_document_breakdown():
     assert [cap.name for cap in tool.capabilities] == ["read_supplier_settlements", "read_documents"]
 
 
+def test_main_policy_covers_supplier_reconciliation_documents():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_supplier_reconciliation_documents"]
+
+    assert tool.risk is RiskLevel.L0
+    assert [cap.name for cap in tool.capabilities] == ["read_supplier_reconciliation", "read_documents"]
+
+
+def test_main_policy_covers_procurement_recommendations():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_procurement_recommendations"]
+
+    assert tool.risk is RiskLevel.L1
+    assert [cap.name for cap in tool.capabilities] == ["read_inventory", "read_documents", "create_local_report"]
+
+
 def test_demo_docs_mark_cash_bank_movements_as_operational_view():
     demo_readme = Path("docs/DEMO_READONLY_SECURE_MODE.md").read_text(encoding="utf-8")
     demo_prompts = Path("docs/DEMO_PROMPTS.md").read_text(encoding="utf-8")

@@ -4,7 +4,7 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from time import perf_counter
 from typing import Any, Callable
@@ -584,6 +584,7 @@ class OneCODataClient:
         counterparty: str | None = None,
         limit: int = 100,
         entity_name: str | None = None,
+        include_sections: bool = False,
     ) -> dict[str, Any]:
         """Read sales/invoice-like rows from OData using metadata heuristics."""
         if entity_name:
@@ -606,7 +607,7 @@ class OneCODataClient:
             source = sources[0]
 
         mapped = source.get("mapped_fields") or {}
-        select = self._build_sales_select(mapped)
+        select = None if include_sections else self._build_sales_select(mapped)
         effective_from = date or date_from
         effective_to = date or date_to
         filter_expr = self._build_common_text_date_filter(
@@ -672,6 +673,171 @@ class OneCODataClient:
             "data": normalized[:limit],
             "warnings": warnings,
             "note": "Реализации/счета определены по metadata-эвристике OData. Для точного дебиторского учета сверяйте с официальными отчетами 1С.",
+        }
+
+    def get_procurement_recommendations(
+        self,
+        days: int = 30,
+        as_of_date: str | None = None,
+        warehouse: str | None = None,
+        item: str | None = None,
+        limit: int = 20,
+        coverage_days: int | None = None,
+    ) -> dict[str, Any]:
+        """Return read-only procurement suggestions based on recent sales and current stock."""
+        lookback_days = min(max(int(days), 1), 180)
+        target_days = min(max(int(coverage_days or lookback_days), 1), 180)
+        effective_limit = min(max(int(limit), 1), 30)
+        explicit_as_of = self._parse_date_like(as_of_date) if as_of_date else None
+        if as_of_date and explicit_as_of is None:
+            raise ODataError(f"Некорректная дата as_of_date: {as_of_date!r}. Используйте YYYY-MM-DD.")
+
+        sales_source_probe = self.discover_sales_sources(limit=1, check_data=True)
+        if not sales_source_probe:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "days": lookback_days,
+                    "as_of_date": as_of_date,
+                    "warehouse": warehouse,
+                    "item": item,
+                    "limit": effective_limit,
+                    "coverage_days": target_days,
+                },
+                "missing_sources": ["sales_documents"],
+                "warnings": ["Не найден безопасный источник продаж/реализаций для расчета закупа по спросу."],
+                "source_explanation": {
+                    "inventory_source": None,
+                    "sales_source": None,
+                    "basis": "source_missing",
+                },
+                "note": "Закуп не рассчитан, потому что не найден published read-only источник продаж.",
+            }
+
+        probe_limit = min(max(effective_limit * 20, 200), self.settings.max_top)
+        sales_probe = self.get_sales_documents(limit=probe_limit, entity_name=sales_source_probe[0]["entity"], include_sections=True)
+        sales_dates = [
+            self._parse_date_like(row.get("date"))
+            for row in sales_probe.get("data") or []
+            if self._parse_date_like(row.get("date")) is not None
+        ]
+        inferred_as_of = explicit_as_of or (max(sales_dates) if sales_dates else date.today())
+        window_start = inferred_as_of - timedelta(days=lookback_days - 1)
+
+        inventory = self.get_inventory_auto(warehouse=warehouse, item=item, limit=min(max(effective_limit * 20, 200), self.settings.max_top))
+        sales = self.get_sales_documents(
+            date_from=window_start.isoformat(),
+            date_to=inferred_as_of.isoformat(),
+            limit=probe_limit,
+            entity_name=sales_source_probe[0]["entity"],
+            include_sections=True,
+        )
+
+        sales_source = sales.get("source") or {}
+        inventory_source = inventory.get("source") or {}
+
+        sold_by_item: dict[str, dict[str, Any]] = {}
+        sales_doc_count_by_item: dict[str, set[str]] = {}
+        for row in sales.get("data") or []:
+            doc_number = str(row.get("number") or "")
+            raw = row.get("raw") or {}
+            line_items = self._extract_sales_line_items(raw)
+            for line in line_items:
+                item_name = str(line.get("name") or "").strip()
+                if not item_name:
+                    continue
+                if item and not self._text_match(item_name, item):
+                    continue
+                qty = self._to_decimal(line.get("quantity"), default=None)
+                amount = self._to_decimal(line.get("amount"), default=Decimal("0")) or Decimal("0")
+                if qty is None or qty <= 0:
+                    continue
+                bucket = sold_by_item.setdefault(
+                    item_name,
+                    {
+                        "sold_quantity": Decimal("0"),
+                        "sales_amount": Decimal("0"),
+                    },
+                )
+                bucket["sold_quantity"] += qty
+                bucket["sales_amount"] += amount
+                sales_doc_count_by_item.setdefault(item_name, set()).add(doc_number)
+
+        current_stock_by_item: dict[str, Decimal] = {}
+        warehouse_by_item: dict[str, str | None] = {}
+        for row in inventory.get("data") or []:
+            item_name = str(row.get("item") or "").strip()
+            if not item_name:
+                continue
+            qty = self._to_decimal(row.get("quantity"), default=Decimal("0")) or Decimal("0")
+            current_stock_by_item[item_name] = current_stock_by_item.get(item_name, Decimal("0")) + qty
+            warehouse_by_item[item_name] = row.get("warehouse")
+
+        rows: list[dict[str, Any]] = []
+        day_divisor = Decimal(str(lookback_days))
+        coverage_multiplier = Decimal(str(target_days))
+        for item_name, sales_info in sold_by_item.items():
+            sold_qty = sales_info["sold_quantity"]
+            current_stock = current_stock_by_item.get(item_name, Decimal("0"))
+            daily_rate = sold_qty / day_divisor if day_divisor else Decimal("0")
+            target_stock = daily_rate * coverage_multiplier
+            recommended_qty = target_stock - current_stock
+            if recommended_qty <= 0:
+                continue
+            stock_days_left = None
+            if daily_rate > 0:
+                stock_days_left = float((current_stock / daily_rate).quantize(Decimal("0.01")))
+            rows.append(
+                {
+                    "item": item_name,
+                    "warehouse": warehouse_by_item.get(item_name),
+                    "sold_quantity_last_days": self._decimal_to_text(sold_qty),
+                    "sales_amount_last_days": self._decimal_to_text(sales_info["sales_amount"]),
+                    "daily_sales_rate": self._decimal_to_text(daily_rate.quantize(Decimal("0.01"))),
+                    "current_stock": self._decimal_to_text(current_stock),
+                    "target_stock_for_period": self._decimal_to_text(target_stock.quantize(Decimal("0.01"))),
+                    "recommended_purchase_qty": self._decimal_to_text(recommended_qty.quantize(Decimal("0.01"))),
+                    "stock_days_left": stock_days_left,
+                    "sales_document_count": len(sales_doc_count_by_item.get(item_name, set())),
+                    "inventory_source": inventory_source.get("entity"),
+                    "sales_source": sales_source.get("entity"),
+                    "reason": f"sales_{lookback_days}_days_gt_current_stock_for_next_{target_days}_days",
+                }
+            )
+
+        rows.sort(
+            key=lambda row: (
+                self._to_decimal(row.get("recommended_purchase_qty"), default=Decimal("0")) or Decimal("0"),
+                self._to_decimal(row.get("sold_quantity_last_days"), default=Decimal("0")) or Decimal("0"),
+            ),
+            reverse=True,
+        )
+
+        warnings = list(inventory.get("warnings") or [])
+        warnings.extend(sales.get("warnings") or [])
+        warnings.append(
+            "Это read-only управленческая рекомендация закупа: продажи за период и текущий остаток из published OData. Это не официальный MRP-расчет 1С."
+        )
+
+        return {
+            "count_returned": min(len(rows), effective_limit),
+            "data": rows[:effective_limit],
+            "filters_applied_in_python": {
+                "days": lookback_days,
+                "as_of_date": inferred_as_of.isoformat(),
+                "warehouse": warehouse,
+                "item": item,
+                "limit": effective_limit,
+                "coverage_days": target_days,
+            },
+            "source_explanation": {
+                "inventory_source": inventory_source.get("entity"),
+                "sales_source": sales_source.get("entity"),
+                "basis": "recent_sales_and_current_stock",
+            },
+            "warnings": warnings,
+            "note": "Read-only procurement estimate only. Основан на продажах за период и текущем остатке, без записи в 1С.",
         }
 
     def get_purchase_documents(
@@ -1530,6 +1696,133 @@ class OneCODataClient:
             "outgoing_payments_source": outgoing_source,
             "warnings": warnings,
             "note": "Read-only document-level management estimate only. Не является официальным бухгалтерским актом сверки или балансом взаиморасчетов.",
+        }
+
+    def get_supplier_reconciliation_documents(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        limit: int = 20,
+        lines_per_document: int = 6,
+    ) -> dict[str, Any]:
+        """Return safe read-only supplier reconciliation documents from published 1C acts."""
+        effective_limit = min(max(int(limit), 1), 20)
+        sample_lines_limit = min(max(int(lines_per_document), 1), 10)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        entity_name = "Document_АктСверкиВзаиморасчетов"
+        entity = self.describe_entity(entity_name)
+        if entity is None:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "limit": effective_limit,
+                    "lines_per_document": sample_lines_limit,
+                },
+                "missing_sources": ["supplier_reconciliation_documents"],
+                "warnings": [
+                    "В OData не найден опубликованный Document_АктСверкиВзаиморасчетов. Нельзя проверить долг по более официальному published источнику."
+                ],
+                "source_explanation": {
+                    "source_entity": None,
+                    "basis": "source_missing",
+                    "missing_sources": ["supplier_reconciliation_documents"],
+                },
+                "note": "Published acts of reconciliation were not found in OData. Используйте управленческую read-only оценку или попросите 1С-сторону опубликовать источник сверки.",
+            }
+
+        fetch_limit = min(max(effective_limit * 10, 100), self.settings.max_top)
+        select = [
+            "Ref_Key",
+            "Number",
+            "Date",
+            "Контрагент_Key",
+            "Организация_Key",
+            "ДатаНачала",
+            "ДатаОкончания",
+            "ОстатокНаНачало",
+            "Расхождение",
+            "СверкаСогласована",
+            "ПоДаннымОрганизации",
+            "ПоДаннымКонтрагента",
+        ]
+        filter_parts: list[str] = []
+        if validated_from:
+            literal = self._to_odata_datetime_literal(validated_from, end_of_day=False)
+            if literal:
+                filter_parts.append(f"ДатаОкончания ge {literal}")
+        if validated_to:
+            literal = self._to_odata_datetime_literal(validated_to, end_of_day=True)
+            if literal:
+                filter_parts.append(f"ДатаОкончания le {literal}")
+        filter_expr = " and ".join(filter_parts) if filter_parts else None
+
+        try:
+            payload = self.query_entity(
+                entity_name=entity_name,
+                top=fetch_limit,
+                select=select,
+                filter_expr=filter_expr,
+                orderby="Date desc",
+            )
+        except ODataError:
+            payload = self.query_entity(
+                entity_name=entity_name,
+                top=fetch_limit,
+                select=select,
+                orderby="Date desc",
+            )
+
+        rows: list[dict[str, Any]] = []
+        for raw in payload.get("data") or []:
+            period_end = raw.get("ДатаОкончания") or raw.get("Date")
+            if not self._date_in_range(period_end, validated_from, validated_to):
+                continue
+            counterparty_info = self._resolve_counterparty_info(raw.get("Контрагент_Key"))
+            counterparty_display = counterparty_info.get("display") or raw.get("Контрагент_Key")
+            if counterparty_name and not self._text_match(counterparty_display, counterparty_name):
+                continue
+            summary = self._summarize_supplier_reconciliation_document(
+                raw,
+                counterparty_display=str(counterparty_display or "<unknown>"),
+                bin_or_iin=counterparty_info.get("bin_or_iin"),
+                sample_lines_limit=sample_lines_limit,
+            )
+            if summary is None:
+                continue
+            rows.append(summary)
+
+        rows.sort(
+            key=lambda row: (
+                self._parse_date_like(row.get("reconciliation_date")) or date.min,
+                self._to_decimal(row.get("balance_estimate_by_organization_view"), default=Decimal("0")) or Decimal("0"),
+            ),
+            reverse=True,
+        )
+
+        return {
+            "count_returned": min(len(rows), effective_limit),
+            "data": rows[:effective_limit],
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "limit": effective_limit,
+                "lines_per_document": sample_lines_limit,
+            },
+            "source_explanation": {
+                "source_entity": entity_name,
+                "basis": "published_reconciliation_documents_from_1c",
+                "missing_sources": [],
+            },
+            "warnings": [
+                "Это read-only published source из 1С: уже существующие акты сверки взаиморасчетов. Источник ближе к официальной сверке, чем эвристика по поступлениям и оплатам, но все равно зависит от того, какие акты реально заведены и опубликованы в OData."
+            ],
+            "note": "Read-only published reconciliation document view. Это чтение уже существующих актов сверки в 1С, а не формирование нового отчета.",
         }
 
     def get_cash_bank_movements(
@@ -3032,6 +3325,105 @@ class OneCODataClient:
             "line_summary_text": ", ".join(line_summary_parts) if line_summary_parts else None,
         }
 
+    def _summarize_supplier_reconciliation_document(
+        self,
+        raw: dict[str, Any],
+        *,
+        counterparty_display: str,
+        bin_or_iin: Any,
+        sample_lines_limit: int,
+    ) -> dict[str, Any] | None:
+        org_rows = raw.get("ПоДаннымОрганизации")
+        if not isinstance(org_rows, list) or not org_rows:
+            return None
+
+        purchase_like = {"поступлениетоваровуслуг", "документрасчетовсконтрагентом", "корректировкадолга"}
+        outgoing_payment_like = {
+            "платежноепоручениеисходящее",
+            "платежныйордерсписаниеденежныхсредств",
+            "списаниесбанковскогосчета",
+            "расходныйкассовыйордер",
+        }
+
+        purchase_rows: list[dict[str, Any]] = []
+        payment_rows: list[dict[str, Any]] = []
+        sample_rows: list[dict[str, Any]] = []
+        doc_types_seen: set[str] = set()
+        debit_total = Decimal("0")
+        credit_total = Decimal("0")
+
+        for row in org_rows:
+            doc_type = str(row.get("Документ_Type") or "")
+            normalized_doc_type = self._norm(doc_type.split(".")[-1] if "." in doc_type else doc_type)
+            debit = self._to_decimal(row.get("Дебет"), default=Decimal("0")) or Decimal("0")
+            credit = self._to_decimal(row.get("Кредит"), default=Decimal("0")) or Decimal("0")
+            debit_total += debit
+            credit_total += credit
+            if doc_type:
+                doc_types_seen.add(doc_type)
+            if any(term in normalized_doc_type for term in purchase_like):
+                purchase_rows.append(row)
+            if any(term in normalized_doc_type for term in outgoing_payment_like) or "списани" in normalized_doc_type or "платеж" in normalized_doc_type:
+                payment_rows.append(row)
+            if len(sample_rows) < sample_lines_limit:
+                sample_rows.append(
+                    {
+                        "date": row.get("Дата"),
+                        "document_type": doc_type,
+                        "debit": row.get("Дебет"),
+                        "credit": row.get("Кредит"),
+                    }
+                )
+
+        if not purchase_rows and not payment_rows:
+            return None
+
+        opening_balance = self._to_decimal(raw.get("ОстатокНаНачало"), default=Decimal("0")) or Decimal("0")
+        discrepancy = self._to_decimal(raw.get("Расхождение"), default=Decimal("0")) or Decimal("0")
+        balance_estimate = opening_balance + credit_total - debit_total
+
+        return {
+            "counterparty": counterparty_display,
+            "bin_or_iin": bin_or_iin,
+            "reconciliation_number": raw.get("Number"),
+            "reconciliation_date": raw.get("Date"),
+            "period_from": raw.get("ДатаНачала"),
+            "period_to": raw.get("ДатаОкончания"),
+            "organization": self._resolve_reference_value("Организация_Key", raw.get("Организация_Key")),
+            "opening_balance": str(opening_balance),
+            "discrepancy": str(discrepancy),
+            "is_agreed": self._to_bool_like(raw.get("СверкаСогласована")),
+            "purchase_document_count": len(purchase_rows),
+            "outgoing_payment_count": len(payment_rows),
+            "purchase_amount_total": str(sum((self._to_decimal(item.get("Кредит"), default=Decimal("0")) or Decimal("0") for item in purchase_rows), Decimal("0"))),
+            "outgoing_payment_amount_total": str(sum((self._to_decimal(item.get("Дебет"), default=Decimal("0")) or Decimal("0") for item in payment_rows), Decimal("0"))),
+            "balance_estimate_by_organization_view": str(balance_estimate),
+            "document_types_seen": sorted(doc_types_seen),
+            "organization_view_lines_sample": sample_rows,
+            "source_entity": "Document_АктСверкиВзаиморасчетов",
+        }
+
+    def _extract_sales_line_items(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
+        rows = raw.get("Товары")
+        if not isinstance(rows, list):
+            return []
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            name = (
+                row.get("Содержание")
+                or row.get("Description")
+                or self._resolve_reference_value("Номенклатура_Key", row.get("Номенклатура_Key"))
+                or self._resolve_reference_value("Номенклатура", row.get("Номенклатура"))
+            )
+            out.append(
+                {
+                    "name": name,
+                    "quantity": row.get("Количество"),
+                    "amount": row.get("Сумма"),
+                }
+            )
+        return out
+
     def _last_payment_dates_by_customer(self, payment_rows: list[dict[str, Any]]) -> dict[str, str]:
         out: dict[str, str] = {}
         for row in payment_rows:
@@ -3076,6 +3468,13 @@ class OneCODataClient:
             return Decimal(text)
         except (InvalidOperation, ValueError):
             return default
+
+    @staticmethod
+    def _decimal_to_text(value: Decimal) -> str:
+        if value == value.to_integral():
+            return str(value.quantize(Decimal("1")))
+        normalized = value.normalize()
+        return format(normalized, "f").rstrip("0").rstrip(".") if "." in format(normalized, "f") else str(normalized)
 
     @staticmethod
     def _severity_rank(value: Any) -> int:

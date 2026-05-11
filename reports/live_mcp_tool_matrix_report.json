@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-05-10T20:16:48.451986+05:00",
+  "generated_at": "2026-05-10T21:11:51.842237+05:00",
   "base_url": "http://192.168.1.183/Isatay",
   "service_url": "http://192.168.1.183/Isatay/odata/standard.odata",
-  "total_tools": 28,
-  "passed": 26,
+  "total_tools": 30,
+  "passed": 28,
   "pass_empty": 0,
   "skipped": 0,
   "failed": 0,
@@ -186,6 +186,27 @@
         "threshold_quantity": "10"
       },
       "result_summary": "{\"ok\": true, \"data\": {\"source\": {\"entity\": \"Document_ВводНачальныхОстатков_Запасы\", \"entity_type\": \"Document_ВводНачальныхОстатков_Запасы\", \"score\": 142, \"confidence\": \"high\", \"reasons\": [\"match:остат\", \"match:номенклатур\", \"match:склад\", \"match:количество\", \"match:сумма\", \"inventory_priority:остатк\", \"inventory_priority:запасы\", \"field:item=Номенклатура_Key\", \"field:warehouse=Склад_Key\", \"field:quantity=КоличествоБУ\", \"field:amount=СуммаБУ\", \"penalty:document\", \"entity_has_data\"], \"mapped_fields\": {\"item\": \"Номенклатура_Key\", \"warehouse\": \"Склад_Key\", \"quantity\": \"КоличествоБУ\", \"amount\": \"СуммаБУ\", \"period\": null}, \"field_count\": 13, \"sample_fields\": [\"Ref_Key\", \"LineNumber\", \"СчетУчетаБУ_",
+      "row_count": 10,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "get_procurement_recommendations",
+      "policy_risk_level": "L1",
+      "capabilities": [
+        "read_inventory",
+        "read_documents",
+        "create_local_report"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "days": 30,
+        "limit": 10
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 10, \"data\": [{\"item\": \"Шуруп монтажный\", \"warehouse\": null, \"sold_quantity_last_days\": \"204\", \"sales_amount_last_days\": \"7320\", \"daily_sales_rate\": \"6.8\", \"current_stock\": \"0\", \"target_stock_for_period\": \"204\", \"recommended_purchase_qty\": \"204\", \"stock_days_left\": 0.0, \"sales_document_count\": 3, \"inventory_source\": \"Document_ВводНачальныхОстатков_Запасы\", \"sales_source\": \"Document_РеализацияТоваровУслуг\", \"reason\": \"sales_30_days_gt_current_stock_for_next_30_days\"}, {\"item\": \"Мешок\", \"warehouse\": null, \"sold_quantity_last_days\": \"91\", \"sales_amount_last_days\": \"5470\", \"daily_sales_rate\": \"3.03\", \"current_stock\": \"0\", \"target_stock_for_period\": \"91\", \"r",
       "row_count": 10,
       "error_type": null,
       "audit_record_created": true,
@@ -487,6 +508,28 @@
         "documents_per_supplier": 3
       },
       "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 5, \"data\": [{\"counterparty\": \"Alina Group ТОО Филиал\", \"bin_or_iin\": \"060241015368\", \"debt_amount\": \"19203536\", \"last_payment_date\": null, \"overdue_days\": 1087, \"source_entity\": \"Document_ПоступлениеТоваровУслуг\", \"documents\": [{\"document_date\": \"2024-01-26T19:35:22\", \"document_number\": \"00000000016\", \"document_total_amount\": \"1417439\", \"outstanding_amount\": \"1417439\", \"paid_amount_estimate\": \"0\", \"currency\": \"KZT\", \"organization\": \"ИП Isatay\", \"overdue_days\": 1070, \"line_items_sample\": [{\"section\": \"goods\", \"name\": \"Затирка AlinEX JOINT, 25 кг (для швов ГКЛ)\", \"quantity\": 3, \"amount\": 16002}, {\"section\": \"goods\", \"name\": \"Наливной пол НАШИ \\\"Нивелир\\\"",
+      "row_count": 5,
+      "error_type": null,
+      "audit_record_created": true,
+      "output_filter_applied": true,
+      "raw_odata_url_leaked": false,
+      "notes": "Tool returned non-empty read-only result."
+    },
+    {
+      "tool_name": "get_supplier_reconciliation_documents",
+      "policy_risk_level": "L0",
+      "capabilities": [
+        "read_supplier_reconciliation",
+        "read_documents"
+      ],
+      "status": "PASS",
+      "input_used": {
+        "date_from": "2020-01-01",
+        "date_to": "2026-12-31",
+        "limit": 5,
+        "lines_per_document": 5
+      },
+      "result_summary": "{\"ok\": true, \"data\": {\"count_returned\": 5, \"data\": [{\"counterparty\": \"Мир инструмента Алматы ТОО\", \"bin_or_iin\": \"031140003312\", \"reconciliation_number\": \"00000000057\", \"reconciliation_date\": \"2025-03-31T12:00:05\", \"period_from\": \"2025-01-01T00:00:00\", \"period_to\": \"2025-03-31T00:00:00\", \"organization\": \"ИП Isatay\", \"opening_balance\": \"37325\", \"discrepancy\": \"0\", \"is_agreed\": true, \"purchase_document_count\": 15, \"outgoing_payment_count\": 13, \"purchase_amount_total\": \"12580235.07\", \"outgoing_payment_amount_total\": \"5315524\", \"balance_estimate_by_organization_view\": \"7302036.07\", \"document_types_seen\": [\"StandardODATA.Document_ПлатежноеПоручениеИсходящее\", \"StandardODATA.Document_ПоступлениеТо",
       "row_count": 5,
       "error_type": null,
       "audit_record_created": true,

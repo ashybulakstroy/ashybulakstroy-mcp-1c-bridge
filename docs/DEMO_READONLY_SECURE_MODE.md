@@ -104,6 +104,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 | `discover_inventory_sources` | Ищет источник остатков | L0 | `read_inventory` | yes | no | yes |
 | `get_inventory_auto` | Возвращает остатки по найденному источнику | L0 | `read_inventory` | yes | no | yes |
 | `get_low_stock_items` | Возвращает low stock список | L0 | `read_inventory` | yes | no | yes |
+| `get_procurement_recommendations` | Рекомендует, что закупить, по продажам за период и текущим остаткам | L1 | `read_inventory`, `read_documents`, `create_local_report` | yes | no | yes |
 | `discover_payment_sources` | Ищет OData-источник оплат | L0 | `read_payments` | yes | no | yes |
 | `get_outgoing_payments` | Кому мы заплатили | L0 | `read_payments` | yes | no | yes |
 | `get_incoming_payments` | От кого получили деньги | L0 | `read_payments` | yes | no | yes |
@@ -115,6 +116,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 | `get_customer_settlements_summary` | Read-only сводка по взаиморасчетам покупателей | L0 | `read_customer_settlements` | yes | no | yes |
 | `get_supplier_settlements_summary` | Read-only сводка по взаиморасчетам с поставщиками | L0 | `read_supplier_settlements` | yes | no | yes |
 | `get_supplier_debt_document_breakdown` | Read-only расшифровка, за что именно должны поставщикам, по документам поступления | L0 | `read_supplier_settlements`, `read_documents` | yes | no | yes |
+| `get_supplier_reconciliation_documents` | Read-only просмотр уже существующих актов сверки поставщиков, опубликованных в 1С | L0 | `read_supplier_reconciliation`, `read_documents` | yes | no | yes |
 | `explain_last_answer` | Объясняет источник и логику последнего ответа | L1 | `explain_results` | yes | no | yes |
 | `parse_inventory_report_text` | Парсит текстовый отчёт 1С | L1 | `create_local_report` | yes | no | yes |
 | `validate_inventory_report_text` | Сверяет результат MCP с отчётом 1С | L1 | `read_inventory`, `create_local_report` | yes | no | yes |
@@ -136,6 +138,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 - `Какие сущности опубликованы в OData`
 - `Найди документ по номеру 000500`
 - `Покажи остатки по складу Основной`
+- `Что нужно закупить по продажам за 30 дней`
 - `Какие товары заканчиваются`
 - `Кому мы заплатили за период 2026-05-01 2026-05-07`
 - `От кого получили деньги за период 2026-05-01 2026-05-07`
@@ -143,6 +146,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 - `Покажи взаиморасчеты с покупателями`
 - `Кому мы должны`
 - `За что мы должны поставщикам`
+- `Покажи акт сверки поставщика`
 - `Топ клиенты за этот месяц`
 - `Кто не оплатил`
 - `Кто не оплатил в течение 3 дней`
@@ -222,9 +226,11 @@ Blocked tool call example:
 - он принимает `trace_id/project_id/agent_id/policy_id/session_id`, если upstream их передаёт;
 - если `trace_id` не пришёл, он генерируется локально;
 - `get_cash_bank_movements` — это read-only operational view по published OData payment documents, а не официальная банковская выписка, кассовая книга или бухгалтерский отчет 1С;
+- `get_procurement_recommendations` — это read-only управленческая рекомендация закупа по продажам и текущему остатку, а не официальный MRP-расчет или план закупа 1С;
 - `get_customer_settlements_summary` — это read-only управленческая оценка по OData, а не официальный бухгалтерский акт сверки и не баланс взаиморасчетов;
 - `get_supplier_settlements_summary` — это read-only управленческая оценка кредиторки по OData, а не официальный бухгалтерский акт сверки и не баланс взаиморасчетов;
 - `get_supplier_debt_document_breakdown` — это read-only управленческая расшифровка кредиторки по документам поступления и их строкам, а не официальный бухгалтерский акт сверки, не баланс взаиморасчетов и не официальный отчет 1С;
+- `get_supplier_reconciliation_documents` — это чтение уже существующих опубликованных `Document_АктСверкиВзаиморасчетов`, а не формирование нового отчета 1С по запросу;
 - blocked operations являются feature, а не limitation.
 
 ## Gaps Before Commercial Pilot

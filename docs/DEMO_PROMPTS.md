@@ -50,6 +50,25 @@
 - `ask_1c`
 - или `get_inventory_auto(warehouse="Основной")`
 
+### Что нужно закупить
+
+```text
+Что нужно закупить по продажам за 30 дней
+```
+
+Текущий safe path:
+- `get_procurement_recommendations`
+- это read-only управленческая рекомендация закупа по продажам и текущим остаткам, а не официальный MRP-расчет 1С
+
+С уточнением:
+
+```text
+Что нужно закупить на 30 дней по складу Основной
+```
+
+Текущий safe path:
+- `get_procurement_recommendations(days=30, warehouse="Основной")`
+
 ### Входящие оплаты
 
 ```text
@@ -161,6 +180,25 @@
 
 Текущий safe path:
 - `get_supplier_debt_document_breakdown(date_from="2024-01-01", date_to="2024-12-31")`
+
+### Акт сверки поставщика
+
+```text
+Покажи акт сверки поставщика
+```
+
+Текущий safe path:
+- `get_supplier_reconciliation_documents`
+- это read-only просмотр уже существующих опубликованных в 1С актов сверки, а не формирование нового отчета
+
+С уточнением:
+
+```text
+Покажи акт сверки поставщика за 2024 год
+```
+
+Текущий safe path:
+- `get_supplier_reconciliation_documents(date_from="2024-01-01", date_to="2024-12-31")`
 
 ### Просроченные должники
 

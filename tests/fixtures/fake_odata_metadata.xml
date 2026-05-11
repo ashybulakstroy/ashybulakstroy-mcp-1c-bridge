@@ -76,6 +76,21 @@
         <Property Name="Валюта" Type="Edm.String" />
         <Property Name="Posted" Type="Edm.Boolean" />
       </EntityType>
+      <EntityType Name="Document_АктСверкиВзаиморасчетовType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Number" Type="Edm.String" />
+        <Property Name="Date" Type="Edm.DateTime" />
+        <Property Name="Контрагент_Key" Type="Edm.Guid" />
+        <Property Name="Организация_Key" Type="Edm.Guid" />
+        <Property Name="ДатаНачала" Type="Edm.DateTime" />
+        <Property Name="ДатаОкончания" Type="Edm.DateTime" />
+        <Property Name="ОстатокНаНачало" Type="Edm.Decimal" />
+        <Property Name="Расхождение" Type="Edm.Decimal" />
+        <Property Name="СверкаСогласована" Type="Edm.Boolean" />
+        <Property Name="ПоДаннымОрганизации" Type="Collection(Fake1C.Document_АктСверкиВзаиморасчетов_ПоДаннымОрганизации_RowType)" />
+        <Property Name="ПоДаннымКонтрагента" Type="Collection(Fake1C.Document_АктСверкиВзаиморасчетов_ПоДаннымКонтрагента_RowType)" />
+      </EntityType>
       <EntityContainer Name="FakeContainer">
         <EntitySet Name="AccumulationRegister_ТоварыНаСкладах" EntityType="Fake1C.AccumulationRegister_ТоварыНаСкладахType" />
         <EntitySet Name="Catalog_Номенклатура" EntityType="Fake1C.Catalog_НоменклатураType" />
@@ -85,6 +100,7 @@
         <EntitySet Name="Document_РасходныйКассовыйОрдер" EntityType="Fake1C.Document_РасходныйКассовыйОрдерType" />
         <EntitySet Name="Document_РеализацияТоваровУслуг" EntityType="Fake1C.Document_РеализацияТоваровУслугType" />
         <EntitySet Name="Document_ПоступлениеТоваровУслуг" EntityType="Fake1C.Document_ПоступлениеТоваровУслугType" />
+        <EntitySet Name="Document_АктСверкиВзаиморасчетов" EntityType="Fake1C.Document_АктСверкиВзаиморасчетовType" />
       </EntityContainer>
     </Schema>
   </edmx:DataServices>
