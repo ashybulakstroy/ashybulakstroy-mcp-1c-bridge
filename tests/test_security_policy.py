@@ -113,6 +113,15 @@ def test_main_policy_covers_supplier_debt_document_breakdown():
     assert [cap.name for cap in tool.capabilities] == ["read_supplier_settlements", "read_documents"]
 
 
+def test_main_policy_covers_purchase_document_details():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_purchase_document_details"]
+
+    assert tool.risk is RiskLevel.L0
+    assert [cap.name for cap in tool.capabilities] == ["read_documents"]
+
+
 def test_main_policy_covers_supplier_reconciliation_documents():
     policy = load_policy(Path("config") / "policy.yaml")
 

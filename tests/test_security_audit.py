@@ -62,6 +62,35 @@ def test_audit_records_include_optional_correlation_metadata(monkeypatch, tmp_pa
     assert record["session_id"] == "session-42"
 
 
+def test_get_server_status_includes_endpoint_health(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "check_endpoint_health",
+        lambda **kwargs: {
+            "host": "fake-host",
+            "port": 80,
+            "host_resolvable": True,
+            "tcp_reachable": True,
+            "server_alive": True,
+            "odata_reachable": None,
+            "metadata_readable": None,
+            "details": None,
+        },
+    )
+
+    result = core_server.get_server_status()
+
+    assert result["ok"] is True
+    assert result["data"]["endpoint_health"]["server_alive"] is True
+    assert result["data"]["endpoint_health"]["host"] == "fake-host"
+
+
 def test_search_document_by_number_allowed_call_is_audited(monkeypatch, tmp_path):
     audit_path = tmp_path / "audit.jsonl"
     monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
@@ -253,6 +282,39 @@ def test_get_supplier_debt_document_breakdown_allowed_call_is_audited(monkeypatc
     assert record["tool"] == "get_supplier_debt_document_breakdown"
     assert record["decision"] == "allow"
     assert record["project_id"] == "project-supplier-docs"
+    assert record["risk"] == "L0"
+
+
+def test_get_purchase_document_details_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_purchase_document_details",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [
+                {
+                    "document_number": "0000000272",
+                    "counterparty": "Алматинский метизный завод ТОО",
+                    "line_count": 15,
+                }
+            ],
+        },
+    )
+
+    result = core_server.get_purchase_document_details(document_number="0000000272", project_id="project-purchase-doc")
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_purchase_document_details"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-purchase-doc"
     assert record["risk"] == "L0"
 
 

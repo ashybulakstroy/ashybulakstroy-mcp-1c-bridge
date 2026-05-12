@@ -190,12 +190,16 @@ def _extract_counterparty_hint(text: str) -> str | None:
 def get_server_status() -> dict[str, Any]:
     """Проверить настройки сервера и доступность базовой конфигурации без чтения бизнес-данных."""
     try:
+        endpoint_health = None
+        if settings.odata_url:
+            endpoint_health = odata.check_endpoint_health(check_metadata=False)
         return _ok(
             {
                 "odata_url_configured": bool(settings.odata_url),
                 "db_path": str(settings.db_path),
                 "max_top": settings.max_top,
                 "mode": "read-only",
+                "endpoint_health": endpoint_health,
             }
         )
     except Exception as exc:
@@ -281,6 +285,8 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Денежный отчет построен адаптивно: сервер нашел OData-источники реализаций и оплат, затем агрегировал данные по контрагентам.")
     elif tool == "search_document_by_number":
         explanation["summary"].append("Поиск документа выполняется через безопасный wrapper: сервер выбирает document-like OData сущности, ищет совпадение по номеру и возвращает только нормализованные поля документа.")
+    elif tool == "get_purchase_document_details":
+        explanation["summary"].append("Детализация поступления читает опубликованный Document_ПоступлениеТоваровУслуг и возвращает безопасную шапку документа и строки ТМЗ/услуг без raw OData.")
     elif tool == "validate_inventory_report_text":
         explanation["summary"].append("Сверка сравнила нормализованные строки MCP и строки отчета 1С по ключам item+warehouse с учетом допусков.")
     if not explanation["warnings"]:
@@ -473,6 +479,27 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
                 tool="get_supplier_reconciliation_documents",
             )
 
+        if any(phrase in ql for phrase in ["покажи поступление", "покажи товары поступления", "что внутри поступления", "товары в поступлении", "расшифруй поступление"]):
+            date_from, date_to = _extract_date_range(q)
+            document_number = _extract_document_number(q)
+            counterparty = _extract_counterparty_hint(q)
+            if not document_number:
+                raise ValueError("Укажите номер поступления, например: 'Покажи товары поступления 0000000272'.")
+            result = odata.get_purchase_document_details(
+                document_number=document_number,
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+            )
+            return _ok(
+                {
+                    "intent": "get_purchase_document_details",
+                    "parsed": {"document_number": document_number, "date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty},
+                    "result": result,
+                },
+                tool="get_purchase_document_details",
+            )
+
         if any(phrase in ql for phrase in ["что нужно закупить", "что надо закупить", "что докупить", "что нужно купить", "закуп на 30 дней", "закупка по продажам", "что закупать"]):
             warehouse = _extract_warehouse(q)
             item = _extract_after_keywords(q, ["товар", "товары", "номенклатура", "закупить", "докупить", "купить"])
@@ -645,6 +672,32 @@ def search_document_by_number(
             limit=min(max(int(limit), 1), 20),
         )
         return _ok(result, tool="search_document_by_number")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_purchase_document_details(
+    document_number: str,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    max_lines: int = 100,
+) -> dict[str, Any]:
+    """Показать шапку и строки одного документа поступления ТМЗ/услуг.
+
+    Возвращает read-only view опубликованного Document_ПоступлениеТоваровУслуг:
+    шапку документа, поставщика, сумму и строки ТМЗ/услуг в безопасном нормализованном виде.
+    """
+    try:
+        result = odata.get_purchase_document_details(
+            document_number=document_number,
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            max_lines=max_lines,
+        )
+        return _ok(result, tool="get_purchase_document_details")
     except Exception as exc:
         return _err(exc)
 

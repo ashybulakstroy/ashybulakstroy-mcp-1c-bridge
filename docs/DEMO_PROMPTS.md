@@ -40,6 +40,24 @@
 Текущий safe path:
 - `search_document_by_number(document_number="000101", document_type="банковский", date_from="2026-04-24", date_to="2026-04-24")`
 
+### Что внутри поступления
+
+```text
+Покажи товары поступления 0000000272
+```
+
+Текущий safe path:
+- `get_purchase_document_details(document_number="0000000272")`
+
+С уточнением поставщика:
+
+```text
+Покажи товары поступления 0000000272 поставщик Алматинский метизный завод
+```
+
+Текущий safe path:
+- `get_purchase_document_details(document_number="0000000272", counterparty_name="Алматинский метизный завод")`
+
 ### Остатки по складу
 
 ```text

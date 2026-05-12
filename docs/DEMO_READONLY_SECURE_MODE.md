@@ -99,6 +99,7 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 | `describe_entity` | Описывает поля одной сущности | L0 | `read_metadata` | yes | no | yes |
 | `sample_entity` | Берёт sample rows из сущности | L0 | `read_documents` | yes | no | yes |
 | `search_document_by_number` | Ищет document-like сущности по номеру | L0 | `read_documents` | yes | no | yes |
+| `get_purchase_document_details` | Показывает шапку и строки одного документа `Поступление ТМЗ и услуг` | L0 | `read_documents` | yes | no | yes |
 | `search_metadata` | Ищет сущности/поля по metadata | L0 | `read_metadata` | yes | no | yes |
 | `explore_live_entities` | Проверяет, какие сущности реально отдают данные | L0 | `read_metadata` | yes | no | yes |
 | `discover_inventory_sources` | Ищет источник остатков | L0 | `read_inventory` | yes | no | yes |
@@ -230,6 +231,7 @@ Blocked tool call example:
 - `get_customer_settlements_summary` — это read-only управленческая оценка по OData, а не официальный бухгалтерский акт сверки и не баланс взаиморасчетов;
 - `get_supplier_settlements_summary` — это read-only управленческая оценка кредиторки по OData, а не официальный бухгалтерский акт сверки и не баланс взаиморасчетов;
 - `get_supplier_debt_document_breakdown` — это read-only управленческая расшифровка кредиторки по документам поступления и их строкам, а не официальный бухгалтерский акт сверки, не баланс взаиморасчетов и не официальный отчет 1С;
+- `get_purchase_document_details` — это read-only детализация уже существующего опубликованного документа поступления, а не изменение документа и не raw OData-view;
 - `get_supplier_reconciliation_documents` — это чтение уже существующих опубликованных `Document_АктСверкиВзаиморасчетов`, а не формирование нового отчета 1С по запросу;
 - blocked operations являются feature, а не limitation.
 

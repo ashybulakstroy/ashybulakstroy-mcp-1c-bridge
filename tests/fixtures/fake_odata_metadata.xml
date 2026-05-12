@@ -76,6 +76,16 @@
         <Property Name="Валюта" Type="Edm.String" />
         <Property Name="Posted" Type="Edm.Boolean" />
       </EntityType>
+      <EntityType Name="Document_СчетФактураПолученныйType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Дата" Type="Edm.DateTime" />
+        <Property Name="Контрагент" Type="Edm.String" />
+        <Property Name="СуммаДокумента" Type="Edm.Decimal" />
+        <Property Name="Номер" Type="Edm.String" />
+        <Property Name="Валюта" Type="Edm.String" />
+        <Property Name="Posted" Type="Edm.Boolean" />
+      </EntityType>
       <EntityType Name="Document_АктСверкиВзаиморасчетовType">
         <Key><PropertyRef Name="Ref_Key" /></Key>
         <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
@@ -100,6 +110,7 @@
         <EntitySet Name="Document_РасходныйКассовыйОрдер" EntityType="Fake1C.Document_РасходныйКассовыйОрдерType" />
         <EntitySet Name="Document_РеализацияТоваровУслуг" EntityType="Fake1C.Document_РеализацияТоваровУслугType" />
         <EntitySet Name="Document_ПоступлениеТоваровУслуг" EntityType="Fake1C.Document_ПоступлениеТоваровУслугType" />
+        <EntitySet Name="Document_СчетФактураПолученный" EntityType="Fake1C.Document_СчетФактураПолученныйType" />
         <EntitySet Name="Document_АктСверкиВзаиморасчетов" EntityType="Fake1C.Document_АктСверкиВзаиморасчетовType" />
       </EntityContainer>
     </Schema>

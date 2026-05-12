@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import logging
 import re
+import socket
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from time import perf_counter
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 import httpx
 
@@ -63,6 +65,40 @@ class OneCODataClient:
     def _url(self, path: str) -> str:
         self._require_url()
         return f"{self.settings.odata_url}/{path.lstrip('/')}"
+
+    def check_endpoint_health(self, *, check_metadata: bool = False) -> dict[str, Any]:
+        self._require_url()
+        host, port = self._get_endpoint_host_port()
+        diagnosis = self._diagnose_endpoint_connectivity(host, port)
+        result: dict[str, Any] = {
+            "host": host,
+            "port": port,
+            "host_resolvable": diagnosis["host_resolved"],
+            "tcp_reachable": diagnosis["tcp_reachable"],
+            "server_alive": bool(diagnosis["host_resolved"] and diagnosis["tcp_reachable"]),
+            "odata_reachable": None,
+            "metadata_readable": None,
+            "details": None,
+        }
+        if not check_metadata:
+            return result
+        if not result["server_alive"]:
+            result["odata_reachable"] = False
+            result["metadata_readable"] = False
+            result["details"] = "OData metadata check skipped because host or port is unreachable."
+            return result
+        try:
+            response = self._get("$metadata", headers={"Accept": "application/xml"})
+            is_ok = response.status_code < 400
+            result["odata_reachable"] = is_ok
+            result["metadata_readable"] = is_ok
+            result["details"] = f"HTTP {response.status_code}"
+            return result
+        except Exception as exc:
+            result["odata_reachable"] = False
+            result["metadata_readable"] = False
+            result["details"] = str(exc)[:300]
+            return result
 
     def get_metadata_xml(self, refresh: bool = False) -> str:
         if self._metadata_xml is not None and not refresh:
@@ -165,6 +201,170 @@ class OneCODataClient:
             "data": values,
         }
 
+    def _find_last_nonempty_skip(
+        self,
+        entity_name: str,
+        *,
+        select: list[str] | None = None,
+        page_size: int,
+        max_probe_skip: int,
+    ) -> int:
+        """Find the latest non-empty skip window without trusting OData sort support.
+
+        Some 1C publications reject $filter/$orderby for document dates and expose
+        old rows on the first page. This helper probes later pages with top=1 and
+        returns the latest skip that still responds with at least one row.
+        """
+        last_good = 0
+        probe = page_size
+        upper_bound = max_probe_skip + page_size
+
+        while probe <= max_probe_skip:
+            try:
+                payload = self.query_entity(entity_name, top=1, select=select or None, skip=probe)
+            except ODataError:
+                upper_bound = probe
+                break
+            if not (payload.get("data") or []):
+                upper_bound = probe
+                break
+            last_good = probe
+            probe *= 2
+        else:
+            upper_bound = max_probe_skip + page_size
+
+        low = last_good
+        high = upper_bound
+        while low + page_size < high:
+            mid_pages = ((low + high) // 2) // page_size
+            mid = mid_pages * page_size
+            if mid <= low:
+                break
+            try:
+                payload = self.query_entity(entity_name, top=1, select=select or None, skip=mid)
+            except ODataError:
+                high = mid
+                continue
+            if payload.get("data") or []:
+                low = mid
+            else:
+                high = mid
+        return low
+
+    def _read_recent_tail_rows(
+        self,
+        entity_name: str,
+        *,
+        select: list[str] | None = None,
+        page_size: int,
+        tail_pages: int,
+        max_probe_skip: int,
+        warnings: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Read the most recent accessible page window for large document entities."""
+        last_skip = self._find_last_nonempty_skip(
+            entity_name,
+            select=select,
+            page_size=page_size,
+            max_probe_skip=max_probe_skip,
+        )
+        rows: list[dict[str, Any]] = []
+        start_skip = max(0, last_skip - page_size * max(tail_pages - 1, 0))
+        for skip in range(start_skip, last_skip + 1, page_size):
+            try:
+                payload = self.query_entity(entity_name, top=page_size, select=select or None, skip=skip)
+            except ODataError as exc:
+                if warnings is not None:
+                    warnings.append(
+                        f"Tail paging for {entity_name} stopped at skip={skip}: {str(exc)[:160]}"
+                    )
+                break
+            data = payload.get("data") or []
+            if not data:
+                break
+            rows.extend(data)
+            if len(data) < page_size and skip >= last_skip:
+                break
+        return rows
+
+    def _load_document_source_rows(
+        self,
+        entity_name: str,
+        *,
+        select: list[str] | None,
+        filter_expr: str | None,
+        orderby: str | None,
+        limit: int,
+        page_size: int,
+        tail_pages: int,
+        max_probe_skip: int,
+        warnings: list[str],
+        prefer_recent_tail: bool = False,
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """Load rows for one document-like source with safe fallback for slow 1C OData."""
+        if prefer_recent_tail and not filter_expr and orderby:
+            rows = self._read_recent_tail_rows(
+                entity_name,
+                select=select,
+                page_size=page_size,
+                tail_pages=tail_pages,
+                max_probe_skip=max_probe_skip,
+                warnings=warnings,
+            )
+            if rows:
+                return rows, True
+        try:
+            raw = self.query_entity(
+                entity_name,
+                top=page_size,
+                select=select or None,
+                filter_expr=filter_expr or None,
+                orderby=orderby or None,
+            )
+            rows = raw.get("data") or []
+            if rows:
+                return rows, False
+        except ODataError as exc:
+            unsupported = filter_expr and self._is_unsupported_where_filter_error(exc)
+            if not unsupported:
+                raise
+            warnings.append(
+                f"OData provider rejected pushdown filter for {entity_name}. "
+                "Trying bounded tail paging with Python-side filtering."
+            )
+
+        tail_rows = self._read_recent_tail_rows(
+            entity_name,
+            select=select,
+            page_size=page_size,
+            tail_pages=tail_pages,
+            max_probe_skip=max_probe_skip,
+            warnings=warnings,
+        )
+        if not tail_rows and warnings:
+            last_warning = warnings[-1]
+            if entity_name in last_warning and ("Доступ запрещен" in last_warning or "401" in last_warning):
+                warnings.append(
+                    f"Источник {entity_name} пропущен: bounded fallback read is not accessible for this entity in current 1C publication."
+                )
+        return tail_rows, True
+
+    def _select_primary_purchase_receipt_source(self, *, limit: int = 5) -> dict[str, Any] | None:
+        sources = self.discover_purchase_sources(limit=limit, check_data=True)
+        if not sources:
+            return None
+        preferred_terms = (
+            "поступлениетоваровуслуг",
+            "поступлениедопрасходов",
+            "поступлениеизпереработки",
+            "поступлениенма",
+        )
+        for source in sources:
+            entity_name = self._norm(str(source.get("entity") or ""))
+            if any(term in entity_name for term in preferred_terms):
+                return source
+        return sources[0]
+
     def _get(self, path: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None) -> httpx.Response:
         started = perf_counter()
         error: str | None = None
@@ -172,6 +372,12 @@ class OneCODataClient:
         try:
             response = self.client.get(self._url(path), params=params, headers=headers)
             return response
+        except httpx.TimeoutException as exc:
+            error = self._build_connectivity_message(exc)
+            raise ODataError(error) from exc
+        except httpx.RequestError as exc:
+            error = self._build_connectivity_message(exc)
+            raise ODataError(error) from exc
         except Exception as exc:
             error = str(exc)
             raise
@@ -221,6 +427,62 @@ class OneCODataClient:
                 "error": error,
             }
         )
+
+    def _build_connectivity_message(self, exc: Exception) -> str:
+        host, port = self._get_endpoint_host_port()
+        diagnosis = self._diagnose_endpoint_connectivity(host, port)
+        prefix = f"OData endpoint недоступен: {host}:{port}."
+        if isinstance(exc, httpx.TimeoutException):
+            if diagnosis["host_resolved"] and diagnosis["tcp_reachable"]:
+                return (
+                    f"{prefix} Хост живой, но служба 1С OData не ответила за "
+                    f"{self.settings.timeout_seconds} сек. Сервер перегружен, завис или OData-публикация отвечает слишком медленно."
+                )
+            if diagnosis["host_resolved"] and not diagnosis["tcp_reachable"]:
+                return f"{prefix} Хост найден, но порт сервера недоступен. Проверьте, запущена ли публикация 1С и доступен ли сервер по сети."
+            if not diagnosis["host_resolved"]:
+                return f"{prefix} Не удалось определить адрес сервера. Проверьте адрес в ONEC_ODATA_URL и доступность DNS/сети."
+            return f"{prefix} Сервер не ответил в срок. Проверьте доступность 1С и сети."
+        if diagnosis["host_resolved"] and not diagnosis["tcp_reachable"]:
+            return f"{prefix} Хост найден, но сетевое подключение к серверу не устанавливается. Проверьте публикацию 1С и доступность порта."
+        if not diagnosis["host_resolved"]:
+            return f"{prefix} Не удалось определить адрес сервера. Проверьте адрес в ONEC_ODATA_URL и доступность сети."
+        return f"{prefix} Ошибка сетевого доступа к OData-службе 1С. Проверьте состояние сервера и публикации."
+
+    def _get_endpoint_host_port(self) -> tuple[str, int]:
+        parsed = urlparse(self.settings.odata_url or "")
+        host = parsed.hostname or "unknown-host"
+        if parsed.port:
+            port = parsed.port
+        elif parsed.scheme == "https":
+            port = 443
+        else:
+            port = 80
+        return host, port
+
+    def _diagnose_endpoint_connectivity(self, host: str, port: int) -> dict[str, bool]:
+        host_resolved = self._can_resolve_host(host)
+        tcp_reachable = host_resolved and self._can_connect_tcp(host, port)
+        return {
+            "host_resolved": host_resolved,
+            "tcp_reachable": tcp_reachable,
+        }
+
+    @staticmethod
+    def _can_resolve_host(host: str) -> bool:
+        try:
+            socket.getaddrinfo(host, None)
+            return True
+        except OSError:
+            return False
+
+    def _can_connect_tcp(self, host: str, port: int) -> bool:
+        timeout = max(1.0, min(float(self.settings.timeout_seconds), 3.0))
+        try:
+            with socket.create_connection((host, port), timeout=timeout):
+                return True
+        except OSError:
+            return False
 
     def search_metadata(self, text: str, limit: int = 30) -> list[dict[str, Any]]:
         q = text.strip().lower()
@@ -587,66 +849,98 @@ class OneCODataClient:
         include_sections: bool = False,
     ) -> dict[str, Any]:
         """Read sales/invoice-like rows from OData using metadata heuristics."""
+        warnings: list[str] = []
         if entity_name:
             entity = self.describe_entity(entity_name)
             if entity is None:
                 raise ODataError(f"Сущность не найдена: {entity_name}")
             score, reasons = self._score_sales_entity(entity)
             mapped = self._map_sales_fields([f.name for f in (entity.fields or [])])
-            source = {
+            source_candidates = [{
                 "entity": entity.name,
                 "score": score,
                 "confidence": self._confidence_from_score(score),
                 "reasons": reasons,
                 "mapped_fields": mapped,
-            }
+            }]
         else:
-            sources = self.discover_sales_sources(limit=1, check_data=True)
-            if not sources:
+            source_candidates = self.discover_sales_sources(limit=3, check_data=True)
+            if not source_candidates:
                 raise ODataError("Не найден кандидат на источник реализаций/счетов. Запустите discover_sales_sources для диагностики.")
-            source = sources[0]
-
-        mapped = source.get("mapped_fields") or {}
-        select = None if include_sections else self._build_sales_select(mapped)
         effective_from = date or date_from
         effective_to = date or date_to
-        filter_expr = self._build_common_text_date_filter(
-            mapped,
-            date_from=effective_from,
-            date_to=effective_to,
-            text_field_key="counterparty",
-            text_value=counterparty,
-        )
-        query_top = min(max(limit, 50), self.settings.max_top)
-        try:
-            raw = self.query_entity(
-                source["entity"],
-                top=query_top,
-                select=select or None,
-                filter_expr=filter_expr or None,
-            )
-            filter_fallback_used = False
-        except ODataError as exc:
-            if filter_expr and self._is_unsupported_where_filter_error(exc):
-                raw = self.query_entity(
-                    source["entity"],
-                    top=min(max(limit * 3, 100), self.settings.max_top),
-                    select=select or None,
-                    filter_expr=None,
-                )
-                filter_fallback_used = True
-            else:
-                raise
-        rows = raw.get("data") or []
-        normalized = [self._normalize_sales_row(r, mapped) for r in rows]
+        query_top = min(max(limit * 5, 100), self.settings.max_top)
+        page_size = min(max(limit * 20, 250), self.settings.max_top)
+        normalized: list[dict[str, Any]] = []
+        source = source_candidates[0]
+        source_entities_used: list[str] = []
+        first_source_with_rows: dict[str, Any] | None = None
 
-        warnings: list[str] = []
-        if filter_fallback_used:
-            warnings.append("OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.")
-        if effective_from or effective_to:
-            normalized = [r for r in normalized if self._date_in_range(r.get("date"), effective_from, effective_to)]
-        if counterparty:
-            normalized = [r for r in normalized if self._text_match(r.get("counterparty"), counterparty) or self._text_match(r.get("raw"), counterparty)]
+        for candidate in source_candidates:
+            mapped = candidate.get("mapped_fields") or {}
+            select = None if include_sections else self._build_sales_select(mapped)
+            filter_expr = self._build_common_text_date_filter(
+                mapped,
+                date_from=effective_from,
+                date_to=effective_to,
+                text_field_key="counterparty",
+                text_value=counterparty,
+            )
+            orderby = f"{mapped['date']} desc" if mapped.get("date") else None
+            rows, filter_fallback_used = self._load_document_source_rows(
+                candidate["entity"],
+                select=select,
+                filter_expr=filter_expr,
+                orderby=orderby,
+                limit=limit,
+                page_size=page_size,
+                tail_pages=max(2, min(6, (limit // 5) + 2)),
+                max_probe_skip=min(self.settings.max_top * 100, 50000),
+                warnings=warnings,
+                prefer_recent_tail=not bool(effective_from or effective_to or counterparty),
+            )
+            candidate_normalized = [self._normalize_sales_row(r, mapped) for r in rows]
+            if effective_from or effective_to:
+                candidate_normalized = [
+                    r for r in candidate_normalized
+                    if self._date_in_range(r.get("date"), effective_from, effective_to)
+                ]
+            if counterparty:
+                candidate_normalized = [
+                    r for r in candidate_normalized
+                    if self._text_match(r.get("counterparty"), counterparty) or self._text_match(r.get("raw"), counterparty)
+                ]
+            if not candidate_normalized:
+                continue
+            source_entities_used.append(str(candidate.get("entity")))
+            normalized.extend(candidate_normalized[:query_top])
+            if first_source_with_rows is None:
+                first_source_with_rows = candidate
+            source = candidate
+            break
+
+        normalized.sort(
+            key=lambda r: (
+                self._parse_datetime_like(r.get("date")) or datetime.min,
+                self._to_decimal(r.get("amount"), default=Decimal("0")) or Decimal("0"),
+            ),
+            reverse=True,
+        )
+        deduped: list[dict[str, Any]] = []
+        seen_keys: set[tuple[Any, Any, Any]] = set()
+        for row in normalized:
+            dedupe_key = (row.get("reference"), row.get("number"), row.get("date"))
+            if dedupe_key in seen_keys:
+                continue
+            seen_keys.add(dedupe_key)
+            deduped.append(row)
+        normalized = deduped
+
+        if first_source_with_rows is not None:
+            source = first_source_with_rows
+        mapped = source.get("mapped_fields") or {}
+        if not source_entities_used:
+            warnings.append("В текущей OData-публикации не найдено строк по проверенным sales-like safe sources для заданных фильтров.")
         if not mapped.get("counterparty"):
             warnings.append("Не найдено явное поле контрагента в источнике реализаций.")
         if not mapped.get("amount"):
@@ -668,6 +962,7 @@ class OneCODataClient:
                 "date_to": date_to,
                 "counterparty": counterparty,
             },
+            "source_entities_used": source_entities_used,
             "count_returned": min(len(normalized), limit),
             "total_amount": str(total_amount),
             "data": normalized[:limit],
@@ -739,6 +1034,7 @@ class OneCODataClient:
 
         sold_by_item: dict[str, dict[str, Any]] = {}
         sales_doc_count_by_item: dict[str, set[str]] = {}
+        sales_item_key_by_item: dict[str, str] = {}
         for row in sales.get("data") or []:
             doc_number = str(row.get("number") or "")
             raw = row.get("raw") or {}
@@ -763,6 +1059,9 @@ class OneCODataClient:
                 bucket["sold_quantity"] += qty
                 bucket["sales_amount"] += amount
                 sales_doc_count_by_item.setdefault(item_name, set()).add(doc_number)
+                item_key = str(line.get("item_key") or "").strip()
+                if item_key and item_name not in sales_item_key_by_item:
+                    sales_item_key_by_item[item_name] = item_key
 
         current_stock_by_item: dict[str, Decimal] = {}
         warehouse_by_item: dict[str, str | None] = {}
@@ -814,11 +1113,215 @@ class OneCODataClient:
             reverse=True,
         )
 
+        candidate_rows = rows[: min(max(effective_limit * 3, 20), len(rows))]
+        candidate_items = {str(row.get("item") or "").strip() for row in candidate_rows if str(row.get("item") or "").strip()}
+        purchase_source: str | None = None
+        purchase_warnings: list[str] = []
+        supplier_by_item: dict[str, dict[str, Any]] = {}
+        if candidate_items:
+            item_meta_by_key: dict[str, dict[str, Any] | None] = {}
+            for item_name in candidate_items:
+                item_key = sales_item_key_by_item.get(item_name)
+                if not item_key:
+                    continue
+                item_meta_by_key[item_key] = self._fetch_entity_by_ref(
+                    "Catalog_Номенклатура",
+                    item_key,
+                    ("Description", "Parent_Key", "НоменклатурнаяГруппа_Key"),
+                )
+            purchase_window_start = inferred_as_of - timedelta(days=365)
+            purchase_probe_limit = min(max(len(candidate_items) * 20, 200), self.settings.max_top)
+            try:
+                purchase_receipt_source = self._select_primary_purchase_receipt_source(limit=5)
+                purchases = self.get_purchase_documents(
+                    date_from=purchase_window_start.isoformat(),
+                    date_to=inferred_as_of.isoformat(),
+                    limit=purchase_probe_limit,
+                    entity_name=(purchase_receipt_source or {}).get("entity"),
+                    include_sections=True,
+                )
+                purchase_source = (purchases.get("source") or {}).get("entity")
+                purchase_warnings.extend(list(purchases.get("warnings") or []))
+                purchase_rows = sorted(
+                    purchases.get("data") or [],
+                    key=lambda row: self._parse_date_like(row.get("date")) or date.min,
+                    reverse=True,
+                )
+                suppliers_by_parent: dict[str, dict[str, Any]] = {}
+                suppliers_by_group: dict[str, dict[str, Any]] = {}
+                for purchase_row in purchase_rows:
+                    supplier_name = purchase_row.get("counterparty")
+                    if not supplier_name:
+                        continue
+                    raw = purchase_row.get("raw") or {}
+                    for line in self._extract_purchase_line_items(raw):
+                        item_name = str(line.get("name") or "").strip()
+                        item_key = str(line.get("item_key") or "").strip()
+                        if item_name and item_name in candidate_items and item_name not in supplier_by_item:
+                            supplier_by_item[item_name] = {
+                                "preferred_supplier": supplier_name,
+                                "supplier_last_purchase_date": purchase_row.get("date"),
+                                "supplier_last_purchase_document_number": purchase_row.get("number"),
+                                "supplier_match_method": "exact_item_name",
+                                "supplier_match_confidence": "high",
+                                "supplier_candidates": [
+                                    {
+                                        "supplier": supplier_name,
+                                        "match_method": "exact_item_name",
+                                        "match_confidence": "high",
+                                        "evidence_count": 1,
+                                        "last_purchase_date": purchase_row.get("date"),
+                                        "last_purchase_document_number": purchase_row.get("number"),
+                                    }
+                                ],
+                            }
+                        if item_key:
+                            meta = item_meta_by_key.get(item_key)
+                            if meta is None:
+                                meta = self._fetch_entity_by_ref(
+                                    "Catalog_Номенклатура",
+                                    item_key,
+                                    ("Description", "Parent_Key", "НоменклатурнаяГруппа_Key"),
+                                )
+                                item_meta_by_key[item_key] = meta
+                            if meta:
+                                parent_key = str(meta.get("Parent_Key") or "")
+                                group_key = str(meta.get("НоменклатурнаяГруппа_Key") or "")
+                                event = {
+                                    "supplier": supplier_name,
+                                    "date": purchase_row.get("date"),
+                                    "document_number": purchase_row.get("number"),
+                                }
+                                if parent_key and parent_key != "00000000-0000-0000-0000-000000000000":
+                                    bucket = suppliers_by_parent.setdefault(parent_key, {})
+                                    bucket.setdefault(supplier_name, event)
+                                if group_key and group_key != "00000000-0000-0000-0000-000000000000":
+                                    bucket = suppliers_by_group.setdefault(group_key, {})
+                                    bucket.setdefault(supplier_name, event)
+
+                parent_supplier_counts: dict[str, dict[str, int]] = {}
+                group_supplier_counts: dict[str, dict[str, int]] = {}
+                for purchase_row in purchase_rows:
+                    supplier_name = purchase_row.get("counterparty")
+                    if not supplier_name:
+                        continue
+                    raw = purchase_row.get("raw") or {}
+                    for line in self._extract_purchase_line_items(raw):
+                        item_key = str(line.get("item_key") or "").strip()
+                        if not item_key:
+                            continue
+                        meta = item_meta_by_key.get(item_key)
+                        if meta is None:
+                            meta = self._fetch_entity_by_ref(
+                                "Catalog_Номенклатура",
+                                item_key,
+                                ("Description", "Parent_Key", "НоменклатурнаяГруппа_Key"),
+                            )
+                            item_meta_by_key[item_key] = meta
+                        if not meta:
+                            continue
+                        parent_key = str(meta.get("Parent_Key") or "")
+                        group_key = str(meta.get("НоменклатурнаяГруппа_Key") or "")
+                        if parent_key and parent_key != "00000000-0000-0000-0000-000000000000":
+                            bucket = parent_supplier_counts.setdefault(parent_key, {})
+                            bucket[supplier_name] = bucket.get(supplier_name, 0) + 1
+                        if group_key and group_key != "00000000-0000-0000-0000-000000000000":
+                            bucket = group_supplier_counts.setdefault(group_key, {})
+                            bucket[supplier_name] = bucket.get(supplier_name, 0) + 1
+
+                for item_name in candidate_items:
+                    if item_name in supplier_by_item:
+                        continue
+                    sales_item_key = sales_item_key_by_item.get(item_name)
+                    if not sales_item_key:
+                        continue
+                    sales_meta = item_meta_by_key.get(sales_item_key)
+                    if not sales_meta:
+                        continue
+                    parent_key = str(sales_meta.get("Parent_Key") or "")
+                    group_key = str(sales_meta.get("НоменклатурнаяГруппа_Key") or "")
+                    parent_counts = parent_supplier_counts.get(parent_key, {})
+                    group_counts = group_supplier_counts.get(group_key, {})
+                    selected_supplier: str | None = None
+                    selected_event: dict[str, Any] | None = None
+                    match_method: str | None = None
+                    confidence: str | None = None
+
+                    if parent_counts:
+                        ordered = sorted(parent_counts.items(), key=lambda pair: pair[1], reverse=True)
+                        top_supplier, top_count = ordered[0]
+                        second_count = ordered[1][1] if len(ordered) > 1 else 0
+                        if top_count >= 3 and top_count > second_count:
+                            selected_supplier = top_supplier
+                            selected_event = (suppliers_by_parent.get(parent_key) or {}).get(top_supplier)
+                            match_method = "parent_group_purchase_history"
+                            confidence = "medium" if top_count >= max(second_count * 2, 4) else "low"
+                    if selected_supplier is None and group_counts:
+                        ordered = sorted(group_counts.items(), key=lambda pair: pair[1], reverse=True)
+                        top_supplier, top_count = ordered[0]
+                        second_count = ordered[1][1] if len(ordered) > 1 else 0
+                        if top_count >= 5 and top_count > second_count:
+                            selected_supplier = top_supplier
+                            selected_event = (suppliers_by_group.get(group_key) or {}).get(top_supplier)
+                            match_method = "nomenclature_group_purchase_history"
+                            confidence = "low"
+
+                    if selected_supplier is not None:
+                        candidates: list[dict[str, Any]] = []
+                        if match_method == "parent_group_purchase_history" and parent_counts:
+                            for supplier_name, count in sorted(parent_counts.items(), key=lambda pair: pair[1], reverse=True)[:3]:
+                                event = (suppliers_by_parent.get(parent_key) or {}).get(supplier_name)
+                                candidates.append(
+                                    {
+                                        "supplier": supplier_name,
+                                        "match_method": "parent_group_purchase_history",
+                                        "match_confidence": "medium" if supplier_name == selected_supplier else "low",
+                                        "evidence_count": count,
+                                        "last_purchase_date": (event or {}).get("date"),
+                                        "last_purchase_document_number": (event or {}).get("document_number"),
+                                    }
+                                )
+                        elif match_method == "nomenclature_group_purchase_history" and group_counts:
+                            for supplier_name, count in sorted(group_counts.items(), key=lambda pair: pair[1], reverse=True)[:3]:
+                                event = (suppliers_by_group.get(group_key) or {}).get(supplier_name)
+                                candidates.append(
+                                    {
+                                        "supplier": supplier_name,
+                                        "match_method": "nomenclature_group_purchase_history",
+                                        "match_confidence": "low",
+                                        "evidence_count": count,
+                                        "last_purchase_date": (event or {}).get("date"),
+                                        "last_purchase_document_number": (event or {}).get("document_number"),
+                                    }
+                                )
+                        supplier_by_item[item_name] = {
+                            "preferred_supplier": selected_supplier,
+                            "supplier_last_purchase_date": (selected_event or {}).get("date"),
+                            "supplier_last_purchase_document_number": (selected_event or {}).get("document_number"),
+                            "supplier_match_method": match_method,
+                            "supplier_match_confidence": confidence,
+                            "supplier_candidates": candidates,
+                        }
+            except Exception as exc:
+                purchase_warnings.append(
+                    f"Не удалось безопасно определить поставщика товара по published purchase documents: {str(exc)[:200]}"
+                )
+
         warnings = list(inventory.get("warnings") or [])
         warnings.extend(sales.get("warnings") or [])
+        warnings.extend(purchase_warnings)
         warnings.append(
             "Это read-only управленческая рекомендация закупа: продажи за период и текущий остаток из published OData. Это не официальный MRP-расчет 1С."
         )
+
+        for row in rows:
+            supplier_info = supplier_by_item.get(str(row.get("item") or "").strip()) or {}
+            row["preferred_supplier"] = supplier_info.get("preferred_supplier")
+            row["supplier_last_purchase_date"] = supplier_info.get("supplier_last_purchase_date")
+            row["supplier_last_purchase_document_number"] = supplier_info.get("supplier_last_purchase_document_number")
+            row["supplier_match_method"] = supplier_info.get("supplier_match_method")
+            row["supplier_match_confidence"] = supplier_info.get("supplier_match_confidence")
+            row["supplier_candidates"] = supplier_info.get("supplier_candidates") or []
 
         return {
             "count_returned": min(len(rows), effective_limit),
@@ -834,6 +1337,7 @@ class OneCODataClient:
             "source_explanation": {
                 "inventory_source": inventory_source.get("entity"),
                 "sales_source": sales_source.get("entity"),
+                "purchase_source": purchase_source,
                 "basis": "recent_sales_and_current_stock",
             },
             "warnings": warnings,
@@ -851,6 +1355,8 @@ class OneCODataClient:
         include_sections: bool = False,
     ) -> dict[str, Any]:
         """Read purchase/supplier-invoice-like rows from OData using metadata heuristics."""
+        effective_limit = min(max(int(limit), 1), 100)
+        validated_from, validated_to = self._validate_date_range(date or date_from, date or date_to)
         if entity_name:
             entity = self.describe_entity(entity_name)
             if entity is None:
@@ -864,53 +1370,55 @@ class OneCODataClient:
                 "reasons": reasons,
                 "mapped_fields": mapped,
             }
+            sources = [source]
         else:
-            sources = self.discover_purchase_sources(limit=1, check_data=True)
+            sources = self.discover_purchase_sources(limit=5, check_data=True)
             if not sources:
                 raise ODataError("Не найден кандидат на источник поступлений/счетов поставщика. Запустите discover_purchase_sources для диагностики.")
-            source = sources[0]
-
-        mapped = source.get("mapped_fields") or {}
-        select = None if include_sections else self._build_purchase_select(mapped)
-        effective_from = date or date_from
-        effective_to = date or date_to
-        filter_expr = self._build_common_text_date_filter(
-            mapped,
-            date_from=effective_from,
-            date_to=effective_to,
-            text_field_key="counterparty",
-            text_value=counterparty,
-        )
-        query_top = min(max(limit, 50), self.settings.max_top)
-        try:
-            raw = self.query_entity(
-                source["entity"],
-                top=query_top,
-                select=select or None,
-                filter_expr=filter_expr or None,
-            )
-            filter_fallback_used = False
-        except ODataError as exc:
-            if filter_expr and self._is_unsupported_where_filter_error(exc):
-                raw = self.query_entity(
-                    source["entity"],
-                    top=min(max(limit * 3, 100), self.settings.max_top),
-                    select=select or None,
-                    filter_expr=None,
-                )
-                filter_fallback_used = True
-            else:
-                raise
-        rows = raw.get("data") or []
-        normalized = [self._normalize_sales_row(r, mapped) for r in rows]
 
         warnings: list[str] = []
-        if filter_fallback_used:
-            warnings.append("OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.")
-        if effective_from or effective_to:
-            normalized = [r for r in normalized if self._date_in_range(r.get("date"), effective_from, effective_to)]
-        if counterparty:
-            normalized = [r for r in normalized if self._text_match(r.get("counterparty"), counterparty) or self._text_match(r.get("raw"), counterparty)]
+        normalized: list[dict[str, Any]] = []
+        first_source_with_rows: dict[str, Any] | None = None
+        source_entities_used: list[str] = []
+        for source in sources:
+            mapped = source.get("mapped_fields") or {}
+            select = None if include_sections else self._build_purchase_select(mapped)
+            filter_expr = self._build_common_text_date_filter(
+                mapped,
+                date_from=validated_from,
+                date_to=validated_to,
+                text_field_key="counterparty",
+                text_value=counterparty,
+            )
+            rows, _tail_used = self._load_document_source_rows(
+                source["entity"],
+                select=select or None,
+                filter_expr=filter_expr or None,
+                orderby=f"{mapped['date']} desc" if mapped.get("date") else None,
+                limit=min(max(effective_limit * 3, 100), self.settings.max_top),
+                page_size=min(max(effective_limit * 3, 100), self.settings.max_top),
+                tail_pages=3,
+                max_probe_skip=min(self.settings.max_top * 100, 50000),
+                warnings=warnings,
+                prefer_recent_tail=True,
+            )
+            if not rows:
+                continue
+            if first_source_with_rows is None:
+                first_source_with_rows = source
+            source_entities_used.append(source["entity"])
+            for row in rows:
+                item = self._normalize_sales_row(row, mapped)
+                if (validated_from or validated_to) and not self._date_in_range(item.get("date"), validated_from, validated_to):
+                    continue
+                if counterparty and not (
+                    self._text_match(item.get("counterparty"), counterparty) or self._text_match(item.get("raw"), counterparty)
+                ):
+                    continue
+                normalized.append(item)
+
+        source = first_source_with_rows or (sources[0] if sources else None)
+        mapped = (source or {}).get("mapped_fields") or {}
         if not mapped.get("counterparty"):
             warnings.append("Не найдено явное поле поставщика/контрагента в источнике поступлений.")
         if not mapped.get("amount"):
@@ -918,25 +1426,200 @@ class OneCODataClient:
         if not mapped.get("date"):
             warnings.append("Не найдено явное поле даты в источнике поступлений.")
 
+        normalized.sort(
+            key=lambda item: (
+                self._parse_datetime_like(item.get("date")) or datetime.min,
+                str(item.get("number") or ""),
+                str(item.get("counterparty") or ""),
+            ),
+            reverse=True,
+        )
+        deduped: list[dict[str, Any]] = []
+        seen_purchase_rows: set[tuple[str, str, str]] = set()
+        for row in normalized:
+            row_key = (
+                str(row.get("reference") or ""),
+                str(row.get("number") or ""),
+                str(row.get("date") or ""),
+            )
+            if row_key in seen_purchase_rows:
+                continue
+            seen_purchase_rows.add(row_key)
+            deduped.append(row)
+        normalized = deduped
+
         total_amount = Decimal("0")
-        for row in normalized[:limit]:
+        for row in normalized[:effective_limit]:
             amount = self._to_decimal(row.get("amount"), default=None)
             if amount is not None:
                 total_amount += amount
 
         return {
             "source": source,
+            "source_entities_used": source_entities_used,
             "filters_applied_in_python": {
                 "date": date,
                 "date_from": date_from,
                 "date_to": date_to,
                 "counterparty": counterparty,
             },
-            "count_returned": min(len(normalized), limit),
+            "count_returned": min(len(normalized), effective_limit),
             "total_amount": str(total_amount),
-            "data": normalized[:limit],
+            "data": normalized[:effective_limit],
             "warnings": warnings,
             "note": "Поступления/счета поставщика определены по metadata-эвристике OData. Для точного учета кредиторки сверяйте с официальными отчетами 1С.",
+        }
+
+    def get_purchase_document_details(
+        self,
+        document_number: str,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        max_lines: int = 100,
+    ) -> dict[str, Any]:
+        """Return safe header + line details for one supplier purchase document."""
+        needle = str(document_number or "").strip()
+        if not needle:
+            raise ODataError("document_number не должен быть пустым.")
+
+        effective_lines = min(max(int(max_lines), 1), 200)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        search = self.search_document_by_number(
+            document_number=needle,
+            document_type="Поступление",
+            date_from=validated_from,
+            date_to=validated_to,
+            limit=10,
+        )
+        candidates = [
+            row for row in (search.get("data") or [])
+            if str(row.get("document_type") or "") == "Document_ПоступлениеТоваровУслуг"
+            and self._document_number_matches(str(row.get("number") or ""), needle)
+            and (not counterparty_name or self._text_match(row.get("counterparty"), counterparty_name))
+        ]
+        if not candidates:
+            return {
+                "document_number": needle,
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "max_lines": effective_lines,
+                },
+                "warnings": list(search.get("warnings") or []),
+                "note": "Документ поступления не найден в опубликованном read-only OData-контуре 1С.",
+            }
+
+        header = candidates[0]
+        header_date = self._parse_date_like(header.get("date"))
+        detailed = self.get_purchase_documents(
+            date_from=header_date.isoformat() if header_date else validated_from,
+            date_to=header_date.isoformat() if header_date else validated_to,
+            counterparty=header.get("counterparty"),
+            limit=20,
+            entity_name="Document_ПоступлениеТоваровУслуг",
+            include_sections=True,
+        )
+        matched_row = next(
+            (
+                row for row in (detailed.get("data") or [])
+                if self._document_number_matches(str(row.get("number") or ""), needle)
+                and (
+                    not counterparty_name
+                    or self._text_match(row.get("counterparty"), counterparty_name)
+                )
+            ),
+            None,
+        )
+        if matched_row is None:
+            return {
+                "document_number": needle,
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "max_lines": effective_lines,
+                },
+                "warnings": list(search.get("warnings") or []) + list(detailed.get("warnings") or []),
+                "note": "Шапка документа найдена, но детальные строки поступления не удалось безопасно прочитать из OData.",
+            }
+
+        raw = matched_row.get("raw") or {}
+        lines: list[dict[str, Any]] = []
+        for section_name, public_name in (
+            ("Товары", "goods"),
+            ("Услуги", "services"),
+            ("ОС", "fixed_assets"),
+            ("НМА", "intangibles"),
+        ):
+            section_rows = raw.get(section_name)
+            if not isinstance(section_rows, list):
+                continue
+            for row in section_rows:
+                name = (
+                    row.get("Содержание")
+                    or row.get("Description")
+                    or self._resolve_reference_value("Номенклатура_Key", row.get("Номенклатура_Key"))
+                    or self._resolve_reference_value("Номенклатура", row.get("Номенклатура"))
+                )
+                lines.append(
+                    {
+                        "section": public_name,
+                        "name": name,
+                        "item_key": row.get("Номенклатура_Key"),
+                        "quantity": row.get("Количество"),
+                        "price": row.get("Цена"),
+                        "amount": row.get("Сумма"),
+                        "accounting_account": (
+                            row.get("СчетУчетаБУ_Key")
+                            or row.get("СчетУчетаБУ")
+                            or row.get("СчетУчета")
+                        ),
+                    }
+                )
+
+        section_summary = self._summarize_purchase_document_sections(raw, max_lines=min(effective_lines, 20))
+        return {
+            "document_number": needle,
+            "count_returned": 1,
+            "data": [
+                {
+                    "document_type": "Document_ПоступлениеТоваровУслуг",
+                    "document_date": matched_row.get("date"),
+                    "document_number": matched_row.get("number"),
+                    "counterparty": matched_row.get("counterparty"),
+                    "amount": matched_row.get("amount"),
+                    "currency": matched_row.get("currency"),
+                    "organization": matched_row.get("organization"),
+                    "warehouse": self._resolve_reference_value("Склад_Key", raw.get("Склад_Key")),
+                    "operation_type": raw.get("ВидОперации"),
+                    "incoming_document_type": raw.get("ВидВходящегоДокумента"),
+                    "incoming_document_number": raw.get("НомерВходящегоДокумента"),
+                    "incoming_document_date": raw.get("ДатаВходящегоДокумента"),
+                    "reference": matched_row.get("reference"),
+                    "section_counts": section_summary["section_counts"],
+                    "line_summary_text": section_summary["line_summary_text"],
+                    "line_count": len(lines),
+                    "lines": lines[:effective_lines],
+                }
+            ],
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "max_lines": effective_lines,
+            },
+            "source": {
+                "entity": "Document_ПоступлениеТоваровУслуг",
+                "confidence": "high",
+            },
+            "warnings": list(search.get("warnings") or []) + list(detailed.get("warnings") or []),
+            "note": "Read-only details view of one published purchase document. Не выполняет запись в 1С и не раскрывает raw OData агенту.",
         }
 
     def search_document_by_number(
@@ -973,6 +1656,7 @@ class OneCODataClient:
         rows: list[dict[str, Any]] = []
         checked_candidates = 0
         for candidate in candidates:
+            candidate_matches = 0
             mapped = candidate.get("mapped_fields") or {}
             if not mapped.get("number"):
                 warnings.append(f"Пропущена сущность {candidate['entity']}: не найдено поле номера документа.")
@@ -985,53 +1669,54 @@ class OneCODataClient:
                 date_from=validated_from,
                 date_to=validated_to,
             )
-            orderby = f"{mapped['date']} desc" if mapped.get("date") else None
-            query_top = min(effective_limit, self.settings.max_top)
-            filter_fallback_used = False
             try:
-                raw = self.query_entity(
+                candidate_rows, _tail_used = self._load_document_source_rows(
                     candidate["entity"],
-                    top=query_top,
                     select=select or None,
                     filter_expr=filter_expr or None,
-                    orderby=orderby,
+                    orderby=f"{mapped['date']} desc" if mapped.get("date") else None,
+                    limit=min(max(effective_limit * 3, 20), 80, self.settings.max_top),
+                    page_size=min(max(effective_limit * 2, 20), 60, self.settings.max_top),
+                    tail_pages=3,
+                    max_probe_skip=min(self.settings.max_top * 100, 50000),
+                    warnings=warnings,
+                    prefer_recent_tail=True,
                 )
             except ODataError as exc:
-                if filter_expr and self._is_unsupported_where_filter_error(exc):
-                    try:
-                        raw = self.query_entity(
-                            candidate["entity"],
-                            top=min(max(effective_limit * 2, 20), 60, self.settings.max_top),
-                            select=select or None,
-                            filter_expr=None,
-                            orderby=orderby,
-                        )
-                        filter_fallback_used = True
-                    except ODataError as fallback_exc:
-                        warnings.append(
-                            f"Источник {candidate['entity']} пропущен: provider rejected $filter and bounded fallback read "
-                            "is not accessible for this entity in current 1C publication."
-                        )
-                        if self._is_access_denied_error(fallback_exc):
-                            continue
-                        raise
-                else:
-                    raise
-            if filter_fallback_used:
-                warnings.append(
-                    f"OData provider rejected pushdown filter for {candidate['entity']}. "
-                    "Applied bounded Python-side filtering instead."
-                )
-            for row in raw.get("data") or []:
+                if self._is_access_denied_error(exc):
+                    warnings.append(
+                        f"Источник {candidate['entity']} пропущен: bounded fallback read is not accessible for this entity in current 1C publication."
+                    )
+                    continue
+                raise
+            for row in candidate_rows or []:
                 normalized = self._normalize_document_search_row(row, candidate["entity"], mapped)
                 if not self._text_match(normalized.get("number"), needle):
                     continue
                 if (validated_from or validated_to) and not self._date_in_range(normalized.get("date"), validated_from, validated_to):
                     continue
                 rows.append(normalized)
+                candidate_matches += 1
+            if document_type and candidate_matches > 0:
+                break
             if len(rows) >= effective_limit and (document_type or checked_candidates >= 3):
                 warnings.append("Поиск остановлен после достижения лимита в наиболее релевантных document-like источниках.")
                 break
+
+        deduped_rows: list[dict[str, Any]] = []
+        seen_document_rows: set[tuple[str, str, str, str]] = set()
+        for row in rows:
+            row_key = (
+                str(row.get("document_type") or ""),
+                str(row.get("reference") or ""),
+                str(row.get("number") or ""),
+                str(row.get("date") or ""),
+            )
+            if row_key in seen_document_rows:
+                continue
+            seen_document_rows.add(row_key)
+            deduped_rows.append(row)
+        rows = deduped_rows
 
         rows.sort(
             key=lambda item: (
@@ -1431,11 +2116,13 @@ class OneCODataClient:
         warnings: list[str] = []
 
         try:
+            purchase_receipt_source = self._select_primary_purchase_receipt_source(limit=5)
             purchases = self.get_purchase_documents(
                 date_from=validated_from,
                 date_to=validated_to,
                 counterparty=counterparty_name,
                 limit=fetch_limit,
+                entity_name=(purchase_receipt_source or {}).get("entity"),
             )
         except ODataError:
             missing_sources.append("purchase_documents")
@@ -2001,12 +2688,13 @@ class OneCODataClient:
                     f"Не найден кандидат на источник платежей direction={normalized_direction}. Запустите discover_payment_sources для диагностики."
                 )
         primary_source = source_candidates[0]
-        source = source_candidates[0]
         normalized: list[dict[str, Any]] = []
-        query_top = min(max(limit, 50), self.settings.max_top)
-        chosen_filter_fallback_used = False
+        source = source_candidates[0]
+        source_entities_used: list[str] = []
+        first_source_with_rows: dict[str, Any] | None = None
+        page_size = min(max(limit * 20, 250), self.settings.max_top)
 
-        for idx, candidate in enumerate(source_candidates):
+        for idx, candidate in enumerate(source_candidates[:6]):
             source_candidates_checked.append(str(candidate.get("entity")))
             mapped = candidate.get("mapped_fields") or {}
             select = self._build_payment_select(mapped)
@@ -2017,30 +2705,26 @@ class OneCODataClient:
                 text_field_key="counterparty",
                 text_value=counterparty,
             )
+            orderby = f"{mapped['date']} desc" if mapped.get("date") else None
             try:
-                raw = self.query_entity(
+                rows, filter_fallback_used = self._load_document_source_rows(
                     candidate["entity"],
-                    top=query_top,
-                    select=select or None,
-                    filter_expr=filter_expr or None,
+                    select=select,
+                    filter_expr=filter_expr,
+                    orderby=orderby,
+                    limit=limit,
+                    page_size=page_size,
+                    tail_pages=max(2, min(6, (limit // 5) + 2)),
+                    max_probe_skip=min(self.settings.max_top * 100, 50000),
+                    warnings=warnings,
+                    prefer_recent_tail=not bool(effective_from or effective_to or counterparty),
                 )
-                filter_fallback_used = False
-            except ODataError as exc:
-                if filter_expr and self._is_unsupported_where_filter_error(exc):
-                    raw = self.query_entity(
-                        candidate["entity"],
-                        top=min(max(limit * 3, 100), self.settings.max_top),
-                        select=select or None,
-                        filter_expr=None,
-                    )
-                    filter_fallback_used = True
-                elif entity_name:
+            except ODataError:
+                if entity_name:
                     raise
-                else:
-                    warnings.append(f"Источник {candidate['entity']} пропущен: безопасное чтение не удалось.")
-                    continue
+                warnings.append(f"Источник {candidate['entity']} пропущен: безопасное чтение не удалось.")
+                continue
 
-            rows = raw.get("data") or []
             candidate_normalized = [self._normalize_payment_row(r, mapped, candidate.get("direction")) for r in rows]
             if effective_from or effective_to:
                 candidate_normalized = [
@@ -2053,17 +2737,37 @@ class OneCODataClient:
                     if self._text_match(r.get("counterparty"), counterparty) or self._text_match(r.get("raw"), counterparty)
                 ]
 
-            source = candidate
-            normalized = candidate_normalized
-            chosen_filter_fallback_used = filter_fallback_used
-            if entity_name or candidate_normalized:
-                break
-            if idx < len(source_candidates) - 1:
+            if candidate_normalized:
+                source_entities_used.append(str(candidate.get("entity")))
+                normalized.extend(candidate_normalized[: min(max(limit * 5, 50), self.settings.max_top)])
+                if first_source_with_rows is None:
+                    first_source_with_rows = candidate
+                source = candidate
+                if entity_name:
+                    break
+            elif idx < len(source_candidates) - 1:
                 warnings.append(f"Источник {candidate['entity']} не вернул строк по текущим фильтрам. Пробуем следующий safe candidate.")
 
+        normalized.sort(
+            key=lambda r: (
+                self._parse_datetime_like(r.get("date")) or datetime.min,
+                self._to_decimal(r.get("amount"), default=Decimal("0")) or Decimal("0"),
+            ),
+            reverse=True,
+        )
+        deduped: list[dict[str, Any]] = []
+        seen_keys: set[tuple[Any, Any, Any]] = set()
+        for row in normalized:
+            dedupe_key = (row.get("reference"), row.get("number"), row.get("date"))
+            if dedupe_key in seen_keys:
+                continue
+            seen_keys.add(dedupe_key)
+            deduped.append(row)
+        normalized = deduped
+
+        if first_source_with_rows is not None:
+            source = first_source_with_rows
         mapped = source.get("mapped_fields") or {}
-        if chosen_filter_fallback_used:
-            warnings.append("OData provider rejected pushdown filter for this source. Applied bounded Python-side filtering instead.")
         if not mapped.get("counterparty"):
             warnings.append("Не найдено явное поле контрагента. Проверьте mapped_fields и сущность вручную.")
         if not mapped.get("amount"):
@@ -2098,6 +2802,7 @@ class OneCODataClient:
             "source": source if normalized else primary_source,
             "last_checked_source": source,
             "source_candidates_checked": source_candidates_checked,
+            "source_entities_used": source_entities_used,
             "no_data_in_checked_sources": not bool(normalized),
             "source_candidates_mode": "preferred_top_level_documents" if not entity_name and source_candidates else "explicit_entity",
             "filters_applied_in_python": {
@@ -2195,17 +2900,43 @@ class OneCODataClient:
         checks.append({"name": "credentials configured", "status": "ok" if (self.settings.username and self.settings.password) else "warning", "details": "username/password set" if (self.settings.username and self.settings.password) else "username or password missing"})
         checks.append({"name": "ssl verification", "status": "ok" if self.settings.verify_ssl else "warning", "details": self.settings.verify_ssl})
 
+        endpoint_health: dict[str, Any] | None = None
+        if url_ok:
+            try:
+                endpoint_health = self.check_endpoint_health(check_metadata=False)
+                checks.append(
+                    {
+                        "name": "endpoint connectivity",
+                        "status": "ok" if endpoint_health["server_alive"] else "error",
+                        "details": {
+                            "host": endpoint_health["host"],
+                            "port": endpoint_health["port"],
+                            "host_resolvable": endpoint_health["host_resolvable"],
+                            "tcp_reachable": endpoint_health["tcp_reachable"],
+                        },
+                    }
+                )
+                if not endpoint_health["server_alive"]:
+                    recommendations.append("Сервер 1С/OData недоступен по сети. Проверьте, жив ли host, открыт ли порт публикации и доступен ли веб-сервер 1С.")
+            except Exception as exc:
+                checks.append({"name": "endpoint connectivity", "status": "error", "details": str(exc)[:300]})
+                recommendations.append("Не удалось выполнить быструю сетевую проверку OData endpoint. Проверьте адрес и сетевую доступность сервера 1С.")
+
         metadata_ok = False
         entities: list[EntityInfo] = []
-        try:
-            xml = self.get_metadata_xml(refresh=True)
-            metadata_ok = True
-            checks.append({"name": "$metadata readable", "status": "ok", "details": {"bytes": len(xml)}})
-            entities = self.list_entities(refresh=False)
-            checks.append({"name": "entities parsed", "status": "ok" if entities else "warning", "details": {"entity_count": len(entities)}})
-        except Exception as exc:
-            checks.append({"name": "$metadata readable", "status": "error", "details": str(exc)[:500]})
-            recommendations.append("Проверьте URL публикации OData, логин/пароль, права пользователя и доступность веб-сервера 1С.")
+        if endpoint_health is not None and not endpoint_health["server_alive"]:
+            checks.append({"name": "$metadata readable", "status": "error", "details": "skipped because endpoint connectivity check failed"})
+            recommendations.append("Проверьте URL публикации OData, логин/пароль, права пользователя, доступность хоста и порта публикации 1С.")
+        else:
+            try:
+                xml = self.get_metadata_xml(refresh=True)
+                metadata_ok = True
+                checks.append({"name": "$metadata readable", "status": "ok", "details": {"bytes": len(xml)}})
+                entities = self.list_entities(refresh=False)
+                checks.append({"name": "entities parsed", "status": "ok" if entities else "warning", "details": {"entity_count": len(entities)}})
+            except Exception as exc:
+                checks.append({"name": "$metadata readable", "status": "error", "details": str(exc)[:500]})
+                recommendations.append("Проверьте URL публикации OData, логин/пароль, права пользователя и доступность веб-сервера 1С.")
 
         categories = self._entity_category_summary(entities) if entities else {}
         inventory_sources: list[dict[str, Any]] = []
@@ -2240,6 +2971,7 @@ class OneCODataClient:
             "server": "ashybulakstroy-1c-bridge",
             "mode": "read-only",
             "checks": checks,
+            "endpoint_health": endpoint_health,
             "entity_summary": categories,
             "inventory_candidates": inventory_sources,
             "live_entities_sample": live_entities[:20],
@@ -2487,6 +3219,9 @@ class OneCODataClient:
             "расходныйкассовыйордер",
             "платежноепоручениеисходящее",
             "платежныйордерсписаниеденежныхсредств",
+            "исходяще",
+            "оплатапоставщику",
+            "перечисление",
             "outgoing",
             "расход",
             "выдан",
@@ -2498,6 +3233,11 @@ class OneCODataClient:
             "приходныйкассовыйордер",
             "платежноепоручениевходящее",
             "платежныйордерпоступлениеденежныхсредств",
+            "оплатаотпокупателяплатежнойкартой",
+            "отчеторозничныхпродажахоплата",
+            "чекккмоплата",
+            "входяще",
+            "оплатапокупателя",
             "incoming",
             "приход",
             "получен",
@@ -2515,7 +3255,7 @@ class OneCODataClient:
             score += incoming_score
             reasons.append("direction:incoming")
 
-        if any(term in haystack for term in ["списаниесбанковскогосчета", "списаниесрасчетногосчета", "поступлениенабанковскийсчет", "поступлениенарасчетныйсчет", "платежноепоручениеисходящее", "платежноепоручениевходящее", "платежныйордерпоступлениеденежныхсредств", "платежныйордерсписаниеденежныхсредств"]):
+        if any(term in haystack for term in ["списаниесбанковскогосчета", "списаниесрасчетногосчета", "поступлениенабанковскийсчет", "поступлениенарасчетныйсчет", "платежноепоручениеисходящее", "платежноепоручениевходящее", "платежныйордерпоступлениеденежныхсредств", "платежныйордерсписаниеденежныхсредств", "оплатаотпокупателяплатежнойкартой"]):
             score += 40
             reasons.append("account:bank_priority")
         elif any(term in haystack for term in ["расходныйкассовыйордер", "приходныйкассовыйордер"]):
@@ -3007,11 +3747,11 @@ class OneCODataClient:
         return isinstance(value, str) and bool(_GUID_RE.fullmatch(value))
 
     def _discover_document_search_candidates(self, document_type: str | None = None, limit: int | None = None) -> list[dict[str, Any]]:
-        requested_type = self._norm(document_type) if document_type else ""
+        requested_type = self._norm(document_type).replace("-", "").replace(" ", "") if document_type else ""
         deduped: dict[str, dict[str, Any]] = {}
         for entity in self.list_entities():
-            name = self._norm(entity.name)
-            etype = self._norm(entity.entity_type)
+            name = self._norm(entity.name).replace("-", "").replace(" ", "")
+            etype = self._norm(entity.entity_type).replace("-", "").replace(" ", "")
             score = 0
             reasons: list[str] = []
             if "document" in name or "документ" in name or "document" in etype or "документ" in etype:
@@ -3029,6 +3769,7 @@ class OneCODataClient:
                 continue
             if requested_type and requested_type not in name and requested_type not in etype:
                 continue
+            score += self._document_type_hint_score_boost(requested_type, name, etype)
 
             mapped = self._map_document_fields([field.name for field in (entity.fields or [])])
             if not mapped.get("number"):
@@ -3049,6 +3790,27 @@ class OneCODataClient:
         if limit is None or limit <= 0:
             return ranked
         return ranked[:limit]
+
+    def _document_type_hint_score_boost(self, requested_type: str, name: str, etype: str) -> int:
+        if not requested_type:
+            return 0
+        haystack = f"{name} {etype}"
+        boost = 0
+        if "счетфактура" in requested_type:
+            if "счетфактураполученный" in haystack or "счетфактуравыданный" in haystack:
+                boost += 80
+        elif "платеж" in requested_type or "оплат" in requested_type:
+            if any(term in haystack for term in ("платежноепоручение", "платежныйордер", "платежнойкартой", "кассовыйордер")):
+                boost += 70
+        elif "поступление" in requested_type:
+            if any(term in haystack for term in ("поступлениетоваровуслуг", "поступлениедопрасходов", "поступлениеизпереработки", "поступлениенма")):
+                boost += 160
+            if any(term in haystack for term in ("поступлениенабанковскийсчет", "платежныйордерпоступлениеденежныхсредств", "приходныйкассовыйордер")):
+                boost -= 120
+        elif "реализац" in requested_type:
+            if "реализациятоваровуслуг" in haystack:
+                boost += 80
+        return boost
 
     @staticmethod
     def _document_search_candidate_limit(document_type: str | None, result_limit: int) -> int:
@@ -3122,7 +3884,7 @@ class OneCODataClient:
         haystack = self._norm(str(entity_name or ""))
         if any(term in haystack for term in ["касс", "cash", "кассовыйордер"]):
             return "cash"
-        if any(term in haystack for term in ["банков", "bank", "расчетногосчета", "банковскогосчета", "платежноепоручение", "платежныйордер"]):
+        if any(term in haystack for term in ["банков", "bank", "расчетногосчета", "банковскогосчета", "платежноепоручение", "платежныйордер", "платежнойкартой", "эквайр"]):
             return "bank"
         return "unknown"
 
@@ -3287,6 +4049,17 @@ class OneCODataClient:
         amount = self._to_decimal(invoice.get("amount"), default=Decimal("0")) or Decimal("0")
         return (invoice_number, invoice_date_iso, str(amount))
 
+    def _document_number_matches(self, actual: str, requested: str) -> bool:
+        actual_clean = str(actual or "").strip()
+        requested_clean = str(requested or "").strip()
+        if not actual_clean or not requested_clean:
+            return False
+        if actual_clean == requested_clean:
+            return True
+        actual_digits = actual_clean.lstrip("0")
+        requested_digits = requested_clean.lstrip("0")
+        return bool(actual_digits) and actual_digits == requested_digits
+
     def _summarize_purchase_document_sections(self, raw: dict[str, Any], max_lines: int = 5) -> dict[str, Any]:
         sections = {
             "Товары": "goods",
@@ -3418,10 +4191,34 @@ class OneCODataClient:
             out.append(
                 {
                     "name": name,
+                    "item_key": row.get("Номенклатура_Key"),
                     "quantity": row.get("Количество"),
                     "amount": row.get("Сумма"),
                 }
             )
+        return out
+
+    def _extract_purchase_line_items(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        for section_name in ("Товары", "Услуги"):
+            rows = raw.get(section_name)
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                name = (
+                    row.get("Содержание")
+                    or row.get("Description")
+                    or self._resolve_reference_value("Номенклатура_Key", row.get("Номенклатура_Key"))
+                    or self._resolve_reference_value("Номенклатура", row.get("Номенклатура"))
+                )
+                out.append(
+                    {
+                        "name": name,
+                        "item_key": row.get("Номенклатура_Key"),
+                        "quantity": row.get("Количество"),
+                        "amount": row.get("Сумма"),
+                    }
+                )
         return out
 
     def _last_payment_dates_by_customer(self, payment_rows: list[dict[str, Any]]) -> dict[str, str]:
@@ -3565,6 +4362,33 @@ class OneCODataClient:
             except ValueError:
                 continue
         return None
+
+    @staticmethod
+    def _parse_datetime_like(value: Any) -> datetime | None:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, date):
+            return datetime.combine(value, datetime.min.time())
+        text = str(value).strip()
+        if not text:
+            return None
+        text = text.replace("Z", "+00:00")
+        candidates = [
+            text,
+            text.replace(" ", "T"),
+            text[:19] if len(text) >= 19 else text,
+        ]
+        for candidate in candidates:
+            try:
+                return datetime.fromisoformat(candidate)
+            except ValueError:
+                continue
+        parsed_date = OneCODataClient._parse_date_like(text)
+        if parsed_date is None:
+            return None
+        return datetime.combine(parsed_date, datetime.min.time())
 
     def _date_in_range(self, value: Any, date_from: str | None, date_to: str | None) -> bool:
         row_date = self._parse_date_like(value)
