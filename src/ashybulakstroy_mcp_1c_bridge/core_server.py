@@ -287,6 +287,8 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Поиск документа выполняется через безопасный wrapper: сервер выбирает document-like OData сущности, ищет совпадение по номеру и возвращает только нормализованные поля документа.")
     elif tool == "get_purchase_document_details":
         explanation["summary"].append("Детализация поступления читает опубликованный Document_ПоступлениеТоваровУслуг и возвращает безопасную шапку документа и строки ТМЗ/услуг без raw OData.")
+    elif tool == "get_purchase_receipts_summary":
+        explanation["summary"].append("Сводка поступлений читает опубликованные документы поступления и возвращает плоские business-строки: дата, товар, объем, поставщик, номер документа.")
     elif tool == "validate_inventory_report_text":
         explanation["summary"].append("Сверка сравнила нормализованные строки MCP и строки отчета 1С по ключам item+warehouse с учетом допусков.")
     if not explanation["warnings"]:
@@ -500,6 +502,26 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
                 tool="get_purchase_document_details",
             )
 
+        if any(phrase in ql for phrase in ["что поступало", "какой товар поступал", "какие товары поступали", "от кого поступал товар", "от кого поступали товары", "поступления за период"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            item_name = _extract_after_keywords(q, ["товар", "товары", "поступал", "поступали", "поступления"])
+            result = odata.get_purchase_receipts_summary(
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+                item_name=item_name,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_purchase_receipts_summary",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty, "item_name": item_name, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_purchase_receipts_summary",
+            )
+
         if any(phrase in ql for phrase in ["что нужно закупить", "что надо закупить", "что докупить", "что нужно купить", "закуп на 30 дней", "закупка по продажам", "что закупать"]):
             warehouse = _extract_warehouse(q)
             item = _extract_after_keywords(q, ["товар", "товары", "номенклатура", "закупить", "докупить", "купить"])
@@ -698,6 +720,33 @@ def get_purchase_document_details(
             max_lines=max_lines,
         )
         return _ok(result, tool="get_purchase_document_details")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_purchase_receipts_summary(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    item_name: str | None = None,
+    limit: int = 50,
+    items_per_document: int = 10,
+) -> dict[str, Any]:
+    """Показать, что и от кого поступало за период.
+
+    Возвращает read-only таблицу строк: дата, товар, объем, поставщик, номер документа.
+    """
+    try:
+        result = odata.get_purchase_receipts_summary(
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            item_name=item_name,
+            limit=limit,
+            items_per_document=items_per_document,
+        )
+        return _ok(result, tool="get_purchase_receipts_summary")
     except Exception as exc:
         return _err(exc)
 

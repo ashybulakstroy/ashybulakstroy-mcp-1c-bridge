@@ -1622,6 +1622,135 @@ class OneCODataClient:
             "note": "Read-only details view of one published purchase document. Не выполняет запись в 1С и не раскрывает raw OData агенту.",
         }
 
+    def get_purchase_receipts_summary(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        item_name: str | None = None,
+        limit: int = 50,
+        items_per_document: int = 10,
+    ) -> dict[str, Any]:
+        """Return safe purchase receipts by period as flat business rows."""
+        effective_limit = min(max(int(limit), 1), 100)
+        sample_items_limit = min(max(int(items_per_document), 1), 30)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        purchase_receipt_source = self._select_primary_purchase_receipt_source(limit=5)
+        if purchase_receipt_source is None:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "item_name": item_name,
+                    "limit": effective_limit,
+                    "items_per_document": sample_items_limit,
+                },
+                "warnings": [
+                    "Не найден безопасный read-only источник поступлений ТМЗ/услуг в OData."
+                ],
+                "note": "Поступления не найдены в опубликованном OData-контуре 1С.",
+            }
+
+        receipts = self.get_purchase_documents(
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty=counterparty_name,
+            limit=min(max(effective_limit * 4, 100), self.settings.max_top),
+            entity_name=purchase_receipt_source.get("entity"),
+            include_sections=True,
+        )
+        document_rows: list[dict[str, Any]] = []
+        item_filter = str(item_name or "").strip()
+        for row in receipts.get("data") or []:
+            raw = row.get("raw") or {}
+            line_items = self._extract_purchase_line_items(raw)
+            grouped_items: dict[str, dict[str, Any]] = {}
+            for line in line_items:
+                if item_filter and not self._text_match(line.get("name"), item_filter):
+                    continue
+                item_key = str(line.get("name") or "").strip()
+                if not item_key:
+                    continue
+                bucket = grouped_items.setdefault(
+                    item_key,
+                    {
+                        "item": item_key,
+                        "quantity": 0,
+                        "amount": 0,
+                    },
+                )
+                quantity = self._safe_float(line.get("quantity"))
+                amount = self._safe_float(line.get("amount"))
+                if quantity is not None:
+                    bucket["quantity"] += quantity
+                if amount is not None:
+                    bucket["amount"] += amount
+            if item_filter and not grouped_items:
+                continue
+            normalized_items = sorted(
+                grouped_items.values(),
+                key=lambda item: (
+                    -float(item.get("quantity") or 0),
+                    str(item.get("item") or ""),
+                ),
+            )
+            document_rows.append(
+                {
+                    "date": row.get("date"),
+                    "date_only": str(row.get("date") or "")[:10],
+                    "document_number": row.get("number"),
+                    "supplier": row.get("counterparty"),
+                    "document_amount": row.get("amount"),
+                    "currency": row.get("currency"),
+                    "item_count": len(normalized_items),
+                    "items": normalized_items[:sample_items_limit],
+                    "source_entity": purchase_receipt_source.get("entity"),
+                }
+            )
+
+        document_rows.sort(
+            key=lambda item: (
+                self._parse_datetime_like(item.get("date")) or datetime.min,
+                str(item.get("document_number") or ""),
+            ),
+            reverse=True,
+        )
+        document_rows = document_rows[:effective_limit]
+        flat_rows: list[dict[str, Any]] = []
+        for document in document_rows:
+            for item in document.get("items") or []:
+                flat_rows.append(
+                    {
+                        "date": document.get("date_only"),
+                        "item": item.get("item"),
+                        "quantity": item.get("quantity"),
+                        "supplier": document.get("supplier"),
+                        "document_number": document.get("document_number"),
+                        "amount": item.get("amount"),
+                        "currency": document.get("currency"),
+                        "source_entity": document.get("source_entity"),
+                    }
+                )
+        return {
+            "count_returned": len(flat_rows),
+            "document_count_returned": len(document_rows),
+            "data": flat_rows,
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "item_name": item_name,
+                "limit": effective_limit,
+                "items_per_document": sample_items_limit,
+            },
+            "source": purchase_receipt_source,
+            "warnings": list(receipts.get("warnings") or []),
+            "note": "Read-only purchase receipts summary from published OData. Формат: дата, товар, объем, поставщик, номер документа.",
+        }
+
     def search_document_by_number(
         self,
         document_number: str,
@@ -4389,6 +4518,21 @@ class OneCODataClient:
         if parsed_date is None:
             return None
         return datetime.combine(parsed_date, datetime.min.time())
+
+    @staticmethod
+    def _safe_float(value: Any) -> float | None:
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        text = str(value).strip().replace(" ", "")
+        if not text:
+            return None
+        text = text.replace(",", ".")
+        try:
+            return float(text)
+        except ValueError:
+            return None
 
     def _date_in_range(self, value: Any, date_from: str | None, date_to: str | None) -> bool:
         row_date = self._parse_date_like(value)

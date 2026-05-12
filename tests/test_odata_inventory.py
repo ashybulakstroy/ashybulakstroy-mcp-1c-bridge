@@ -1157,6 +1157,33 @@ def test_get_purchase_document_details_returns_empty_when_document_not_found():
     assert "не найден" in result["note"].lower()
 
 
+def test_get_purchase_receipts_summary_returns_supplier_and_items_by_period():
+    client = FakeOneCODataClient()
+
+    result = client.get_purchase_receipts_summary(date_from="2026-04-20", date_to="2026-04-30", limit=10, items_per_document=5)
+
+    assert result["count_returned"] == 4
+    assert result["document_count_returned"] == 3
+    top = result["data"][0]
+    assert top["date"] == "2026-04-24"
+    assert top["document_number"] == "SUP-003"
+    assert top["supplier"] == "ТОО Сервис"
+    assert top["item"] == "Сервисное обслуживание"
+    assert top["quantity"] == 1
+    assert top["amount"] == 60000.0
+
+
+def test_get_purchase_receipts_summary_filters_by_item_name():
+    client = FakeOneCODataClient()
+
+    result = client.get_purchase_receipts_summary(date_from="2026-04-20", date_to="2026-04-30", item_name="Цемент", limit=10)
+
+    assert result["count_returned"] == 1
+    row = result["data"][0]
+    assert row["document_number"] == "SUP-001"
+    assert row["item"] == "Цемент М400"
+
+
 def test_get_sales_documents_uses_tail_paging_when_filter_pushdown_is_rejected():
     client = FakeOneCODataClientSalesTailPaging()
 

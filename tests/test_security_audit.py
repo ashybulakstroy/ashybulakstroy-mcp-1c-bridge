@@ -318,6 +318,41 @@ def test_get_purchase_document_details_allowed_call_is_audited(monkeypatch, tmp_
     assert record["risk"] == "L0"
 
 
+def test_get_purchase_receipts_summary_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_purchase_receipts_summary",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [
+                {
+                    "date": "2026-05-06",
+                    "supplier": "Алматинский метизный завод ТОО",
+                    "item": "Шпильки резьбовые M12",
+                    "quantity": 250,
+                    "document_number": "0000000272",
+                }
+            ],
+        },
+    )
+
+    result = core_server.get_purchase_receipts_summary(date_from="2026-05-01", date_to="2026-05-31", project_id="project-purchase-summary")
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_purchase_receipts_summary"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-purchase-summary"
+    assert record["risk"] == "L0"
+
+
 def test_get_supplier_reconciliation_documents_allowed_call_is_audited(monkeypatch, tmp_path):
     audit_path = tmp_path / "audit.jsonl"
     monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
