@@ -1844,9 +1844,9 @@ class OneCODataClient:
                     "counterparty_bin_or_iin": detailed.get("counterparty_bin_or_iin"),
                     "organization": detailed.get("organization"),
                     "warehouse": self._extract_sales_warehouse(raw),
-                    "structural_unit": self._resolve_reference_value("СтруктурноеПодразделение_Key", raw.get("СтруктурноеПодразделение_Key")),
+                    "structural_unit": self._extract_sales_structural_unit(raw, detailed.get("organization") or raw.get("Организация")),
                     "operation_type": raw.get("ВидОперации"),
-                    "operation_type_display": self._format_enum_label(raw.get("ВидОперации")),
+                    "operation_type_display": self._format_sales_operation_type(raw),
                     "issue_method": raw.get("СпособВыпискиАктовВыполненныхРабот"),
                     "issue_method_display": self._format_enum_label(raw.get("СпособВыпискиАктовВыполненныхРабот")),
                     "invoice_number": self._extract_sales_invoice_number(raw),
@@ -1986,6 +1986,94 @@ class OneCODataClient:
             "source": sales.get("source"),
             "warnings": list(sales.get("warnings") or []),
             "note": "Read-only sales receipts summary from published OData. Формат: дата, товар, объем, контрагент, номер документа.",
+        }
+
+    def get_sales_journal_view(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Return screen-like sales journal rows close to the 1C list view."""
+        effective_limit = min(max(int(limit), 1), 100)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        source_list = self.discover_sales_sources(limit=1, check_data=True)
+        if not source_list:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "limit": effective_limit,
+                },
+                "warnings": ["Не найден безопасный источник реализаций в OData."],
+                "note": "Журнал реализаций не построен, потому что в OData не найден безопасный read-only источник продаж.",
+            }
+
+        source = source_list[0]
+        entity_name = str(source.get("entity") or "Document_РеализацияТоваровУслуг")
+        mapped = source.get("mapped_fields") or {}
+        warnings: list[str] = []
+        headers = self._get_recent_sales_headers(
+            entity_name=entity_name,
+            mapped=mapped,
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty_name=counterparty_name,
+            max_documents=effective_limit,
+            warnings=warnings,
+        )
+        rows: list[dict[str, Any]] = []
+        for header in headers:
+            ref_key = str(header.get("reference") or "")
+            raw = self._fetch_raw_entity_by_ref(entity_name, ref_key)
+            if not raw:
+                continue
+            detailed = self._normalize_sales_row(raw, mapped)
+            rows.append(
+                {
+                    "date": detailed.get("date"),
+                    "date_only": str(detailed.get("date") or "")[:10],
+                    "signed_date": self._extract_sales_signed_date(raw),
+                    "document_number": detailed.get("number"),
+                    "organization": detailed.get("organization"),
+                    "operation_type": raw.get("ВидОперации"),
+                    "operation_type_display": self._format_sales_operation_type(raw),
+                    "amount": detailed.get("amount"),
+                    "currency": detailed.get("currency"),
+                    "counterparty": detailed.get("counterparty"),
+                    "warehouse": self._extract_sales_warehouse(raw),
+                    "issue_method": raw.get("СпособВыпискиАктовВыполненныхРабот"),
+                    "issue_method_display": self._format_enum_label(raw.get("СпособВыпискиАктовВыполненныхРабот")),
+                    "responsible": self._resolve_reference_value("Ответственный_Key", raw.get("Ответственный_Key")),
+                    "comment": raw.get("Комментарий"),
+                    "status": self._extract_document_status(raw, self._map_document_fields(list(raw.keys()))),
+                    "source_entity": entity_name,
+                }
+            )
+
+        rows.sort(
+            key=lambda item: (
+                self._parse_datetime_like(item.get("date")) or datetime.min,
+                str(item.get("document_number") or ""),
+            ),
+            reverse=True,
+        )
+        return {
+            "count_returned": len(rows[:effective_limit]),
+            "data": rows[:effective_limit],
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "limit": effective_limit,
+            },
+            "source": source,
+            "warnings": warnings,
+            "note": "Read-only sales journal view from published OData. Приближен к журналу 'Реализации ТМЗ и услуг' в 1С.",
         }
 
     def _get_recent_sales_documents(
@@ -4330,6 +4418,10 @@ class OneCODataClient:
     def _is_guid_like(value: Any) -> bool:
         return isinstance(value, str) and bool(_GUID_RE.fullmatch(value))
 
+    @staticmethod
+    def _is_zero_guid_value(value: Any) -> bool:
+        return isinstance(value, str) and value == "00000000-0000-0000-0000-000000000000"
+
     def _discover_document_search_candidates(self, document_type: str | None = None, limit: int | None = None) -> list[dict[str, Any]]:
         requested_type = self._norm(document_type).replace("-", "").replace(" ", "") if document_type else ""
         deduped: dict[str, dict[str, Any]] = {}
@@ -4797,6 +4889,11 @@ class OneCODataClient:
                         row.get("СубконтоСписанияСебестоимостиБУ3"),
                     ),
                 )
+                account_bu_display = self._best_account_display(account_bu, account_bu_inferred)
+                revenue_account_bu_display = self._best_account_display(revenue_account_bu, revenue_account_bu_inferred)
+                cogs_account_bu_display = self._best_account_display(cogs_account_bu, cogs_account_bu_inferred)
+                revenue_analytics_summary = self._format_analytics_summary(revenue_analytics_bu)
+                cogs_analytics_summary = self._format_analytics_summary(cogs_analytics_bu)
                 out.append(
                     {
                         "section": "goods" if section_name == "Товары" else "services",
@@ -4812,8 +4909,13 @@ class OneCODataClient:
                         "revenue_account_bu_inferred_label": revenue_account_bu_inferred,
                         "cogs_account_bu": cogs_account_bu,
                         "cogs_account_bu_inferred_label": cogs_account_bu_inferred,
+                        "account_bu_display": account_bu_display,
+                        "revenue_account_bu_display": revenue_account_bu_display,
+                        "cogs_account_bu_display": cogs_account_bu_display,
                         "revenue_analytics_bu": revenue_analytics_bu,
                         "cogs_analytics_bu": cogs_analytics_bu,
+                        "revenue_analytics_summary": revenue_analytics_summary,
+                        "cogs_analytics_summary": cogs_analytics_summary,
                         "accounting_view": {
                             "account_bu": account_bu,
                             "account_bu_inferred_label": account_bu_inferred,
@@ -4821,8 +4923,13 @@ class OneCODataClient:
                             "revenue_account_bu_inferred_label": revenue_account_bu_inferred,
                             "cogs_account_bu": cogs_account_bu,
                             "cogs_account_bu_inferred_label": cogs_account_bu_inferred,
+                            "account_bu_display": account_bu_display,
+                            "revenue_account_bu_display": revenue_account_bu_display,
+                            "cogs_account_bu_display": cogs_account_bu_display,
                             "revenue_analytics_bu": revenue_analytics_bu,
                             "cogs_analytics_bu": cogs_analytics_bu,
+                            "revenue_analytics_summary": revenue_analytics_summary,
+                            "cogs_analytics_summary": cogs_analytics_summary,
                         },
                     }
                 )
@@ -4861,10 +4968,24 @@ class OneCODataClient:
     def _extract_sales_warehouse(self, raw: dict[str, Any]) -> Any:
         return self._resolve_reference_value("Склад_Key", raw.get("Склад_Key"))
 
+    def _extract_sales_structural_unit(self, raw: dict[str, Any], organization: Any = None) -> Any:
+        structural_unit = self._resolve_reference_value("СтруктурноеПодразделение_Key", raw.get("СтруктурноеПодразделение_Key"))
+        if self._is_zero_guid_value(structural_unit):
+            return organization
+        return structural_unit
+
     def _extract_sales_invoice_number(self, raw: dict[str, Any]) -> str | None:
         invoice_ref = raw.get("СчетНаОплатуПокупателю_Key")
         if self._is_guid_like(invoice_ref):
             resolved = self._fetch_entity_by_ref("Document_СчетНаОплатуПокупателю", str(invoice_ref), ("Number", "Date"))
+            if resolved:
+                number = resolved.get("Number")
+                if number not in (None, ""):
+                    return str(number)
+        basis_ref = raw.get("ДокументОснование")
+        basis_type = raw.get("ДокументОснование_Type")
+        if self._is_guid_like(basis_ref) and basis_type == "StandardODATA.Document_СчетНаОплатуПокупателю":
+            resolved = self._fetch_entity_by_ref("Document_СчетНаОплатуПокупателю", str(basis_ref), ("Number", "Date"))
             if resolved:
                 number = resolved.get("Number")
                 if number not in (None, ""):
@@ -4875,6 +4996,10 @@ class OneCODataClient:
         invoice_ref = raw.get("СчетНаОплатуПокупателю_Key")
         if self._is_guid_like(invoice_ref):
             return self._resolve_document_reference_display("Document_СчетНаОплатуПокупателю", str(invoice_ref))
+        basis_ref = raw.get("ДокументОснование")
+        basis_type = raw.get("ДокументОснование_Type")
+        if self._is_guid_like(basis_ref) and basis_type == "StandardODATA.Document_СчетНаОплатуПокупателю":
+            return self._resolve_document_reference_display("Document_СчетНаОплатуПокупателю", str(basis_ref))
         return None
 
     def _extract_sales_settlement_document(self, raw: dict[str, Any]) -> str | None:
@@ -4892,6 +5017,35 @@ class OneCODataClient:
             entity_name = basis_type.split(".")[-1]
             return self._resolve_document_reference_display(entity_name, str(basis_ref))
         return None
+
+    @staticmethod
+    def _best_account_display(account_value: Any, inferred_label: str | None) -> str | None:
+        if account_value not in (None, ""):
+            return str(account_value)
+        return inferred_label
+
+    @staticmethod
+    def _format_analytics_summary(values: list[Any]) -> str | None:
+        parts = [str(value).strip() for value in values if value not in (None, "") and str(value).strip()]
+        if not parts:
+            return None
+        return " / ".join(parts)
+
+    def _format_sales_operation_type(self, raw: dict[str, Any]) -> str | None:
+        operation = raw.get("ВидОперации")
+        if operation in (None, ""):
+            return "Реализация (Товары, услуги)"
+        if operation in ("ПродажаКомиссия", "РеализацияТоваровУслуг"):
+            has_goods = isinstance(raw.get("Товары"), list) and len(raw.get("Товары") or []) > 0
+            has_services = isinstance(raw.get("Услуги"), list) and len(raw.get("Услуги") or []) > 0
+            if has_goods and has_services:
+                return "Реализация (Товары, услуги)"
+            if has_goods:
+                return "Реализация (Товары)"
+            if has_services:
+                return "Реализация (Услуги)"
+            return "Реализация (Товары, услуги)"
+        return self._format_enum_label(operation)
 
     def _resolve_account_field(self, value: Any) -> str | None:
         if not value:

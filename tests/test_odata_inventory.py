@@ -1227,6 +1227,22 @@ def test_get_sales_receipts_summary_filters_by_item_name():
     assert row["item"] == "Бокорез"
 
 
+def test_get_sales_journal_view_returns_screen_like_rows():
+    client = FakeOneCODataClient()
+
+    result = client.get_sales_journal_view(date_from="2026-04-20", date_to="2026-04-30", limit=10)
+
+    assert result["count_returned"] == 3
+    top = result["data"][0]
+    assert top["date"] == "2026-04-24T13:00:00"
+    assert top["date_only"] == "2026-04-24"
+    assert top["document_number"] == "000502"
+    assert top["counterparty"] == "ТОО БетонПром"
+    assert top["amount"] == "90000"
+    assert top["operation_type_display"] == "Реализация (Товары, услуги)"
+    assert top["source_entity"] == "Document_РеализацияТоваровУслуг"
+
+
 def test_get_sales_document_details_formats_business_header_and_accounting_view():
     client = FakeOneCODataClient()
 
@@ -1294,7 +1310,7 @@ def test_get_sales_document_details_formats_business_header_and_accounting_view(
     assert result["count_returned"] == 1
     row = result["data"][0]
     assert row["issue_method_display"] == "В бумажном виде"
-    assert row["operation_type_display"] == "Реализация товаров услуг"
+    assert row["operation_type_display"] == "Реализация (Товары)"
     assert row["structural_unit"] == "Основное подразделение"
     assert row["responsible"] == "Сапар"
     assert row["invoice_document"] == "0000000127 от 2026-04-20"
@@ -1304,11 +1320,95 @@ def test_get_sales_document_details_formats_business_header_and_accounting_view(
     assert line["section_display"] == "ТМЗ"
     assert line["account_bu"] == "1330 Товары"
     assert line["account_bu_inferred_label"] is None
+    assert line["account_bu_display"] == "1330 Товары"
     assert line["revenue_account_bu"] == "6010 Доходы"
     assert line["cogs_account_bu"] == "7010 Себестоимость"
     assert line["revenue_analytics_bu"] == ["Доходы", "Основная номенклатурная группа"]
     assert line["cogs_analytics_bu"] == ["Статьи затрат"]
+    assert line["revenue_analytics_summary"] == "Доходы / Основная номенклатурная группа"
+    assert line["cogs_analytics_summary"] == "Статьи затрат"
     assert line["accounting_view"]["revenue_account_bu"] == "6010 Доходы"
+    assert line["accounting_view"]["revenue_account_bu_display"] == "6010 Доходы"
+
+
+def test_get_sales_document_details_falls_back_to_basis_invoice_and_organization_for_zero_guid_structural_unit():
+    client = FakeOneCODataClient()
+
+    detailed_raw = {
+        "Ref_Key": "00000000-0000-0000-0000-000000000101",
+        "Дата": "2026-04-20T12:00:00",
+        "Date": "2026-04-20T12:00:00",
+        "Контрагент": "ТОО Альфа Строй",
+        "СуммаДокумента": "100000",
+        "Номер": "000501",
+        "Организация": "ИП Isatay",
+        "Posted": True,
+        "ДатаПодписанияАкта": "2026-04-21T00:00:00",
+        "СпособВыпискиАктовВыполненныхРабот": "ВБумажномВиде",
+        "ВидОперации": "ПродажаКомиссия",
+        "СтруктурноеПодразделение_Key": "00000000-0000-0000-0000-000000000000",
+        "Ответственный_Key": "user-guid",
+        "ДокументОснование": "22222222-2222-2222-2222-222222222222",
+        "ДокументОснование_Type": "StandardODATA.Document_СчетНаОплатуПокупателю",
+        "Товары": [{"Содержание": "Цемент М400", "Количество": 8, "Цена": 10000, "Сумма": "80000"}],
+    }
+
+    client._fetch_raw_entity_by_ref = lambda entity_name, ref_key: detailed_raw  # type: ignore[method-assign]
+    client._resolve_reference_value = lambda field_name, value: "Сапар" if (field_name, value) == ("Ответственный_Key", "user-guid") else value  # type: ignore[method-assign]
+    client._resolve_document_reference_display = lambda entity_name, ref_key: "0000000127 от 2026-04-20" if ref_key == "22222222-2222-2222-2222-222222222222" else None  # type: ignore[method-assign]
+    client._fetch_entity_by_ref = lambda entity_name, ref_key, select_fields: {"Number": "0000000127", "Date": "2026-04-20T00:00:00"} if ref_key == "22222222-2222-2222-2222-222222222222" else None  # type: ignore[method-assign]
+
+    result = client.get_sales_document_details(document_number="000501", max_lines=20)
+
+    row = result["data"][0]
+    assert row["structural_unit"] == "ИП Isatay"
+    assert row["invoice_number"] == "0000000127"
+    assert row["invoice_document"] == "0000000127 от 2026-04-20"
+    assert row["basis_document"] == "0000000127 от 2026-04-20"
+    assert row["operation_type_display"] == "Реализация (Товары)"
+
+
+def test_sales_line_accounting_view_uses_inferred_labels_as_display_fallback():
+    client = FakeOneCODataClient()
+
+    detailed_raw = {
+        "Ref_Key": "00000000-0000-0000-0000-000000000102",
+        "Дата": "2026-04-20T12:00:00",
+        "Date": "2026-04-20T12:00:00",
+        "Контрагент": "ТОО Альфа Строй",
+        "СуммаДокумента": "100000",
+        "Номер": "000503",
+        "Posted": True,
+        "ВидОперации": "ПродажаКомиссия",
+        "Товары": [
+            {
+                "Содержание": "Цемент М400",
+                "Количество": 8,
+                "Цена": 10000,
+                "Сумма": "80000",
+                "СчетУчетаБУ_Key": "acc-guid-1",
+                "СчетДоходовБУ_Key": "acc-guid-2",
+                "СчетСписанияСебестоимостиБУ_Key": "acc-guid-3",
+            }
+        ],
+    }
+
+    client._fetch_raw_entity_by_ref = lambda entity_name, ref_key: detailed_raw  # type: ignore[method-assign]
+    client._get_recent_sales_headers = lambda **kwargs: [{"number": "000503", "reference": detailed_raw["Ref_Key"]}]  # type: ignore[method-assign]
+    client._resolve_account_field = lambda value: None  # type: ignore[method-assign]
+    client._infer_account_label = lambda ref_key: {  # type: ignore[method-assign]
+        "acc-guid-1": "Товары",
+        "acc-guid-2": "Доход от реализации",
+        "acc-guid-3": "Себестоимость реализации",
+    }.get(ref_key)
+
+    result = client.get_sales_document_details(document_number="000503", max_lines=20)
+
+    line = result["data"][0]["lines"][0]
+    assert line["account_bu"] is None
+    assert line["account_bu_display"] == "Товары"
+    assert line["revenue_account_bu_display"] == "Доход от реализации"
+    assert line["cogs_account_bu_display"] == "Себестоимость реализации"
 
 
 def test_infer_account_labels_from_correspondence_catalog():
