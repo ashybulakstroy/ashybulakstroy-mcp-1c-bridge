@@ -1316,6 +1316,7 @@ def test_get_sales_document_details_formats_business_header_and_accounting_view(
     assert row["invoice_document"] == "0000000127 от 2026-04-20"
     assert row["basis_document"] == "0000000127 от 2026-04-20"
     assert row["settlement_document"] == "0000000127 от 2026-04-20"
+    assert row["document_link_mode"] == "direct_invoice_link"
     line = row["lines"][0]
     assert line["section_display"] == "ТМЗ"
     assert line["account_bu"] == "1330 Товары"
@@ -1365,6 +1366,7 @@ def test_get_sales_document_details_falls_back_to_basis_invoice_and_organization
     assert row["invoice_number"] == "0000000127"
     assert row["invoice_document"] == "0000000127 от 2026-04-20"
     assert row["basis_document"] == "0000000127 от 2026-04-20"
+    assert row["document_link_mode"] == "basis_invoice_link"
     assert row["operation_type_display"] == "Реализация (Товары)"
 
 
@@ -1409,6 +1411,13 @@ def test_sales_line_accounting_view_uses_inferred_labels_as_display_fallback():
     assert line["account_bu_display"] == "Товары"
     assert line["revenue_account_bu_display"] == "Доход от реализации"
     assert line["cogs_account_bu_display"] == "Себестоимость реализации"
+
+
+def test_sales_document_link_mode_reports_comment_only_and_no_links():
+    client = FakeOneCODataClient()
+
+    assert client._extract_sales_document_link_mode({"Комментарий": "КАРТА от 05.05.2026"}) == "comment_only"
+    assert client._extract_sales_document_link_mode({}) == "no_linked_documents"
 
 
 def test_infer_account_labels_from_correspondence_catalog():

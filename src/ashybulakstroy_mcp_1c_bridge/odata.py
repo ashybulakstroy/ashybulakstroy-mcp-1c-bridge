@@ -1853,6 +1853,7 @@ class OneCODataClient:
                     "invoice_document": self._extract_sales_invoice_document(raw),
                     "settlement_document": self._extract_sales_settlement_document(raw),
                     "basis_document": self._extract_sales_basis_document(raw),
+                    "document_link_mode": self._extract_sales_document_link_mode(raw),
                     "responsible": self._resolve_reference_value("Ответственный_Key", raw.get("Ответственный_Key")),
                     "comment": raw.get("Комментарий"),
                     "amount": detailed.get("amount"),
@@ -5017,6 +5018,25 @@ class OneCODataClient:
             entity_name = basis_type.split(".")[-1]
             return self._resolve_document_reference_display(entity_name, str(basis_ref))
         return None
+
+    def _extract_sales_document_link_mode(self, raw: dict[str, Any]) -> str:
+        invoice_ref = raw.get("СчетНаОплатуПокупателю_Key")
+        settlement_ref = raw.get("ДокументРасчетовСКонтрагентом")
+        basis_ref = raw.get("ДокументОснование")
+        basis_type = raw.get("ДокументОснование_Type")
+        comment = str(raw.get("Комментарий") or "").strip()
+
+        if self._is_guid_like(invoice_ref):
+            return "direct_invoice_link"
+        if self._is_guid_like(settlement_ref):
+            return "settlement_document_link"
+        if self._is_guid_like(basis_ref):
+            if basis_type == "StandardODATA.Document_СчетНаОплатуПокупателю":
+                return "basis_invoice_link"
+            return "basis_document_link"
+        if comment:
+            return "comment_only"
+        return "no_linked_documents"
 
     @staticmethod
     def _best_account_display(account_value: Any, inferred_label: str | None) -> str | None:
