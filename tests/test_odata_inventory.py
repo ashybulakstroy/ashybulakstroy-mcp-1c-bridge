@@ -1184,6 +1184,176 @@ def test_get_purchase_receipts_summary_filters_by_item_name():
     assert row["item"] == "Цемент М400"
 
 
+def test_get_sales_document_details_returns_header_and_lines():
+    client = FakeOneCODataClient()
+
+    result = client.get_sales_document_details(document_number="000500", max_lines=20)
+
+    assert result["count_returned"] == 1
+    row = result["data"][0]
+    assert row["document_type"] == "Document_РеализацияТоваровУслуг"
+    assert row["document_number"] == "000500"
+    assert row["counterparty"] == "ТОО Альфа Строй"
+    assert row["section_counts"]["goods"] == 2
+    assert row["lines"][0]["name"] == "Цемент М400"
+    assert row["lines"][0]["quantity"] == 8
+    assert row["lines"][0]["amount"] == "80000"
+
+
+def test_get_sales_receipts_summary_returns_flat_rows():
+    client = FakeOneCODataClient()
+
+    result = client.get_sales_receipts_summary(date_from="2026-04-20", date_to="2026-04-30", limit=10, items_per_document=5)
+
+    assert result["count_returned"] == 5
+    assert result["document_count_returned"] == 3
+    top = result["data"][0]
+    assert top["date"] == "2026-04-24"
+    assert top["document_number"] == "000502"
+    assert top["counterparty"] == "ТОО БетонПром"
+    assert top["item"] == "Песок"
+    assert top["quantity"] == 4
+    assert top["amount"] == 40000.0
+
+
+def test_get_sales_receipts_summary_filters_by_item_name():
+    client = FakeOneCODataClient()
+
+    result = client.get_sales_receipts_summary(date_from="2026-04-20", date_to="2026-04-30", item_name="Бокорез", limit=10)
+
+    assert result["count_returned"] == 1
+    row = result["data"][0]
+    assert row["document_number"] == "000501"
+    assert row["item"] == "Бокорез"
+
+
+def test_get_sales_document_details_formats_business_header_and_accounting_view():
+    client = FakeOneCODataClient()
+
+    detailed_raw = {
+        "Ref_Key": "00000000-0000-0000-0000-000000000100",
+        "Дата": "2026-04-20T12:00:00",
+        "Date": "2026-04-20T12:00:00",
+        "Контрагент": "ТОО Альфа Строй",
+        "СуммаДокумента": "100000",
+        "Номер": "000500",
+        "Posted": True,
+        "ДатаПодписанияАкта": "2026-04-21T00:00:00",
+        "СпособВыпискиАктовВыполненныхРабот": "ВБумажномВиде",
+        "ВидОперации": "РеализацияТоваровУслуг",
+        "СтруктурноеПодразделение_Key": "dep-guid",
+        "Ответственный_Key": "user-guid",
+        "СчетНаОплатуПокупателю_Key": "11111111-1111-1111-1111-111111111111",
+        "ДокументОснование": "22222222-2222-2222-2222-222222222222",
+        "ДокументОснование_Type": "StandardODATA.Document_СчетНаОплатуПокупателю",
+        "ДокументРасчетовСКонтрагентом": "33333333-3333-3333-3333-333333333333",
+        "ДокументРасчетовСКонтрагентом_Type": "StandardODATA.Document_СчетНаОплатуПокупателю",
+        "Товары": [
+            {
+                "Содержание": "Цемент М400",
+                "Количество": 8,
+                "Цена": 10000,
+                "Сумма": "80000",
+                "СчетУчетаБУ_Key": "acc-guid-1",
+                "СчетДоходовБУ_Key": "acc-guid-2",
+                "СчетСписанияСебестоимостиБУ_Key": "acc-guid-3",
+                "СубконтоДоходовБУ1": "sub-guid-1",
+                "СубконтоДоходовБУ1_Type": "StandardODATA.Catalog_Доходы",
+                "СубконтоДоходовБУ2": "sub-guid-2",
+                "СубконтоДоходовБУ2_Type": "StandardODATA.Catalog_НоменклатурныеГруппы",
+                "СубконтоСписанияСебестоимостиБУ1": "sub-guid-3",
+                "СубконтоСписанияСебестоимостиБУ1_Type": "StandardODATA.Catalog_СтатьиЗатрат",
+            }
+        ],
+    }
+
+    client._fetch_raw_entity_by_ref = lambda entity_name, ref_key: detailed_raw  # type: ignore[method-assign]
+    original_resolve_reference_value = client._resolve_reference_value
+    client._resolve_reference_value = lambda field_name, value: {  # type: ignore[method-assign]
+        ("СтруктурноеПодразделение_Key", "dep-guid"): "Основное подразделение",
+        ("Ответственный_Key", "user-guid"): "Сапар",
+    }.get((field_name, value), original_resolve_reference_value(field_name, value))
+    client._resolve_document_reference_display = lambda entity_name, ref_key: {  # type: ignore[method-assign]
+        "11111111-1111-1111-1111-111111111111": "0000000127 от 2026-04-20",
+        "22222222-2222-2222-2222-222222222222": "0000000127 от 2026-04-20",
+        "33333333-3333-3333-3333-333333333333": "0000000127 от 2026-04-20",
+    }.get(ref_key)
+    client._resolve_account_field = lambda value: {  # type: ignore[method-assign]
+        "acc-guid-1": "1330 Товары",
+        "acc-guid-2": "6010 Доходы",
+        "acc-guid-3": "7010 Себестоимость",
+    }.get(value)
+    client._resolve_typed_reference_display = lambda value, type_name: {  # type: ignore[method-assign]
+        "sub-guid-1": "Доходы",
+        "sub-guid-2": "Основная номенклатурная группа",
+        "sub-guid-3": "Статьи затрат",
+    }.get(value)
+
+    result = client.get_sales_document_details(document_number="000500", max_lines=20)
+
+    assert result["count_returned"] == 1
+    row = result["data"][0]
+    assert row["issue_method_display"] == "В бумажном виде"
+    assert row["operation_type_display"] == "Реализация товаров услуг"
+    assert row["structural_unit"] == "Основное подразделение"
+    assert row["responsible"] == "Сапар"
+    assert row["invoice_document"] == "0000000127 от 2026-04-20"
+    assert row["basis_document"] == "0000000127 от 2026-04-20"
+    assert row["settlement_document"] == "0000000127 от 2026-04-20"
+    line = row["lines"][0]
+    assert line["section_display"] == "ТМЗ"
+    assert line["account_bu"] == "1330 Товары"
+    assert line["account_bu_inferred_label"] is None
+    assert line["revenue_account_bu"] == "6010 Доходы"
+    assert line["cogs_account_bu"] == "7010 Себестоимость"
+    assert line["revenue_analytics_bu"] == ["Доходы", "Основная номенклатурная группа"]
+    assert line["cogs_analytics_bu"] == ["Статьи затрат"]
+    assert line["accounting_view"]["revenue_account_bu"] == "6010 Доходы"
+
+
+def test_infer_account_labels_from_correspondence_catalog():
+    client = FakeOneCODataClient()
+    original_query = client.query_entity
+
+    def patched_query(entity_name, top=50, select=None, filter_expr=None, orderby=None, skip=0):
+        if entity_name == "Catalog_КорреспонденцииСчетов":
+            return {
+                "entity": entity_name,
+                "count_returned": 3,
+                "top_applied": top,
+                "data": [
+                    {
+                        "СчетДт_Key": "8a906a7e-7eb2-11ee-a060-e0d55e49a969",
+                        "СчетКт_Key": "8a90697a-7eb2-11ee-a060-e0d55e49a969",
+                        "ТипДокумента": "Реализация ТМЗ и услуг",
+                        "ВидОперацииДокумента": "Реализация",
+                        "Содержание": "Реализация товаров",
+                    },
+                    {
+                        "СчетДт_Key": "00000000-0000-0000-0000-000000000000",
+                        "СчетКт_Key": "8a906a64-7eb2-11ee-a060-e0d55e49a969",
+                        "ТипДокумента": "Реализация ТМЗ и услуг",
+                        "ВидОперацииДокумента": "Реализация",
+                        "Содержание": "Реализация готовой продукции, товаров на договорную стоимость",
+                    },
+                    {
+                        "СчетДт_Key": "8a90697a-7eb2-11ee-a060-e0d55e49a969",
+                        "СчетКт_Key": "00000000-0000-0000-0000-000000000000",
+                        "ТипДокумента": "Поступление ТМЗ и услуг",
+                        "ВидОперацииДокумента": "Покупка",
+                        "Содержание": "Приобретение товаров: у физических лиц и организаций",
+                    },
+                ],
+            }
+        return original_query(entity_name, top=top, select=select, filter_expr=filter_expr, orderby=orderby, skip=skip)
+
+    client.query_entity = patched_query  # type: ignore[method-assign]
+
+    assert client._infer_account_label("8a90697a-7eb2-11ee-a060-e0d55e49a969") == "Товары"
+    assert client._infer_account_label("8a906a64-7eb2-11ee-a060-e0d55e49a969") == "Доход от реализации"
+    assert client._infer_account_label("8a906a7e-7eb2-11ee-a060-e0d55e49a969") == "Себестоимость реализации"
+
+
 def test_get_sales_documents_uses_tail_paging_when_filter_pushdown_is_rejected():
     client = FakeOneCODataClientSalesTailPaging()
 

@@ -101,6 +101,8 @@ cd C:\Work\Projects\Prj_9_MCP_1C_Ashybulak
 | `search_document_by_number` | Ищет document-like сущности по номеру | L0 | `read_documents` | yes | no | yes |
 | `get_purchase_document_details` | Показывает шапку и строки одного документа `Поступление ТМЗ и услуг` | L0 | `read_documents` | yes | no | yes |
 | `get_purchase_receipts_summary` | Показывает плоскую таблицу поступлений за период: дата, товар, объем, поставщик, номер документа | L0 | `read_documents` | yes | no | yes |
+| `get_sales_document_details` | Показывает шапку и строки одной реализации `Реализация ТМЗ и услуг` | L0 | `read_documents` | yes | no | yes |
+| `get_sales_receipts_summary` | Показывает плоскую таблицу реализаций за период: дата, товар, объем, контрагент, номер документа | L0 | `read_documents` | yes | no | yes |
 | `search_metadata` | Ищет сущности/поля по metadata | L0 | `read_metadata` | yes | no | yes |
 | `explore_live_entities` | Проверяет, какие сущности реально отдают данные | L0 | `read_metadata` | yes | no | yes |
 | `discover_inventory_sources` | Ищет источник остатков | L0 | `read_inventory` | yes | no | yes |

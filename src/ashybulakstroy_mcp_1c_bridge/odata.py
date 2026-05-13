@@ -57,6 +57,7 @@ class OneCODataClient:
         self._metadata_xml: str | None = None
         self._entities_cache: list[EntityInfo] | None = None
         self._reference_cache: dict[tuple[str, str, tuple[str, ...]], dict[str, Any] | None] = {}
+        self._account_label_cache: dict[str, str | None] = {}
 
     def _require_url(self) -> None:
         if not self.settings.odata_url:
@@ -1750,6 +1751,350 @@ class OneCODataClient:
             "warnings": list(receipts.get("warnings") or []),
             "note": "Read-only purchase receipts summary from published OData. Формат: дата, товар, объем, поставщик, номер документа.",
         }
+
+    def get_sales_document_details(
+        self,
+        document_number: str,
+        counterparty_name: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        max_lines: int = 50,
+    ) -> dict[str, Any]:
+        """Return safe read-only details for one sales document with line items."""
+        effective_max_lines = min(max(int(max_lines), 1), 200)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        source_list = self.discover_sales_sources(limit=1, check_data=True)
+        if not source_list:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "document_number": document_number,
+                    "counterparty_name": counterparty_name,
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "max_lines": effective_max_lines,
+                },
+                "warnings": ["Не найден безопасный источник реализаций в OData."],
+                "note": "Реализация не найдена в опубликованном read-only OData контуре.",
+            }
+        source = source_list[0]
+        entity_name = str(source.get("entity") or "Document_РеализацияТоваровУслуг")
+        mapped = source.get("mapped_fields") or {}
+        warnings: list[str] = []
+        candidates = self._get_recent_sales_headers(
+            entity_name=entity_name,
+            mapped=mapped,
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty_name=counterparty_name,
+            max_documents=200,
+            warnings=warnings,
+        )
+        needle = str(document_number or "").strip().lstrip("0")
+        candidates = [
+            row for row in candidates
+            if str(row.get("number") or "").strip().lstrip("0") == needle
+        ]
+        if not candidates:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "document_number": document_number,
+                    "counterparty_name": counterparty_name,
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "max_lines": effective_max_lines,
+                },
+                "warnings": warnings,
+                "note": "Реализация не найдена в опубликованном read-only OData контуре.",
+            }
+        detailed_header = candidates[0]
+        raw = self._fetch_raw_entity_by_ref(entity_name, str(detailed_header.get("reference") or ""))
+        if raw is None:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "document_number": document_number,
+                    "counterparty_name": counterparty_name,
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "max_lines": effective_max_lines,
+                },
+                "warnings": warnings,
+                "note": "Шапка реализации найдена, но детальные строки документа не были прочитаны из OData.",
+            }
+        detailed = self._normalize_sales_row(raw, mapped)
+        line_items = self._extract_sales_line_items(raw)[:effective_max_lines]
+        section_counts = {
+            "goods": len(raw.get("Товары") or []) if isinstance(raw.get("Товары"), list) else 0,
+            "services": len(raw.get("Услуги") or []) if isinstance(raw.get("Услуги"), list) else 0,
+        }
+        return {
+            "count_returned": 1,
+            "data": [
+                {
+                    "document_type": "Document_РеализацияТоваровУслуг",
+                    "document_number": detailed.get("number"),
+                    "date": detailed.get("date"),
+                    "signed_date": self._extract_sales_signed_date(raw),
+                    "counterparty": detailed.get("counterparty"),
+                    "counterparty_bin_or_iin": detailed.get("counterparty_bin_or_iin"),
+                    "organization": detailed.get("organization"),
+                    "warehouse": self._extract_sales_warehouse(raw),
+                    "structural_unit": self._resolve_reference_value("СтруктурноеПодразделение_Key", raw.get("СтруктурноеПодразделение_Key")),
+                    "operation_type": raw.get("ВидОперации"),
+                    "operation_type_display": self._format_enum_label(raw.get("ВидОперации")),
+                    "issue_method": raw.get("СпособВыпискиАктовВыполненныхРабот"),
+                    "issue_method_display": self._format_enum_label(raw.get("СпособВыпискиАктовВыполненныхРабот")),
+                    "invoice_number": self._extract_sales_invoice_number(raw),
+                    "invoice_document": self._extract_sales_invoice_document(raw),
+                    "settlement_document": self._extract_sales_settlement_document(raw),
+                    "basis_document": self._extract_sales_basis_document(raw),
+                    "responsible": self._resolve_reference_value("Ответственный_Key", raw.get("Ответственный_Key")),
+                    "comment": raw.get("Комментарий"),
+                    "amount": detailed.get("amount"),
+                    "currency": detailed.get("currency"),
+                    "status": self._extract_document_status(raw, self._map_document_fields(list(raw.keys()))),
+                    "section_counts": section_counts,
+                    "lines": line_items,
+                    "source_entity": "Document_РеализацияТоваровУслуг",
+                }
+            ],
+            "filters_applied_in_python": {
+                "document_number": document_number,
+                "counterparty_name": counterparty_name,
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "max_lines": effective_max_lines,
+            },
+            "source": source,
+            "warnings": warnings,
+            "note": "Read-only details view of one published sales document. Не выполняет запись в 1С и не раскрывает raw OData агенту.",
+        }
+
+    def get_sales_receipts_summary(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        item_name: str | None = None,
+        limit: int = 50,
+        items_per_document: int = 10,
+    ) -> dict[str, Any]:
+        """Return safe sales rows by period as flat business rows."""
+        effective_limit = min(max(int(limit), 1), 100)
+        sample_items_limit = min(max(int(items_per_document), 1), 30)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        sales = self._get_recent_sales_documents(
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty_name=counterparty_name,
+            max_documents=min(max(effective_limit, 1), 30),
+        )
+        document_rows: list[dict[str, Any]] = []
+        item_filter = str(item_name or "").strip()
+        for row in sales.get("data") or []:
+            raw = row.get("raw") or {}
+            line_items = self._extract_sales_line_items(raw)
+            grouped_items: dict[str, dict[str, Any]] = {}
+            for line in line_items:
+                if item_filter and not self._text_match(line.get("name"), item_filter):
+                    continue
+                item_key = str(line.get("name") or "").strip()
+                if not item_key:
+                    continue
+                bucket = grouped_items.setdefault(
+                    item_key,
+                    {
+                        "item": item_key,
+                        "quantity": 0,
+                        "amount": 0,
+                    },
+                )
+                quantity = self._safe_float(line.get("quantity"))
+                amount = self._safe_float(line.get("amount"))
+                if quantity is not None:
+                    bucket["quantity"] += quantity
+                if amount is not None:
+                    bucket["amount"] += amount
+            if item_filter and not grouped_items:
+                continue
+            normalized_items = sorted(
+                grouped_items.values(),
+                key=lambda item: (-float(item.get("quantity") or 0), str(item.get("item") or "")),
+            )
+            document_rows.append(
+                {
+                    "date": row.get("date"),
+                    "date_only": str(row.get("date") or "")[:10],
+                    "document_number": row.get("number"),
+                    "counterparty": row.get("counterparty"),
+                    "amount": row.get("amount"),
+                    "currency": row.get("currency"),
+                    "warehouse": self._extract_sales_warehouse(raw),
+                    "operation_type": raw.get("ВидОперации"),
+                    "signed_date": self._extract_sales_signed_date(raw),
+                    "issue_method": raw.get("СпособВыпискиАктовВыполненныхРабот"),
+                    "item_count": len(normalized_items),
+                    "items": normalized_items[:sample_items_limit],
+                    "source_entity": "Document_РеализацияТоваровУслуг",
+                }
+            )
+
+        document_rows.sort(
+            key=lambda item: (
+                self._parse_datetime_like(item.get("date")) or datetime.min,
+                str(item.get("document_number") or ""),
+            ),
+            reverse=True,
+        )
+        document_rows = document_rows[:effective_limit]
+        flat_rows: list[dict[str, Any]] = []
+        for document in document_rows:
+            for item in document.get("items") or []:
+                flat_rows.append(
+                    {
+                        "date": document.get("date_only"),
+                        "item": item.get("item"),
+                        "quantity": item.get("quantity"),
+                        "counterparty": document.get("counterparty"),
+                        "document_number": document.get("document_number"),
+                        "amount": item.get("amount"),
+                        "currency": document.get("currency"),
+                        "warehouse": document.get("warehouse"),
+                        "operation_type": document.get("operation_type"),
+                        "signed_date": document.get("signed_date"),
+                        "issue_method": document.get("issue_method"),
+                        "source_entity": document.get("source_entity"),
+                    }
+                )
+        return {
+            "count_returned": len(flat_rows),
+            "document_count_returned": len(document_rows),
+            "data": flat_rows,
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "item_name": item_name,
+                "limit": effective_limit,
+                "items_per_document": sample_items_limit,
+            },
+            "source": sales.get("source"),
+            "warnings": list(sales.get("warnings") or []),
+            "note": "Read-only sales receipts summary from published OData. Формат: дата, товар, объем, контрагент, номер документа.",
+        }
+
+    def _get_recent_sales_documents(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        max_documents: int = 200,
+    ) -> dict[str, Any]:
+        warnings: list[str] = []
+        source = self.discover_sales_sources(limit=1, check_data=True)
+        if not source:
+            return {
+                "source": None,
+                "count_returned": 0,
+                "data": [],
+                "warnings": ["Не найден безопасный источник реализаций в OData."],
+        }
+        candidate = source[0]
+        entity_name = str(candidate.get("entity") or "Document_РеализацияТоваровУслуг")
+        mapped = candidate.get("mapped_fields") or {}
+        headers = self._get_recent_sales_headers(
+            entity_name=entity_name,
+            mapped=mapped,
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            max_documents=max_documents,
+            warnings=warnings,
+        )
+        deduped: list[dict[str, Any]] = []
+        for header in headers:
+            ref_key = str(header.get("reference") or "")
+            raw = self._fetch_raw_entity_by_ref(entity_name, ref_key)
+            if not raw:
+                continue
+            normalized = self._normalize_sales_row(raw, mapped)
+            deduped.append(normalized)
+        if not deduped:
+            warnings.append("В текущей OData-публикации не найдено строк по реализациям для заданных фильтров.")
+        return {
+            "source": candidate,
+            "count_returned": len(deduped),
+            "data": deduped,
+            "warnings": warnings,
+        }
+
+    def _get_recent_sales_headers(
+        self,
+        *,
+        entity_name: str,
+        mapped: dict[str, Any],
+        date_from: str | None,
+        date_to: str | None,
+        counterparty_name: str | None,
+        max_documents: int,
+        warnings: list[str],
+    ) -> list[dict[str, Any]]:
+        page_size = min(max(max_documents, 50), 100)
+        validated_from = self._parse_date_like(date_from) if date_from else None
+        validated_to = self._parse_date_like(date_to) if date_to else None
+        header_select = self._build_sales_header_select(entity_name, mapped)
+        raw_rows = self._read_recent_tail_rows(
+            entity_name,
+            select=header_select,
+            page_size=page_size,
+            tail_pages=max(4, min(10, (max_documents // 10) + 4)),
+            max_probe_skip=min(self.settings.max_top * 100, 50000),
+            warnings=warnings,
+        )
+        rows: list[dict[str, Any]] = []
+        document_mapped = self._map_document_fields(list({*header_select, "Posted", "DeletionMark"}))
+        if mapped.get("counterparty"):
+            document_mapped["counterparty"] = mapped.get("counterparty")
+        if mapped.get("amount"):
+            document_mapped["amount"] = mapped.get("amount")
+        if mapped.get("date"):
+            document_mapped["date"] = mapped.get("date")
+        if mapped.get("number"):
+            document_mapped["number"] = mapped.get("number")
+        document_mapped["reference"] = "Ref_Key"
+        for raw in raw_rows:
+            row = self._normalize_document_search_row(raw, entity_name, document_mapped)
+            row_date = self._parse_date_like(row.get("date"))
+            if validated_to and row_date and row_date > validated_to:
+                continue
+            if validated_from and row_date and row_date < validated_from:
+                continue
+            if counterparty_name and not self._text_match(row.get("counterparty"), counterparty_name):
+                continue
+            rows.append(row)
+        rows.sort(
+            key=lambda item: (
+                self._parse_datetime_like(item.get("date")) or datetime.min,
+                str(item.get("number") or ""),
+            ),
+            reverse=True,
+        )
+        deduped: list[dict[str, Any]] = []
+        seen: set[tuple[Any, Any]] = set()
+        for row in rows:
+            key = (row.get("number"), row.get("date"))
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(row)
+            if len(deduped) >= max_documents:
+                break
+        return deduped
 
     def search_document_by_number(
         self,
@@ -3575,8 +3920,14 @@ class OneCODataClient:
             "date": ["date", "дата", "period", "период", "documentdate"],
             "number": ["number", "номер", "documentnumber"],
             "organization": ["организацияkey", "организация", "organization", "company"],
+            "currency": ["валютадокументаkey", "валютаkey", "валюта", "currency"],
         }
-        return self._map_fields_by_patterns(field_names, patterns)
+        mapped = self._map_fields_by_patterns(field_names, patterns)
+        if "Контрагент_Key" in field_names:
+            mapped["counterparty"] = "Контрагент_Key"
+        elif "Контрагент" in field_names:
+            mapped["counterparty"] = "Контрагент"
+        return mapped
 
     def _map_purchase_fields(self, field_names: list[str]) -> dict[str, str | None]:
         patterns: dict[str, list[str]] = {
@@ -3643,10 +3994,40 @@ class OneCODataClient:
     @staticmethod
     def _build_sales_select(mapped: dict[str, str | None]) -> list[str]:
         out: list[str] = []
-        for key in ("counterparty", "amount", "date", "number", "organization"):
+        for key in ("counterparty", "amount", "date", "number", "organization", "currency"):
             value = mapped.get(key)
             if value and value not in out:
                 out.append(value)
+        return out
+
+    def _build_sales_header_select(self, entity_name: str, mapped: dict[str, str | None]) -> list[str]:
+        entity = self.describe_entity(entity_name)
+        field_names = {field.name for field in (entity.fields or [])} if entity else set()
+        preferred = [
+            "Ref_Key",
+            mapped.get("number"),
+            mapped.get("date"),
+            mapped.get("counterparty"),
+            mapped.get("amount"),
+            mapped.get("organization"),
+            mapped.get("currency"),
+            "Склад_Key",
+            "ВидОперации",
+            "ДатаПодписанияГЗ",
+            "ДатаПодписанияАкта",
+            "СпособВыпискиАктовВыполненныхРабот",
+            "СчетНаОплатуПокупателю_Key",
+            "ДокументРасчетовСКонтрагентом",
+            "ДокументРасчетовСКонтрагентом_Type",
+            "Ответственный_Key",
+            "Комментарий",
+            "Posted",
+            "DeletionMark",
+        ]
+        out: list[str] = []
+        for field in preferred:
+            if field and field in field_names and field not in out:
+                out.append(field)
         return out
 
     @staticmethod
@@ -3817,34 +4198,100 @@ class OneCODataClient:
         for field in select_fields:
             self._validate_identifier(field, "select field")
         path = f"{entity_name}(guid'{ref_key}')"
-        response = self._get(path, params={"$select": ",".join(select_fields)}, headers={"Accept": "application/xml"})
+        try:
+            response = self._get(path, params={"$select": ",".join(select_fields)}, headers={"Accept": "application/xml"})
+        except ODataError:
+            response = None
+        out: dict[str, Any] | None = None
+        if response is not None and response.status_code < 400:
+            try:
+                root = ET.fromstring(response.text)
+            except ET.ParseError:
+                root = None
+            if root is not None:
+                properties = None
+                for node in root.iter():
+                    if self._xml_local_name(node.tag) == "properties":
+                        properties = node
+                        break
+                if properties is not None:
+                    parsed: dict[str, Any] = {}
+                    for child in properties:
+                        local_name = self._xml_local_name(child.tag)
+                        if local_name in select_fields:
+                            parsed[local_name] = child.text
+                    out = parsed or None
+        if out is None:
+            payload = self._query_entity_reference_fallback(entity_name, ref_key, select_fields)
+            if payload:
+                out = payload
+        self._reference_cache[cache_key] = out
+        return self._reference_cache[cache_key]
+
+    def _query_entity_reference_fallback(
+        self,
+        entity_name: str,
+        ref_key: str,
+        select_fields: tuple[str, ...],
+    ) -> dict[str, Any] | None:
+        top = min(max(self.settings.max_top, 1), 1000)
+        try:
+            payload = self.query_entity(
+                entity_name,
+                top=top,
+                select=["Ref_Key", *select_fields],
+            )
+        except ODataError:
+            payload = None
+        if payload:
+            for row in payload.get("data") or []:
+                if str(row.get("Ref_Key") or "") == ref_key:
+                    return {field: row.get(field) for field in select_fields if row.get(field) not in (None, "")}
+        merged: dict[str, Any] = {}
+        for field in select_fields:
+            try:
+                payload = self.query_entity(entity_name, top=top, select=["Ref_Key", field])
+            except ODataError:
+                continue
+            for row in payload.get("data") or []:
+                if str(row.get("Ref_Key") or "") == ref_key and row.get(field) not in (None, ""):
+                    merged[field] = row.get(field)
+                    break
+        return merged or None
+
+    def _fetch_raw_entity_by_ref(self, entity_name: str, ref_key: str) -> dict[str, Any] | None:
+        if not self._is_guid_like(ref_key) or ref_key == "00000000-0000-0000-0000-000000000000":
+            return None
+        self._validate_identifier(entity_name, "entity_name")
+        path = f"{entity_name}(guid'{ref_key}')"
+        try:
+            response = self._get(path)
+        except ODataError:
+            try:
+                payload = self.query_entity(entity_name, top=min(max(self.settings.max_top, 1), 1000))
+            except ODataError:
+                return None
+            for row in payload.get("data") or []:
+                if str(row.get("Ref_Key") or "") == ref_key:
+                    return row
+            return None
         if response.status_code >= 400:
-            self._reference_cache[cache_key] = None
             return None
         try:
-            root = ET.fromstring(response.text)
-        except ET.ParseError:
-            self._reference_cache[cache_key] = None
+            data = response.json()
+        except ValueError:
             return None
-        properties = None
-        for node in root.iter():
-            if self._xml_local_name(node.tag) == "properties":
-                properties = node
-                break
-        if properties is None:
-            self._reference_cache[cache_key] = None
-            return None
-        out: dict[str, Any] = {}
-        for child in properties:
-            local_name = self._xml_local_name(child.tag)
-            if local_name in select_fields:
-                out[local_name] = child.text
-        self._reference_cache[cache_key] = out or None
-        return self._reference_cache[cache_key]
+        return data if isinstance(data, dict) else None
 
     @staticmethod
     def _preferred_display_fields_for_entity(entity_name: str) -> tuple[str, ...]:
+        if entity_name.startswith("Document_"):
+            return ("Number", "Date")
+        if entity_name.startswith("ChartOfAccounts_"):
+            return ("Code", "Description")
         if entity_name in {"Catalog_Склады", "Catalog_Кассы", "Catalog_Организации"}:
+            return ("Description", "Code")
+        if entity_name in {"Catalog_Пользователи", "Catalog_ПодразделенияОрганизаций", "Catalog_ДоговорыКонтрагентов", "Catalog_Доходы", "Catalog_СтатьиЗатрат", "Catalog_НоменклатурныеГруппы"}:
             return ("Description", "Code")
         if entity_name == "Catalog_БанковскиеСчета":
             return ("Description", "НомерСчета", "Code")
@@ -3865,6 +4312,14 @@ class OneCODataClient:
             return "Catalog_Валюты"
         if "касс" in normalized:
             return "Catalog_Кассы"
+        if "ответствен" in normalized or "автор" in normalized or "пользоват" in normalized:
+            return "Catalog_Пользователи"
+        if "подраздел" in normalized:
+            return "Catalog_ПодразделенияОрганизаций"
+        if "счетнаоплатупокупателю" in normalized:
+            return "Document_СчетНаОплатуПокупателю"
+        if "договорконтрагента" in normalized:
+            return "Catalog_ДоговорыКонтрагентов"
         if "счетбанк" in normalized or "банковскиесчет" in normalized:
             return "Catalog_БанковскиеСчета"
         if "организац" in normalized:
@@ -4306,25 +4761,71 @@ class OneCODataClient:
         }
 
     def _extract_sales_line_items(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
-        rows = raw.get("Товары")
-        if not isinstance(rows, list):
-            return []
         out: list[dict[str, Any]] = []
-        for row in rows:
-            name = (
-                row.get("Содержание")
-                or row.get("Description")
-                or self._resolve_reference_value("Номенклатура_Key", row.get("Номенклатура_Key"))
-                or self._resolve_reference_value("Номенклатура", row.get("Номенклатура"))
-            )
-            out.append(
-                {
-                    "name": name,
-                    "item_key": row.get("Номенклатура_Key"),
-                    "quantity": row.get("Количество"),
-                    "amount": row.get("Сумма"),
-                }
-            )
+        for section_name in ("Товары", "Услуги"):
+            rows = raw.get(section_name)
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                name = (
+                    row.get("Содержание")
+                    or row.get("Description")
+                    or self._resolve_reference_value("Номенклатура_Key", row.get("Номенклатура_Key"))
+                    or self._resolve_reference_value("Номенклатура", row.get("Номенклатура"))
+                )
+                account_bu = self._resolve_account_field(row.get("СчетУчетаБУ_Key"))
+                revenue_account_bu = self._resolve_account_field(row.get("СчетДоходовБУ_Key"))
+                cogs_account_bu = self._resolve_account_field(row.get("СчетСписанияСебестоимостиБУ_Key"))
+                account_bu_inferred = self._infer_account_label(str(row.get("СчетУчетаБУ_Key") or ""))
+                revenue_account_bu_inferred = self._infer_account_label(str(row.get("СчетДоходовБУ_Key") or ""))
+                cogs_account_bu_inferred = self._infer_account_label(str(row.get("СчетСписанияСебестоимостиБУ_Key") or ""))
+                revenue_analytics_bu = self._extract_subkonto_values(
+                    row,
+                    "СубконтоДоходовБУ",
+                    (
+                        row.get("СубконтоДоходовБУ1"),
+                        row.get("СубконтоДоходовБУ2"),
+                        row.get("СубконтоДоходовБУ3"),
+                    ),
+                )
+                cogs_analytics_bu = self._extract_subkonto_values(
+                    row,
+                    "СубконтоСписанияСебестоимостиБУ",
+                    (
+                        row.get("СубконтоСписанияСебестоимостиБУ1"),
+                        row.get("СубконтоСписанияСебестоимостиБУ2"),
+                        row.get("СубконтоСписанияСебестоимостиБУ3"),
+                    ),
+                )
+                out.append(
+                    {
+                        "section": "goods" if section_name == "Товары" else "services",
+                        "section_display": "ТМЗ" if section_name == "Товары" else "Услуги",
+                        "name": name,
+                        "item_key": row.get("Номенклатура_Key"),
+                        "quantity": row.get("Количество"),
+                        "price": row.get("Цена"),
+                        "amount": row.get("Сумма"),
+                        "account_bu": account_bu,
+                        "account_bu_inferred_label": account_bu_inferred,
+                        "revenue_account_bu": revenue_account_bu,
+                        "revenue_account_bu_inferred_label": revenue_account_bu_inferred,
+                        "cogs_account_bu": cogs_account_bu,
+                        "cogs_account_bu_inferred_label": cogs_account_bu_inferred,
+                        "revenue_analytics_bu": revenue_analytics_bu,
+                        "cogs_analytics_bu": cogs_analytics_bu,
+                        "accounting_view": {
+                            "account_bu": account_bu,
+                            "account_bu_inferred_label": account_bu_inferred,
+                            "revenue_account_bu": revenue_account_bu,
+                            "revenue_account_bu_inferred_label": revenue_account_bu_inferred,
+                            "cogs_account_bu": cogs_account_bu,
+                            "cogs_account_bu_inferred_label": cogs_account_bu_inferred,
+                            "revenue_analytics_bu": revenue_analytics_bu,
+                            "cogs_analytics_bu": cogs_analytics_bu,
+                        },
+                    }
+                )
         return out
 
     def _extract_purchase_line_items(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
@@ -4349,6 +4850,207 @@ class OneCODataClient:
                     }
                 )
         return out
+
+    def _extract_sales_signed_date(self, raw: dict[str, Any]) -> str | None:
+        return (
+            raw.get("ДатаПодписанияАкта")
+            or raw.get("ДатаПодписанияГЗ")
+            or raw.get("ДатаПодписания")
+        )
+
+    def _extract_sales_warehouse(self, raw: dict[str, Any]) -> Any:
+        return self._resolve_reference_value("Склад_Key", raw.get("Склад_Key"))
+
+    def _extract_sales_invoice_number(self, raw: dict[str, Any]) -> str | None:
+        invoice_ref = raw.get("СчетНаОплатуПокупателю_Key")
+        if self._is_guid_like(invoice_ref):
+            resolved = self._fetch_entity_by_ref("Document_СчетНаОплатуПокупателю", str(invoice_ref), ("Number", "Date"))
+            if resolved:
+                number = resolved.get("Number")
+                if number not in (None, ""):
+                    return str(number)
+        return None
+
+    def _extract_sales_invoice_document(self, raw: dict[str, Any]) -> str | None:
+        invoice_ref = raw.get("СчетНаОплатуПокупателю_Key")
+        if self._is_guid_like(invoice_ref):
+            return self._resolve_document_reference_display("Document_СчетНаОплатуПокупателю", str(invoice_ref))
+        return None
+
+    def _extract_sales_settlement_document(self, raw: dict[str, Any]) -> str | None:
+        doc_ref = raw.get("ДокументРасчетовСКонтрагентом")
+        doc_type = raw.get("ДокументРасчетовСКонтрагентом_Type")
+        if self._is_guid_like(doc_ref) and isinstance(doc_type, str) and "." in doc_type:
+            entity_name = doc_type.split(".")[-1]
+            return self._resolve_document_reference_display(entity_name, str(doc_ref))
+        return None
+
+    def _extract_sales_basis_document(self, raw: dict[str, Any]) -> str | None:
+        basis_ref = raw.get("ДокументОснование")
+        basis_type = raw.get("ДокументОснование_Type")
+        if self._is_guid_like(basis_ref) and isinstance(basis_type, str) and "." in basis_type:
+            entity_name = basis_type.split(".")[-1]
+            return self._resolve_document_reference_display(entity_name, str(basis_ref))
+        return None
+
+    def _resolve_account_field(self, value: Any) -> str | None:
+        if not value:
+            return None
+        if self._is_guid_like(value):
+            display = self._resolve_account_reference(str(value))
+            if display:
+                return display
+            return str(value)[:8]
+        return str(value)
+
+    def _resolve_account_reference(self, ref_key: str) -> str | None:
+        for entity_name in (
+            "ChartOfAccounts_Хозрасчетный",
+            "ChartOfAccounts_Бухгалтерский",
+            "ChartOfAccounts_РабочийПланСчетов",
+            "ChartOfAccounts_СчетаБухгалтерскогоУчета",
+            "ChartOfAccounts_ХозрасчетныеСчета",
+        ):
+            payload = self._fetch_entity_by_ref(entity_name, ref_key, ("Code", "Description"))
+            if payload:
+                code = payload.get("Code")
+                description = payload.get("Description")
+                if code and description:
+                    return f"{code} {description}"
+                if code:
+                    return str(code)
+                if description:
+                    return str(description)
+        return None
+
+    def _infer_account_label(self, ref_key: str) -> str | None:
+        if not self._is_guid_like(ref_key):
+            return None
+        if ref_key in self._account_label_cache:
+            return self._account_label_cache[ref_key]
+        try:
+            payload = self.query_entity("Catalog_КорреспонденцииСчетов", top=500)
+        except ODataError:
+            self._account_label_cache[ref_key] = None
+            return None
+        sales_hits: list[dict[str, Any]] = []
+        purchase_hits: list[dict[str, Any]] = []
+        generic_hits: list[dict[str, Any]] = []
+        for row in payload.get("data") or []:
+            is_dt = row.get("СчетДт_Key") == ref_key
+            is_kt = row.get("СчетКт_Key") == ref_key
+            if not is_dt and not is_kt:
+                continue
+            doc_type = str(row.get("ТипДокумента") or "")
+            op_type = str(row.get("ВидОперацииДокумента") or "")
+            content = str(row.get("Содержание") or "")
+            bucket_row = {
+                "is_dt": is_dt,
+                "is_kt": is_kt,
+                "doc_type": doc_type,
+                "op_type": op_type,
+                "content": content,
+            }
+            doc_text = f"{doc_type} {op_type} {content}".lower()
+            if "реализац" in doc_text:
+                sales_hits.append(bucket_row)
+            elif "поступлен" in doc_text or "приобретен" in doc_text or "товар" in doc_text:
+                purchase_hits.append(bucket_row)
+            else:
+                generic_hits.append(bucket_row)
+        inferred = self._infer_account_label_from_hits(sales_hits, purchase_hits, generic_hits)
+        self._account_label_cache[ref_key] = inferred
+        return inferred
+
+    @staticmethod
+    def _infer_account_label_from_hits(
+        sales_hits: list[dict[str, Any]],
+        purchase_hits: list[dict[str, Any]],
+        generic_hits: list[dict[str, Any]],
+    ) -> str | None:
+        sales_text = " ".join(
+            f"{row.get('doc_type','')} {row.get('op_type','')} {row.get('content','')}".lower()
+            for row in sales_hits
+        )
+        purchase_text = " ".join(
+            f"{row.get('doc_type','')} {row.get('op_type','')} {row.get('content','')}".lower()
+            for row in purchase_hits
+        )
+        generic_text = " ".join(
+            f"{row.get('doc_type','')} {row.get('op_type','')} {row.get('content','')}".lower()
+            for row in generic_hits
+        )
+        if "договорную стоимость" in sales_text or "доход" in sales_text:
+            return "Доход от реализации"
+        if "себестоим" in sales_text:
+            return "Себестоимость реализации"
+        if "реализация товаров" in sales_text and any(row.get("is_dt") for row in sales_hits):
+            return "Себестоимость реализации"
+        if "реализация товаров" in sales_text and any(row.get("is_kt") for row in sales_hits):
+            return "Товары"
+        if "приобретение товаров" in purchase_text or "поступление товаров" in purchase_text:
+            return "Товары"
+        if "товар" in generic_text:
+            return "Товары"
+        return None
+
+    def _extract_subkonto_values(self, row: dict[str, Any], prefix: str, values: tuple[Any, Any, Any]) -> list[str]:
+        out: list[str] = []
+        for idx, value in enumerate(values, start=1):
+            if value in (None, "", "00000000-0000-0000-0000-000000000000"):
+                continue
+            resolved = self._resolve_typed_reference_display(value, row.get(f"{prefix}{idx}_Type")) or value
+            text = str(resolved).strip()
+            if text and text not in out:
+                out.append(text)
+        return out
+
+    def _resolve_typed_reference_display(self, value: Any, type_name: Any) -> str | None:
+        if not self._is_guid_like(value) or not isinstance(type_name, str) or "." not in type_name:
+            return None
+        entity_name = type_name.split(".")[-1]
+        preferred_fields = self._preferred_display_fields_for_entity(entity_name)
+        payload = self._fetch_entity_by_ref(entity_name, str(value), preferred_fields)
+        if not payload:
+            return None
+        for field in preferred_fields:
+            resolved = payload.get(field)
+            if resolved not in (None, ""):
+                return str(resolved)
+        return None
+
+    def _resolve_document_reference_display(self, entity_name: str, ref_key: str) -> str | None:
+        payload = self._fetch_entity_by_ref(entity_name, ref_key, ("Number", "Date"))
+        if not payload:
+            return None
+        number = payload.get("Number")
+        doc_date = payload.get("Date")
+        if number in (None, "") and doc_date in (None, ""):
+            return None
+        if number not in (None, "") and doc_date not in (None, ""):
+            return f"{number} от {str(doc_date)[:10]}"
+        if number not in (None, ""):
+            return str(number)
+        return str(doc_date)[:10]
+
+    @staticmethod
+    def _format_enum_label(value: Any) -> str | None:
+        if value in (None, ""):
+            return None
+        raw = str(value).strip()
+        known = {
+            "ВБумажномВиде": "В бумажном виде",
+            "ВЭлектронномВиде": "В электронном виде",
+            "РеализацияТоваровУслуг": "Реализация товаров услуг",
+            "ПродажаКомиссия": "Продажа комиссия",
+        }
+        if raw in known:
+            return known[raw]
+        text = raw.replace("_", " ").strip()
+        text = re.sub(r"(?<=[а-яa-z0-9])(?=[А-ЯA-Z])", " ", text)
+        if not text:
+            return None
+        return text[:1].upper() + text[1:]
 
     def _last_payment_dates_by_customer(self, payment_rows: list[dict[str, Any]]) -> dict[str, str]:
         out: dict[str, str] = {}

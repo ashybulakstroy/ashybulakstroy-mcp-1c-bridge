@@ -289,6 +289,10 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Детализация поступления читает опубликованный Document_ПоступлениеТоваровУслуг и возвращает безопасную шапку документа и строки ТМЗ/услуг без raw OData.")
     elif tool == "get_purchase_receipts_summary":
         explanation["summary"].append("Сводка поступлений читает опубликованные документы поступления и возвращает плоские business-строки: дата, товар, объем, поставщик, номер документа.")
+    elif tool == "get_sales_document_details":
+        explanation["summary"].append("Детализация реализации читает опубликованный Document_РеализацияТоваровУслуг и возвращает безопасную шапку документа и строки товаров/услуг без raw OData.")
+    elif tool == "get_sales_receipts_summary":
+        explanation["summary"].append("Сводка реализаций читает опубликованные документы продаж и возвращает плоские business-строки: дата, товар, объем, контрагент, номер документа.")
     elif tool == "validate_inventory_report_text":
         explanation["summary"].append("Сверка сравнила нормализованные строки MCP и строки отчета 1С по ключам item+warehouse с учетом допусков.")
     if not explanation["warnings"]:
@@ -522,6 +526,47 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
                 tool="get_purchase_receipts_summary",
             )
 
+        if any(phrase in ql for phrase in ["покажи реализацию", "покажи товары реализации", "что внутри реализации", "товары в реализации", "расшифруй реализацию"]):
+            date_from, date_to = _extract_date_range(q)
+            document_number = _extract_document_number(q)
+            counterparty = _extract_counterparty_hint(q)
+            if not document_number:
+                raise ValueError("Укажите номер реализации, например: 'Покажи товары реализации 0000001243'.")
+            result = odata.get_sales_document_details(
+                document_number=document_number,
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+            )
+            return _ok(
+                {
+                    "intent": "get_sales_document_details",
+                    "parsed": {"document_number": document_number, "date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty},
+                    "result": result,
+                },
+                tool="get_sales_document_details",
+            )
+
+        if any(phrase in ql for phrase in ["что продавали", "какой товар продавали", "какие товары продавали", "реализации за период", "продажи за период", "отгрузки за период"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            item_name = _extract_after_keywords(q, ["товар", "товары", "продавали", "реализации", "продажи", "отгрузки"])
+            result = odata.get_sales_receipts_summary(
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+                item_name=item_name,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_sales_receipts_summary",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty, "item_name": item_name, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_sales_receipts_summary",
+            )
+
         if any(phrase in ql for phrase in ["что нужно закупить", "что надо закупить", "что докупить", "что нужно купить", "закуп на 30 дней", "закупка по продажам", "что закупать"]):
             warehouse = _extract_warehouse(q)
             item = _extract_after_keywords(q, ["товар", "товары", "номенклатура", "закупить", "докупить", "купить"])
@@ -747,6 +792,55 @@ def get_purchase_receipts_summary(
             items_per_document=items_per_document,
         )
         return _ok(result, tool="get_purchase_receipts_summary")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_sales_document_details(
+    document_number: str,
+    counterparty_name: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    max_lines: int = 50,
+) -> dict[str, Any]:
+    """Показать шапку и строки одной реализации ТМЗ и услуг."""
+    try:
+        result = odata.get_sales_document_details(
+            document_number=document_number,
+            counterparty_name=counterparty_name,
+            date_from=date_from,
+            date_to=date_to,
+            max_lines=max_lines,
+        )
+        return _ok(result, tool="get_sales_document_details")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_sales_receipts_summary(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    item_name: str | None = None,
+    limit: int = 50,
+    items_per_document: int = 10,
+) -> dict[str, Any]:
+    """Показать, что и кому продавали за период.
+
+    Возвращает read-only таблицу строк: дата, товар, объем, контрагент, номер документа.
+    """
+    try:
+        result = odata.get_sales_receipts_summary(
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            item_name=item_name,
+            limit=limit,
+            items_per_document=items_per_document,
+        )
+        return _ok(result, tool="get_sales_receipts_summary")
     except Exception as exc:
         return _err(exc)
 
