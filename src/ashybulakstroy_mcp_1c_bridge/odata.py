@@ -2077,6 +2077,118 @@ class OneCODataClient:
             "note": "Read-only sales journal view from published OData. Приближен к журналу 'Реализации ТМЗ и услуг' в 1С.",
         }
 
+    def get_customer_invoice_journal_view(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Return screen-like customer invoice journal rows for Document_СчетНаОплатуПокупателю."""
+        effective_limit = min(max(int(limit), 1), 100)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        warnings: list[str] = []
+        rows = self._get_customer_invoice_headers(
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty_name=counterparty_name,
+            max_documents=effective_limit,
+            warnings=warnings,
+        )
+        return {
+            "count_returned": len(rows),
+            "data": rows,
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "limit": effective_limit,
+            },
+            "source": {"entity": "Document_СчетНаОплатуПокупателю"},
+            "warnings": warnings,
+            "note": "Read-only customer invoice journal view from published OData. Приближен к журналу 'Документы покупателей / Счета на оплату'.",
+        }
+
+    def get_customer_invoice_details(
+        self,
+        document_number: str,
+        counterparty_name: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        max_lines: int = 50,
+    ) -> dict[str, Any]:
+        """Return safe read-only details for one customer invoice with line items."""
+        effective_max_lines = min(max(int(max_lines), 1), 200)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        warnings: list[str] = []
+        candidates = self._get_customer_invoice_headers(
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty_name=counterparty_name,
+            max_documents=200,
+            warnings=warnings,
+        )
+        needle = str(document_number or "").strip().lstrip("0")
+        candidates = [row for row in candidates if str(row.get("document_number") or "").strip().lstrip("0") == needle]
+        if not candidates:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "document_number": document_number,
+                    "counterparty_name": counterparty_name,
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "max_lines": effective_max_lines,
+                },
+                "warnings": warnings,
+                "note": "Счет на оплату покупателю не найден в опубликованном read-only OData контуре.",
+            }
+        detailed_header = candidates[0]
+        raw = self._fetch_raw_entity_by_ref("Document_СчетНаОплатуПокупателю", str(detailed_header.get("reference") or ""))
+        if raw is None:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "document_number": document_number,
+                    "counterparty_name": counterparty_name,
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "max_lines": effective_max_lines,
+                },
+                "warnings": warnings,
+                "note": "Шапка счета найдена, но детальные строки не были прочитаны из OData.",
+            }
+        line_items = self._extract_customer_invoice_line_items(raw)[:effective_max_lines]
+        section_counts = {
+            "goods": len(raw.get("Товары") or []) if isinstance(raw.get("Товары"), list) else 0,
+            "services": len(raw.get("Услуги") or []) if isinstance(raw.get("Услуги"), list) else 0,
+            "fixed_assets": len(raw.get("ОС") or []) if isinstance(raw.get("ОС"), list) else 0,
+        }
+        row = self._normalize_customer_invoice_row(raw)
+        row.update(
+            {
+                "section_counts": section_counts,
+                "lines": line_items,
+                "source_entity": "Document_СчетНаОплатуПокупателю",
+            }
+        )
+        return {
+            "count_returned": 1,
+            "data": [row],
+            "filters_applied_in_python": {
+                "document_number": document_number,
+                "counterparty_name": counterparty_name,
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "max_lines": effective_max_lines,
+            },
+            "source": {"entity": "Document_СчетНаОплатуПокупателю"},
+            "warnings": warnings,
+            "note": "Read-only details view of one published customer invoice. Не выполняет запись в 1С и не раскрывает raw OData агенту.",
+        }
+
     def _get_recent_sales_documents(
         self,
         date_from: str | None = None,
@@ -4958,6 +5070,133 @@ class OneCODataClient:
                     }
                 )
         return out
+
+    def _extract_customer_invoice_line_items(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        for section_name, section_display in (("Товары", "ТМЗ"), ("Услуги", "Услуги"), ("ОС", "ОС")):
+            rows = raw.get(section_name)
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                name = (
+                    row.get("Содержание")
+                    or row.get("Description")
+                    or self._resolve_reference_value("Номенклатура_Key", row.get("Номенклатура_Key"))
+                    or self._resolve_reference_value("Номенклатура", row.get("Номенклатура"))
+                    or self._resolve_reference_value("ОсновноеСредство_Key", row.get("ОсновноеСредство_Key"))
+                )
+                out.append(
+                    {
+                        "section": section_name.lower(),
+                        "section_display": section_display,
+                        "name": name,
+                        "item_key": row.get("Номенклатура_Key") or row.get("ОсновноеСредство_Key"),
+                        "quantity": row.get("Количество"),
+                        "price": row.get("Цена"),
+                        "amount": row.get("Сумма"),
+                    }
+                )
+        return out
+
+    def _normalize_customer_invoice_row(self, raw: dict[str, Any]) -> dict[str, Any]:
+        counterparty_info = self._resolve_counterparty_info(raw.get("Контрагент_Key") or raw.get("Контрагент"))
+        return {
+            "document_type": "Document_СчетНаОплатуПокупателю",
+            "document_number": raw.get("Number") or raw.get("Номер"),
+            "date": raw.get("Date") or raw.get("Дата"),
+            "date_only": str(raw.get("Date") or raw.get("Дата") or "")[:10],
+            "counterparty": counterparty_info.get("display"),
+            "counterparty_bin_or_iin": counterparty_info.get("bin_or_iin"),
+            "organization": self._resolve_reference_value("Организация_Key", raw.get("Организация_Key")) or raw.get("Организация"),
+            "warehouse": self._extract_invoice_warehouse(raw),
+            "structural_unit": self._extract_invoice_structural_unit(raw),
+            "responsible": self._resolve_reference_value("Ответственный_Key", raw.get("Ответственный_Key")),
+            "contract": self._resolve_reference_value("ДоговорКонтрагента_Key", raw.get("ДоговорКонтрагента_Key")),
+            "price_type": self._resolve_reference_value("ТипЦен_Key", raw.get("ТипЦен_Key")),
+            "amount": raw.get("СуммаДокумента"),
+            "currency": self._resolve_reference_value("ВалютаДокумента_Key", raw.get("ВалютаДокумента_Key")) or raw.get("ВалютаДокумента"),
+            "comment": raw.get("Комментарий"),
+            "status": self._extract_document_status(raw, self._map_document_fields(list(raw.keys()))),
+            "vat_included": self._to_bool_like(raw.get("СуммаВключаетНДС")),
+            "excise_included": self._to_bool_like(raw.get("СуммаВключаетАкциз")),
+            "vat_accounting": self._to_bool_like(raw.get("УчитыватьНДС")),
+            "excise_accounting": self._to_bool_like(raw.get("УчитыватьАкциз")),
+            "source_entity": "Document_СчетНаОплатуПокупателю",
+        }
+
+    def _extract_invoice_structural_unit(self, raw: dict[str, Any]) -> Any:
+        structural_unit = self._resolve_reference_value("СтруктурноеПодразделение_Key", raw.get("СтруктурноеПодразделение_Key"))
+        if self._is_zero_guid_value(structural_unit) or structural_unit in (None, ""):
+            fallback = raw.get("СтруктурнаяЕдиница")
+            if fallback not in (None, ""):
+                resolved = self._resolve_typed_reference_display(fallback, raw.get("СтруктурнаяЕдиница_Type"))
+                return resolved or fallback
+        return structural_unit
+
+    def _extract_invoice_warehouse(self, raw: dict[str, Any]) -> Any:
+        warehouse = self._resolve_reference_value("Склад_Key", raw.get("Склад_Key"))
+        if self._is_zero_guid_value(warehouse):
+            return None
+        return warehouse
+
+    def _get_customer_invoice_headers(
+        self,
+        *,
+        date_from: str | None,
+        date_to: str | None,
+        counterparty_name: str | None,
+        max_documents: int,
+        warnings: list[str],
+    ) -> list[dict[str, Any]]:
+        entity_name = "Document_СчетНаОплатуПокупателю"
+        select_fields = [
+            "Ref_Key",
+            "Number",
+            "Date",
+            "Posted",
+            "Контрагент_Key",
+            "Организация_Key",
+            "Склад_Key",
+            "Ответственный_Key",
+            "СтруктурноеПодразделение_Key",
+            "СтруктурнаяЕдиница",
+            "Комментарий",
+            "СуммаДокумента",
+            "ВалютаДокумента_Key",
+        ]
+        rows, _ = self._load_document_source_rows(
+            entity_name,
+            select=select_fields,
+            filter_expr=None,
+            orderby="Date desc",
+            limit=max_documents,
+            page_size=min(max(max_documents * 8, 200), self.settings.max_top),
+            tail_pages=max(2, min(6, (max_documents // 10) + 2)),
+            max_probe_skip=min(self.settings.max_top * 100, 50000),
+            warnings=warnings,
+            prefer_recent_tail=not bool(date_from or date_to or counterparty_name),
+        )
+        normalized = [self._normalize_customer_invoice_row(row) | {"reference": row.get("Ref_Key")} for row in rows]
+        if date_from or date_to:
+            normalized = [row for row in normalized if self._date_in_range(row.get("date"), date_from, date_to)]
+        if counterparty_name:
+            normalized = [row for row in normalized if self._text_match(row.get("counterparty"), counterparty_name)]
+        normalized.sort(
+            key=lambda item: (
+                self._parse_datetime_like(item.get("date")) or datetime.min,
+                str(item.get("document_number") or ""),
+            ),
+            reverse=True,
+        )
+        deduped: list[dict[str, Any]] = []
+        seen_keys: set[tuple[Any, Any, Any]] = set()
+        for row in normalized:
+            dedupe_key = (row.get("reference"), row.get("document_number"), row.get("date"))
+            if dedupe_key in seen_keys:
+                continue
+            seen_keys.add(dedupe_key)
+            deduped.append(row)
+        return deduped[:max_documents]
 
     def _extract_sales_signed_date(self, raw: dict[str, Any]) -> str | None:
         return (

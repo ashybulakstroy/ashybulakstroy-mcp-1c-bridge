@@ -295,6 +295,10 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Журнал реализаций читает опубликованные документы продаж и возвращает строки, близкие к экрану списка реализаций 1С: дата, номер, контрагент, сумма, склад и вид операции.")
     elif tool == "get_sales_receipts_summary":
         explanation["summary"].append("Сводка реализаций читает опубликованные документы продаж и возвращает плоские business-строки: дата, товар, объем, контрагент, номер документа.")
+    elif tool == "get_customer_invoice_details":
+        explanation["summary"].append("Детализация счета покупателю читает опубликованный Document_СчетНаОплатуПокупателю и возвращает безопасную шапку документа и строки товаров/услуг без raw OData.")
+    elif tool == "get_customer_invoice_journal_view":
+        explanation["summary"].append("Журнал счетов покупателям читает опубликованные документы Document_СчетНаОплатуПокупателю и возвращает строки, близкие к экрану списка счетов 1С.")
     elif tool == "validate_inventory_report_text":
         explanation["summary"].append("Сверка сравнила нормализованные строки MCP и строки отчета 1С по ключам item+warehouse с учетом допусков.")
     if not explanation["warnings"]:
@@ -565,6 +569,45 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
                     "result": result,
                 },
                 tool="get_sales_journal_view",
+            )
+
+        if any(phrase in ql for phrase in ["покажи счет покупателю", "покажи счет на оплату", "что внутри счета покупателю", "расшифруй счет покупателю", "детали счета покупателю"]):
+            date_from, date_to = _extract_date_range(q)
+            document_number = _extract_document_number(q)
+            counterparty = _extract_counterparty_hint(q)
+            if not document_number:
+                raise ValueError("Укажите номер счета, например: 'Покажи счет покупателю 00000000127'.")
+            result = odata.get_customer_invoice_details(
+                document_number=document_number,
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+            )
+            return _ok(
+                {
+                    "intent": "get_customer_invoice_details",
+                    "parsed": {"document_number": document_number, "date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty},
+                    "result": result,
+                },
+                tool="get_customer_invoice_details",
+            )
+
+        if any(phrase in ql for phrase in ["журнал счетов покупателям", "счета покупателям", "список счетов покупателям", "журнал счетов на оплату", "покажи счета покупателям"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            result = odata.get_customer_invoice_journal_view(
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_customer_invoice_journal_view",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_customer_invoice_journal_view",
             )
 
         if any(phrase in ql for phrase in ["что продавали", "какой товар продавали", "какие товары продавали", "реализации за период", "продажи за период", "отгрузки за период"]):
@@ -881,6 +924,48 @@ def get_sales_receipts_summary(
             items_per_document=items_per_document,
         )
         return _ok(result, tool="get_sales_receipts_summary")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_customer_invoice_details(
+    document_number: str,
+    counterparty_name: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    max_lines: int = 50,
+) -> dict[str, Any]:
+    """Показать шапку и строки одного счета на оплату покупателю."""
+    try:
+        result = odata.get_customer_invoice_details(
+            document_number=document_number,
+            counterparty_name=counterparty_name,
+            date_from=date_from,
+            date_to=date_to,
+            max_lines=max_lines,
+        )
+        return _ok(result, tool="get_customer_invoice_details")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_customer_invoice_journal_view(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Показать журнал счетов на оплату покупателям в формате, близком к экрану 1С."""
+    try:
+        result = odata.get_customer_invoice_journal_view(
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            limit=limit,
+        )
+        return _ok(result, tool="get_customer_invoice_journal_view")
     except Exception as exc:
         return _err(exc)
 

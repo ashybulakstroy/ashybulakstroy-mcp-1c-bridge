@@ -455,6 +455,60 @@ def test_get_sales_receipts_summary_allowed_call_is_audited(monkeypatch, tmp_pat
     assert record["risk"] == "L0"
 
 
+def test_get_customer_invoice_details_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_customer_invoice_details",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [{"document_number": "000127", "counterparty": "МПРО"}],
+        },
+    )
+
+    result = core_server.get_customer_invoice_details(document_number="000127", project_id="project-customer-invoice-detail")
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_customer_invoice_details"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-customer-invoice-detail"
+    assert record["risk"] == "L0"
+
+
+def test_get_customer_invoice_journal_view_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_customer_invoice_journal_view",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [{"document_number": "000127", "counterparty": "МПРО"}],
+        },
+    )
+
+    result = core_server.get_customer_invoice_journal_view(date_from="2026-04-01", date_to="2026-04-30", project_id="project-customer-invoice-journal")
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_customer_invoice_journal_view"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-customer-invoice-journal"
+    assert record["risk"] == "L0"
+
+
 def test_get_supplier_reconciliation_documents_allowed_call_is_audited(monkeypatch, tmp_path):
     audit_path = tmp_path / "audit.jsonl"
     monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))

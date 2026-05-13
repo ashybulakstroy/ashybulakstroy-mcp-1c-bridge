@@ -158,6 +158,24 @@ def test_main_policy_covers_sales_receipts_summary():
     assert [cap.name for cap in tool.capabilities] == ["read_documents"]
 
 
+def test_main_policy_covers_customer_invoice_details():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_customer_invoice_details"]
+
+    assert tool.risk is RiskLevel.L0
+    assert [cap.name for cap in tool.capabilities] == ["read_documents"]
+
+
+def test_main_policy_covers_customer_invoice_journal_view():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_customer_invoice_journal_view"]
+
+    assert tool.risk is RiskLevel.L0
+    assert [cap.name for cap in tool.capabilities] == ["read_documents"]
+
+
 def test_main_policy_covers_supplier_reconciliation_documents():
     policy = load_policy(Path("config") / "policy.yaml")
 

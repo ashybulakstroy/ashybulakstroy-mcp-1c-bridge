@@ -188,6 +188,50 @@ class FakeOneCODataClient(OneCODataClient):
             if select:
                 rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
             return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Document_СчетНаОплатуПокупателю":
+            rows = [
+                {
+                    "Ref_Key": "10000000-0000-0000-0000-000000000100",
+                    "Number": "000127",
+                    "Date": "2026-04-30T10:00:00",
+                    "Контрагент_Key": "cp-guid-1",
+                    "Организация_Key": "org-guid-1",
+                    "Склад_Key": "wh-guid-1",
+                    "Ответственный_Key": "user-guid-1",
+                    "СтруктурноеПодразделение_Key": "00000000-0000-0000-0000-000000000000",
+                    "СтруктурнаяЕдиница": "ИП Isatay",
+                    "Комментарий": "Срочный счет",
+                    "СуммаДокумента": "64000",
+                    "ВалютаДокумента_Key": "cur-guid-1",
+                    "Posted": True,
+                    "Товары": [
+                        {"Содержание": "Круглая труба", "Количество": 48, "Цена": 680, "Сумма": "32640"},
+                    ],
+                    "Услуги": [
+                        {"Содержание": "Доставка", "Количество": 1, "Цена": 4000, "Сумма": "4000"},
+                    ],
+                },
+                {
+                    "Ref_Key": "10000000-0000-0000-0000-000000000101",
+                    "Number": "000128",
+                    "Date": "2026-05-01T11:00:00",
+                    "Контрагент_Key": "cp-guid-2",
+                    "Организация_Key": "org-guid-1",
+                    "Склад_Key": "wh-guid-1",
+                    "Ответственный_Key": "user-guid-2",
+                    "СтруктурноеПодразделение_Key": "dep-guid-2",
+                    "Комментарий": "",
+                    "СуммаДокумента": "18000",
+                    "ВалютаДокумента_Key": "cur-guid-1",
+                    "Posted": False,
+                    "Товары": [
+                        {"Содержание": "Бокорез", "Количество": 3, "Цена": 6000, "Сумма": "18000"},
+                    ],
+                },
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
         if entity_name == "Document_ПоступлениеТоваровУслуг":
             rows = [
                 {
@@ -1241,6 +1285,65 @@ def test_get_sales_journal_view_returns_screen_like_rows():
     assert top["amount"] == "90000"
     assert top["operation_type_display"] == "Реализация (Товары, услуги)"
     assert top["source_entity"] == "Document_РеализацияТоваровУслуг"
+
+
+def test_get_customer_invoice_journal_view_returns_screen_like_rows():
+    client = FakeOneCODataClient()
+    original_resolve_reference_value = client._resolve_reference_value
+    client._resolve_reference_value = lambda field_name, value: {  # type: ignore[method-assign]
+        ("Организация_Key", "org-guid-1"): "ИП Isatay",
+        ("Склад_Key", "wh-guid-1"): "Основной склад",
+        ("Ответственный_Key", "user-guid-1"): "Бекболат",
+        ("Ответственный_Key", "user-guid-2"): "Сапар",
+        ("ВалютаДокумента_Key", "cur-guid-1"): "KZT",
+    }.get((field_name, value), original_resolve_reference_value(field_name, value))
+    client._resolve_counterparty_info = lambda value: {  # type: ignore[method-assign]
+        "cp-guid-1": {"display": "МПРО", "bin_or_iin": "123456789012"},
+        "cp-guid-2": {"display": "ТОО БетонПром", "bin_or_iin": None},
+    }.get(value, {"display": value, "bin_or_iin": None})
+
+    result = client.get_customer_invoice_journal_view(date_from="2026-04-20", date_to="2026-05-30", limit=10)
+
+    assert result["count_returned"] == 2
+    top = result["data"][0]
+    assert top["document_number"] == "000128"
+    assert top["counterparty"] == "ТОО БетонПром"
+    assert top["amount"] == "18000"
+    assert top["warehouse"] == "Основной склад"
+    assert top["source_entity"] == "Document_СчетНаОплатуПокупателю"
+
+
+def test_get_customer_invoice_details_returns_header_and_lines():
+    client = FakeOneCODataClient()
+    original_resolve_reference_value = client._resolve_reference_value
+    client._resolve_reference_value = lambda field_name, value: {  # type: ignore[method-assign]
+        ("Организация_Key", "org-guid-1"): "ИП Isatay",
+        ("Склад_Key", "wh-guid-1"): "Основной склад",
+        ("Ответственный_Key", "user-guid-1"): "Бекболат",
+        ("ТипЦен_Key", None): None,
+        ("ВалютаДокумента_Key", "cur-guid-1"): "KZT",
+    }.get((field_name, value), original_resolve_reference_value(field_name, value))
+    client._resolve_counterparty_info = lambda value: {  # type: ignore[method-assign]
+        "cp-guid-1": {"display": "МПРО", "bin_or_iin": "123456789012"},
+    }.get(value, {"display": value, "bin_or_iin": None})
+
+    result = client.get_customer_invoice_details(document_number="000127", max_lines=10)
+
+    assert result["count_returned"] == 1
+    row = result["data"][0]
+    assert row["document_type"] == "Document_СчетНаОплатуПокупателю"
+    assert row["document_number"] == "000127"
+    assert row["counterparty"] == "МПРО"
+    assert row["warehouse"] == "Основной склад"
+    assert row["structural_unit"] == "ИП Isatay"
+    assert row["responsible"] == "Бекболат"
+    assert row["currency"] == "KZT"
+    assert row["section_counts"]["goods"] == 1
+    assert row["section_counts"]["services"] == 1
+    assert row["lines"][0]["section_display"] == "ТМЗ"
+    assert row["lines"][0]["name"] == "Круглая труба"
+    assert row["lines"][1]["section_display"] == "Услуги"
+    assert row["lines"][1]["name"] == "Доставка"
 
 
 def test_get_sales_document_details_formats_business_header_and_accounting_view():
