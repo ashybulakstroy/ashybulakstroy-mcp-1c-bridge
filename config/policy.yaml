@@ -114,6 +114,12 @@ tools:
       - read_documents
     auto_approval: true
 
+  get_sales_journal_view:
+    risk: L0
+    capabilities:
+      - read_documents
+    auto_approval: true
+
   get_sales_receipts_summary:
     risk: L0
     capabilities:

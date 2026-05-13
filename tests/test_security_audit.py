@@ -386,6 +386,40 @@ def test_get_sales_document_details_allowed_call_is_audited(monkeypatch, tmp_pat
     assert record["risk"] == "L0"
 
 
+def test_get_sales_journal_view_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_sales_journal_view",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [
+                {
+                    "date": "2026-05-05T13:25:31",
+                    "document_number": "0000001248",
+                    "counterparty": "ИП DWS TOO",
+                    "amount": "19760",
+                }
+            ],
+        },
+    )
+
+    result = core_server.get_sales_journal_view(date_from="2026-05-01", date_to="2026-05-31", project_id="project-sales-journal")
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_sales_journal_view"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-sales-journal"
+    assert record["risk"] == "L0"
+
+
 def test_get_sales_receipts_summary_allowed_call_is_audited(monkeypatch, tmp_path):
     audit_path = tmp_path / "audit.jsonl"
     monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))

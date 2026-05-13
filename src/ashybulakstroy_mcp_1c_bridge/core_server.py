@@ -291,6 +291,8 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Сводка поступлений читает опубликованные документы поступления и возвращает плоские business-строки: дата, товар, объем, поставщик, номер документа.")
     elif tool == "get_sales_document_details":
         explanation["summary"].append("Детализация реализации читает опубликованный Document_РеализацияТоваровУслуг и возвращает безопасную шапку документа и строки товаров/услуг без raw OData.")
+    elif tool == "get_sales_journal_view":
+        explanation["summary"].append("Журнал реализаций читает опубликованные документы продаж и возвращает строки, близкие к экрану списка реализаций 1С: дата, номер, контрагент, сумма, склад и вид операции.")
     elif tool == "get_sales_receipts_summary":
         explanation["summary"].append("Сводка реализаций читает опубликованные документы продаж и возвращает плоские business-строки: дата, товар, объем, контрагент, номер документа.")
     elif tool == "validate_inventory_report_text":
@@ -545,6 +547,24 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
                     "result": result,
                 },
                 tool="get_sales_document_details",
+            )
+
+        if any(phrase in ql for phrase in ["журнал реализаций", "реализации тмз и услуг", "список реализаций", "покажи реализации", "покажи журнал продаж"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            result = odata.get_sales_journal_view(
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_sales_journal_view",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_sales_journal_view",
             )
 
         if any(phrase in ql for phrase in ["что продавали", "какой товар продавали", "какие товары продавали", "реализации за период", "продажи за период", "отгрузки за период"]):
@@ -814,6 +834,26 @@ def get_sales_document_details(
             max_lines=max_lines,
         )
         return _ok(result, tool="get_sales_document_details")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_sales_journal_view(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Показать журнал реализаций ТМЗ и услуг в формате, близком к экрану 1С."""
+    try:
+        result = odata.get_sales_journal_view(
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            limit=limit,
+        )
+        return _ok(result, tool="get_sales_journal_view")
     except Exception as exc:
         return _err(exc)
 

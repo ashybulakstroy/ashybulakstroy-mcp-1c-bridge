@@ -140,6 +140,15 @@ def test_main_policy_covers_sales_document_details():
     assert [cap.name for cap in tool.capabilities] == ["read_documents"]
 
 
+def test_main_policy_covers_sales_journal_view():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_sales_journal_view"]
+
+    assert tool.risk is RiskLevel.L0
+    assert [cap.name for cap in tool.capabilities] == ["read_documents"]
+
+
 def test_main_policy_covers_sales_receipts_summary():
     policy = load_policy(Path("config") / "policy.yaml")
 
