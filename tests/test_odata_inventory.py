@@ -55,6 +55,39 @@ class FakeOneCODataClient(OneCODataClient):
             if select:
                 rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
             return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType":
+            rows = [
+                {
+                    "Ref_Key": "vr-1",
+                    "Period": "2026-04-20T12:00:00",
+                    "Active": True,
+                    "RecordType": "Receipt",
+                    "Номенклатура": "10000000-0000-0000-0000-000000000001",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                    "Количество": 10,
+                },
+                {
+                    "Ref_Key": "vr-2",
+                    "Period": "2026-04-21T10:00:00",
+                    "Active": True,
+                    "RecordType": "Receipt",
+                    "Номенклатура": "10000000-0000-0000-0000-000000000002",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                    "Количество": 20,
+                },
+                {
+                    "Ref_Key": "vr-3",
+                    "Period": "2026-04-23T12:00:00",
+                    "Active": True,
+                    "RecordType": "Expense",
+                    "Номенклатура": "10000000-0000-0000-0000-000000000001",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                    "Количество": 7,
+                },
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
         if entity_name == "Document_СписаниеСБанковскогоСчета":
             rows = [
                 {
@@ -237,7 +270,7 @@ class FakeOneCODataClient(OneCODataClient):
                     "Date": "2026-04-30T10:00:00",
                     "Контрагент_Key": "cp-guid-1",
                     "Организация_Key": "org-guid-1",
-                    "Склад_Key": "wh-guid-1",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
                     "Ответственный_Key": "user-guid-1",
                     "СтруктурноеПодразделение_Key": "00000000-0000-0000-0000-000000000000",
                     "СтруктурнаяЕдиница": "ИП Isatay",
@@ -258,7 +291,7 @@ class FakeOneCODataClient(OneCODataClient):
                     "Date": "2026-05-01T11:00:00",
                     "Контрагент_Key": "cp-guid-2",
                     "Организация_Key": "org-guid-1",
-                    "Склад_Key": "wh-guid-1",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
                     "Ответственный_Key": "user-guid-2",
                     "СтруктурноеПодразделение_Key": "dep-guid-2",
                     "Комментарий": "",
@@ -322,14 +355,14 @@ class FakeOneCODataClient(OneCODataClient):
                     "Ref_Key": "stock-ref-1",
                     "LineNumber": "1",
                     "Номенклатура_Key": "10000000-0000-0000-0000-000000000001",
-                    "Склад_Key": "wh-guid-1",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
                     "КоличествоБУ": 3,
                 },
                 {
                     "Ref_Key": "stock-ref-1",
                     "LineNumber": "2",
                     "Номенклатура_Key": "10000000-0000-0000-0000-000000000002",
-                    "Склад_Key": "wh-guid-1",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
                     "КоличествоБУ": 20,
                 },
             ]
@@ -347,7 +380,7 @@ class FakeOneCODataClient(OneCODataClient):
             return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
         if entity_name == "Catalog_Склады":
             rows = [
-                {"Ref_Key": "wh-guid-1", "Description": "Основной склад"},
+                {"Ref_Key": "20000000-0000-0000-0000-000000000001", "Description": "Основной склад"},
             ]
             if select:
                 rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
@@ -1025,9 +1058,19 @@ def test_get_inventory_auto_normalizes_inventory_rows():
     result = client.get_inventory_auto(warehouse="Основной", limit=10)
 
     assert result["count_returned"] == 2
-    assert result["data"][0]["item"] == "Цемент М400"
-    assert result["data"][0]["quantity"] == "3"
-    assert result["source"]["entity"] == "AccumulationRegister_ТоварыНаСкладах"
+    quantities = {row["item"]: row["quantity"] for row in result["data"]}
+    assert quantities["Цемент М400"] == "3"
+    assert result["source"]["entity"] == "AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType"
+
+
+def test_get_inventory_auto_uses_virtual_register_stock_balance():
+    client = FakeOneCODataClient()
+
+    result = client.get_inventory_auto(limit=10)
+
+    quantities = {row["item"]: row["quantity"] for row in result["data"]}
+    assert quantities["Цемент М400"] == "3"
+    assert quantities["Песок"] == "20"
 
 
 def test_get_low_stock_items_uses_threshold():
@@ -1369,7 +1412,7 @@ def test_get_customer_invoice_journal_view_returns_screen_like_rows():
     original_resolve_reference_value = client._resolve_reference_value
     client._resolve_reference_value = lambda field_name, value: {  # type: ignore[method-assign]
         ("Организация_Key", "org-guid-1"): "ИП Isatay",
-        ("Склад_Key", "wh-guid-1"): "Основной склад",
+        ("Склад_Key", "20000000-0000-0000-0000-000000000001"): "Основной склад",
         ("Ответственный_Key", "user-guid-1"): "Бекболат",
         ("Ответственный_Key", "user-guid-2"): "Сапар",
         ("ВалютаДокумента_Key", "cur-guid-1"): "KZT",
@@ -1395,7 +1438,7 @@ def test_get_customer_invoice_details_returns_header_and_lines():
     original_resolve_reference_value = client._resolve_reference_value
     client._resolve_reference_value = lambda field_name, value: {  # type: ignore[method-assign]
         ("Организация_Key", "org-guid-1"): "ИП Isatay",
-        ("Склад_Key", "wh-guid-1"): "Основной склад",
+        ("Склад_Key", "20000000-0000-0000-0000-000000000001"): "Основной склад",
         ("Ответственный_Key", "user-guid-1"): "Бекболат",
         ("ТипЦен_Key", None): None,
         ("ВалютаДокумента_Key", "cur-guid-1"): "KZT",
@@ -2070,7 +2113,7 @@ def test_get_procurement_recommendations_fast_uses_sales_rows_and_stock_snapshot
     assert top["recommended_purchase_qty"] == "10"
     assert top["sales_document_count"] == 2
     assert top["sales_row_source"] == "Document_РеализацияТоваровУслуг_Товары"
-    assert result["source_explanation"]["basis"] == "recent_sales_row_tail_and_current_stock"
+    assert result["source_explanation"]["basis"] == "recent_sales_row_tail_and_virtual_current_stock"
 
 
 def test_get_procurement_recommendations_fast_caps_limit_and_infers_as_of():

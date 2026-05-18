@@ -58,6 +58,7 @@ class OneCODataClient:
         self._entities_cache: list[EntityInfo] | None = None
         self._reference_cache: dict[tuple[str, str, tuple[str, ...]], dict[str, Any] | None] = {}
         self._account_label_cache: dict[str, str | None] = {}
+        self._virtual_stock_cache: dict[str, list[dict[str, Any]]] = {}
 
     def _require_url(self) -> None:
         if not self.settings.odata_url:
@@ -572,6 +573,15 @@ class OneCODataClient:
         Text filters are applied in Python to avoid generating unsafe or wrong OData filters
         against unknown customized configurations.
         """
+        if entity_name in (None, "AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType"):
+            virtual_inventory = self._get_virtual_warehouse_current_stock_rows(
+                warehouse=warehouse,
+                item=item,
+                limit=limit,
+            )
+            if virtual_inventory is not None:
+                return virtual_inventory
+
         if entity_name:
             entity = self.describe_entity(entity_name)
             if entity is None:
@@ -617,6 +627,137 @@ class OneCODataClient:
             "warnings": warnings,
             "note": "Автоопределение основано на metadata и sample OData. Для бухгалтерской точности подтвердите источник и сохраните verified recipe.",
         }
+
+    def _get_virtual_warehouse_current_stock_rows(
+        self,
+        *,
+        as_of_date: date | None = None,
+        warehouse: str | None = None,
+        item: str | None = None,
+        item_keys: set[str] | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any] | None:
+        entity_name = "AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType"
+        entity = self.describe_entity(entity_name)
+        if entity is None:
+            return None
+
+        field_names = {field.name for field in (entity.fields or [])}
+        item_field = "Номенклатура_Key" if "Номенклатура_Key" in field_names else ("Номенклатура" if "Номенклатура" in field_names else None)
+        warehouse_field = "Склад_Key" if "Склад_Key" in field_names else ("Склад" if "Склад" in field_names else None)
+        quantity_field = "Количество" if "Количество" in field_names else None
+        period_field = "Period" if "Period" in field_names else None
+        active_field = "Active" if "Active" in field_names else None
+        record_type_field = "RecordType" if "RecordType" in field_names else None
+        if not item_field or not quantity_field:
+            return None
+
+        cutoff_dt = datetime.combine(as_of_date, datetime.max.time()) if as_of_date else None
+        cache_key = as_of_date.isoformat() if as_of_date else "__all__"
+        if cache_key not in self._virtual_stock_cache:
+            select = [field for field in (period_field, active_field, record_type_field, item_field, warehouse_field, quantity_field) if field]
+            page_size = 200
+            aggregated: dict[tuple[str, str | None], Decimal] = {}
+            for skip in range(0, max(2000, min(self.settings.max_top * 40, 20000)) + 1, page_size):
+                payload = self.query_entity(entity_name, top=page_size, select=select or None, skip=skip)
+                batch = payload.get("data") or []
+                if not batch:
+                    break
+                for row in batch:
+                    if active_field and self._to_bool_like(row.get(active_field)) is False:
+                        continue
+                    period_value = self._parse_datetime_like(row.get(period_field)) if period_field else None
+                    if cutoff_dt and period_value and period_value > cutoff_dt:
+                        continue
+                    item_ref = str(row.get(item_field) or "").strip()
+                    if not item_ref:
+                        continue
+                    qty = self._to_decimal(row.get(quantity_field), default=None)
+                    signed_qty = self._normalize_register_stock_quantity(qty, row.get(record_type_field))
+                    if signed_qty is None:
+                        continue
+                    warehouse_ref = str(row.get(warehouse_field) or "").strip() if warehouse_field else None
+                    bucket_key = (item_ref, warehouse_ref or None)
+                    aggregated[bucket_key] = aggregated.get(bucket_key, Decimal("0")) + signed_qty
+                if len(batch) < page_size:
+                    break
+
+            rows: list[dict[str, Any]] = []
+            for (item_ref, warehouse_ref), quantity in aggregated.items():
+                if quantity == 0:
+                    continue
+                rows.append(
+                    {
+                        "item": self._resolve_reference_value(item_field, item_ref),
+                        "item_ref": item_ref,
+                        "warehouse": self._resolve_reference_value(warehouse_field, warehouse_ref) if warehouse_field else None,
+                        "warehouse_ref": warehouse_ref,
+                        "quantity": self._decimal_to_text(quantity),
+                        "amount": None,
+                        "period": as_of_date.isoformat() if as_of_date else None,
+                        "raw": {
+                            "source_entity": entity_name,
+                            "basis": "aggregated_virtual_warehouse_register_movements",
+                            "as_of_date": as_of_date.isoformat() if as_of_date else None,
+                        },
+                    }
+                )
+            rows.sort(
+                key=lambda row: (
+                    str(row.get("item") or ""),
+                    str(row.get("warehouse") or ""),
+                )
+            )
+            self._virtual_stock_cache[cache_key] = rows
+
+        rows = list(self._virtual_stock_cache.get(cache_key) or [])
+        if item_keys:
+            rows = [row for row in rows if str(row.get("item_ref") or "") in item_keys]
+        if warehouse:
+            rows = [row for row in rows if self._text_match(row.get("warehouse"), warehouse) or self._text_match(row.get("raw"), warehouse)]
+        if item:
+            rows = [row for row in rows if self._text_match(row.get("item"), item) or self._text_match(row.get("raw"), item)]
+
+        effective_limit = len(rows) if limit is None else max(int(limit), 1)
+        return {
+            "source": {
+                "entity": entity_name,
+                "confidence": "high",
+                "reasons": [
+                    "virtual_warehouse_accumulation_register",
+                    "current_stock_derived_from_receipt_and_expense_movements",
+                ],
+                "mapped_fields": {
+                    "item": item_field,
+                    "warehouse": warehouse_field,
+                    "quantity": quantity_field,
+                    "period": period_field,
+                    "record_type": record_type_field,
+                },
+            },
+            "filters_applied_in_python": {
+                "warehouse": warehouse,
+                "item": item,
+                "as_of_date": as_of_date.isoformat() if as_of_date else None,
+            },
+            "count_returned": min(len(rows), effective_limit),
+            "data": rows[:effective_limit],
+            "warnings": [
+                "Текущий остаток рассчитан из движений регистра виртуального склада. Для официального остатка сверяйте с отчетом 1С."
+            ],
+            "note": "Read-only current stock derived from published accumulation register movements. Не выполняет запись в 1С и не раскрывает raw OData агенту.",
+        }
+
+    @staticmethod
+    def _normalize_register_stock_quantity(quantity: Decimal | None, record_type: Any) -> Decimal | None:
+        if quantity is None:
+            return None
+        record_type_text = str(record_type or "").strip().lower()
+        if any(token in record_type_text for token in ("expense", "расход", "writeoff", "out")):
+            return -abs(quantity)
+        if any(token in record_type_text for token in ("receipt", "приход", "income", "in")):
+            return abs(quantity)
+        return quantity
 
     def get_low_stock_items(
         self,
@@ -1021,7 +1162,6 @@ class OneCODataClient:
         inferred_as_of = explicit_as_of or (max(sales_dates) if sales_dates else date.today())
         window_start = inferred_as_of - timedelta(days=lookback_days - 1)
 
-        inventory = self.get_inventory_auto(warehouse=warehouse, item=item, limit=min(max(effective_limit * 20, 200), self.settings.max_top))
         sales = self.get_sales_documents(
             date_from=window_start.isoformat(),
             date_to=inferred_as_of.isoformat(),
@@ -1031,7 +1171,6 @@ class OneCODataClient:
         )
 
         sales_source = sales.get("source") or {}
-        inventory_source = inventory.get("source") or {}
 
         sold_by_item: dict[str, dict[str, Any]] = {}
         sales_doc_count_by_item: dict[str, set[str]] = {}
@@ -1063,6 +1202,21 @@ class OneCODataClient:
                 item_key = str(line.get("item_key") or "").strip()
                 if item_key and item_name not in sales_item_key_by_item:
                     sales_item_key_by_item[item_name] = item_key
+
+        inventory = self._get_virtual_warehouse_current_stock_rows(
+            as_of_date=inferred_as_of,
+            warehouse=warehouse,
+            item=item,
+            item_keys={value for value in sales_item_key_by_item.values() if value},
+            limit=min(max(len(sales_item_key_by_item), effective_limit * 20), self.settings.max_top),
+        )
+        if inventory is None:
+            inventory = self.get_inventory_auto(
+                warehouse=warehouse,
+                item=item,
+                limit=min(max(effective_limit * 20, 200), self.settings.max_top),
+            )
+        inventory_source = inventory.get("source") or {}
 
         current_stock_by_item: dict[str, Decimal] = {}
         warehouse_by_item: dict[str, str | None] = {}
@@ -1541,34 +1695,31 @@ class OneCODataClient:
 
         stock_by_key: dict[str, Decimal] = {}
         warehouse_by_key: dict[str, str | None] = {}
+        stock_entity: str | None = None
         if sold_by_key:
-            stock_entity = "Document_ВводНачальныхОстатков_Запасы"
-            stock_select = ["Номенклатура_Key", "КоличествоБУ", "Склад_Key"]
-            try:
-                for skip in range(0, min(self.settings.max_top * 10, 5000), 200):
-                    payload = self.query_entity(stock_entity, top=200, select=stock_select, skip=skip)
-                    batch = payload.get("data") or []
-                    if not batch:
-                        break
-                    for row in batch:
-                        item_key = str(row.get("Номенклатура_Key") or "")
-                        if item_key not in sold_by_key:
-                            continue
-                        stock_by_key[item_key] = stock_by_key.get(item_key, Decimal("0")) + (
-                            self._to_decimal(row.get("КоличествоБУ"), default=Decimal("0")) or Decimal("0")
-                        )
-                        if warehouse is None and item_key not in warehouse_by_key:
-                            warehouse_by_key[item_key] = self._resolve_reference_value("Склад_Key", row.get("Склад_Key"))
-                    if len(batch) < 200:
-                        break
-            except ODataError as exc:
+            stock_snapshot = self._get_virtual_warehouse_current_stock_rows(
+                as_of_date=inferred_as_of,
+                warehouse=warehouse,
+                item=item,
+                item_keys=set(sold_by_key.keys()),
+                limit=max(len(sold_by_key), 1),
+            )
+            if stock_snapshot is not None:
+                stock_entity = str((stock_snapshot.get("source") or {}).get("entity") or "")
+                for row in stock_snapshot.get("data") or []:
+                    item_key = str(row.get("item_ref") or "")
+                    if not item_key:
+                        continue
+                    stock_by_key[item_key] = stock_by_key.get(item_key, Decimal("0")) + (
+                        self._to_decimal(row.get("quantity"), default=Decimal("0")) or Decimal("0")
+                    )
+                    if warehouse is None and item_key not in warehouse_by_key:
+                        warehouse_by_key[item_key] = row.get("warehouse")
+            else:
                 warnings.append(
-                    f"Прямой stock-source недоступен для быстрого пути: {str(exc)[:160]}. "
+                    "Текущий остаток из регистра виртуального склада недоступен. "
                     "Используется нулевой остаток только как fallback для витрины."
                 )
-                stock_entity = None
-        else:
-            stock_entity = "Document_ВводНачальныхОстатков_Запасы"
 
         rows: list[dict[str, Any]] = []
         day_divisor = Decimal(str(lookback_days))
@@ -1579,8 +1730,7 @@ class OneCODataClient:
             daily_rate = sold_qty / day_divisor if day_divisor else Decimal("0")
             target_stock = daily_rate * coverage_multiplier
             recommended_qty = target_stock - current_stock
-            if recommended_qty <= 0:
-                continue
+            shortage_qty = recommended_qty if recommended_qty > 0 else Decimal("0")
             stock_days_left = None
             if daily_rate > 0:
                 stock_days_left = float((current_stock / daily_rate).quantize(Decimal("0.01")))
@@ -1593,13 +1743,18 @@ class OneCODataClient:
                     "daily_sales_rate": self._decimal_to_text(daily_rate.quantize(Decimal("0.01"))),
                     "current_stock": self._decimal_to_text(current_stock),
                     "target_stock_for_period": self._decimal_to_text(target_stock.quantize(Decimal("0.01"))),
-                    "recommended_purchase_qty": self._decimal_to_text(recommended_qty.quantize(Decimal("0.01"))),
+                    "recommended_purchase_qty": self._decimal_to_text(shortage_qty.quantize(Decimal("0.01"))),
+                    "planning_basis_qty": self._decimal_to_text(target_stock.quantize(Decimal("0.01"))),
                     "stock_days_left": stock_days_left,
                     "sales_document_count": len(sales_info["sales_document_refs"]),
                     "inventory_source": stock_entity,
                     "sales_source": sales_entity,
                     "sales_row_source": sales_row_entity,
-                    "reason": f"fast_sales_rows_{lookback_days}_days_gt_current_stock_for_next_{target_days}_days",
+                    "reason": (
+                        f"fast_sales_rows_{lookback_days}_days_planning_basis_with_stock_gap_for_next_{target_days}_days"
+                        if shortage_qty > 0
+                        else f"fast_sales_rows_{lookback_days}_days_planning_basis_stock_covers_next_{target_days}_days"
+                    ),
                     "last_sale_date": sales_info["last_sale_date"].isoformat() if sales_info["last_sale_date"] else None,
                     "preferred_supplier": None,
                     "supplier_last_purchase_date": None,
@@ -1612,14 +1767,14 @@ class OneCODataClient:
 
         rows.sort(
             key=lambda row: (
-                self._to_decimal(row.get("recommended_purchase_qty"), default=Decimal("0")) or Decimal("0"),
                 self._to_decimal(row.get("sold_quantity_last_days"), default=Decimal("0")) or Decimal("0"),
+                self._to_decimal(row.get("recommended_purchase_qty"), default=Decimal("0")) or Decimal("0"),
             ),
             reverse=True,
         )
 
         warnings.append(
-            "Это быстрый read-only управленческий расчет закупа: прямые строки продаж за период сопоставлены с текущим published stock source. Для официального MRP/плана закупа сверяйте с 1С."
+            "Это быстрый read-only управленческий план спроса и закупа: продажи за период формируют потребность, а текущий published stock source только корректирует gap к закупу. Для официального MRP/плана закупа сверяйте с 1С."
         )
         return {
             "count_returned": min(len(rows), effective_limit),
@@ -1636,7 +1791,7 @@ class OneCODataClient:
                 "inventory_source": stock_entity,
                 "sales_source": sales_entity,
                 "sales_row_source": sales_row_entity,
-                "basis": "recent_sales_row_tail_and_current_stock",
+                "basis": "recent_sales_row_tail_and_virtual_current_stock",
                 "recent_sales_document_count": len(recent_refs),
                 "matched_sales_document_count": len(matched_document_refs),
             },

@@ -10,6 +10,16 @@
         <Property Name="СуммаОстаток" Type="Edm.Decimal" />
         <Property Name="Период" Type="Edm.DateTime" />
       </EntityType>
+      <EntityType Name="AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordTypeType">
+        <Key><PropertyRef Name="Ref_Key" /></Key>
+        <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
+        <Property Name="Period" Type="Edm.DateTime" />
+        <Property Name="Active" Type="Edm.Boolean" />
+        <Property Name="RecordType" Type="Edm.String" />
+        <Property Name="Номенклатура" Type="Edm.Guid" />
+        <Property Name="Склад_Key" Type="Edm.Guid" />
+        <Property Name="Количество" Type="Edm.Decimal" />
+      </EntityType>
       <EntityType Name="Catalog_НоменклатураType">
         <Key><PropertyRef Name="Ref_Key" /></Key>
         <Property Name="Ref_Key" Type="Edm.Guid" Nullable="false" />
@@ -103,6 +113,7 @@
       </EntityType>
       <EntityContainer Name="FakeContainer">
         <EntitySet Name="AccumulationRegister_ТоварыНаСкладах" EntityType="Fake1C.AccumulationRegister_ТоварыНаСкладахType" />
+        <EntitySet Name="AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType" EntityType="Fake1C.AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordTypeType" />
         <EntitySet Name="Catalog_Номенклатура" EntityType="Fake1C.Catalog_НоменклатураType" />
         <EntitySet Name="Document_СписаниеСБанковскогоСчета" EntityType="Fake1C.Document_СписаниеСБанковскогоСчетаType" />
         <EntitySet Name="Document_ПоступлениеНаБанковскийСчет" EntityType="Fake1C.Document_ПоступлениеНаБанковскийСчетType" />
