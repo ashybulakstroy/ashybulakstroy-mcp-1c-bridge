@@ -1345,6 +1345,305 @@ class OneCODataClient:
             "note": "Read-only procurement estimate only. Основан на продажах за период и текущем остатке, без записи в 1С.",
         }
 
+    def get_procurement_recommendations_fast(
+        self,
+        days: int = 5,
+        as_of_date: str | None = None,
+        warehouse: str | None = None,
+        item: str | None = None,
+        limit: int = 20,
+        coverage_days: int | None = None,
+    ) -> dict[str, Any]:
+        """Return a faster read-only procurement estimate using direct sales row entities when available."""
+        lookback_days = min(max(int(days), 1), 30)
+        target_days = min(max(int(coverage_days or lookback_days), 1), 30)
+        effective_limit = min(max(int(limit), 1), 30)
+        explicit_as_of = self._parse_date_like(as_of_date) if as_of_date else None
+        if as_of_date and explicit_as_of is None:
+            raise ODataError(f"Некорректная дата as_of_date: {as_of_date!r}. Используйте YYYY-MM-DD.")
+
+        sales_sources = self.discover_sales_sources(limit=1, check_data=True)
+        if not sales_sources:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "days": lookback_days,
+                    "as_of_date": as_of_date,
+                    "warehouse": warehouse,
+                    "item": item,
+                    "limit": effective_limit,
+                    "coverage_days": target_days,
+                },
+                "missing_sources": ["sales_documents"],
+                "warnings": ["Не найден безопасный источник продаж/реализаций для быстрого расчета закупа по спросу."],
+                "source_explanation": {
+                    "inventory_source": None,
+                    "sales_source": None,
+                    "sales_row_source": None,
+                    "basis": "source_missing",
+                },
+                "note": "Быстрый закуп не рассчитан, потому что не найден published read-only источник продаж.",
+            }
+
+        sales_source = sales_sources[0]
+        sales_entity = str(sales_source.get("entity") or "Document_РеализацияТоваровУслуг")
+        sales_row_entity = f"{sales_entity}_Товары"
+        warnings: list[str] = []
+
+        recent_headers = self._get_recent_sales_headers(
+            entity_name=sales_entity,
+            mapped=sales_source.get("mapped_fields") or {},
+            date_from=None,
+            date_to=None,
+            counterparty_name=None,
+            max_documents=min(max(effective_limit * 20, 120), 240),
+            warnings=warnings,
+        )
+        if not recent_headers:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "days": lookback_days,
+                    "as_of_date": as_of_date,
+                    "warehouse": warehouse,
+                    "item": item,
+                    "limit": effective_limit,
+                    "coverage_days": target_days,
+                },
+                "warnings": warnings + ["Не удалось быстро прочитать недавние заголовки продаж из OData."],
+                "source_explanation": {
+                    "inventory_source": "Document_ВводНачальныхОстатков_Запасы",
+                    "sales_source": sales_entity,
+                    "sales_row_source": sales_row_entity,
+                    "basis": "recent_sales_headers_missing",
+                },
+                "note": "Быстрый закуп не рассчитан, потому что OData не вернула недавние заголовки продаж.",
+            }
+
+        sales_dates = [
+            self._parse_date_like(row.get("date"))
+            for row in recent_headers
+            if self._parse_date_like(row.get("date")) is not None
+        ]
+        inferred_as_of = explicit_as_of or (max(sales_dates) if sales_dates else date.today())
+        window_start = inferred_as_of - timedelta(days=lookback_days - 1)
+
+        recent_headers = [
+            row
+            for row in recent_headers
+            if self._date_in_range(row.get("date"), window_start.isoformat(), inferred_as_of.isoformat())
+        ]
+        recent_refs = {
+            str(row.get("reference") or ""): row
+            for row in recent_headers
+            if str(row.get("reference") or "")
+        }
+        if not recent_refs:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "filters_applied_in_python": {
+                    "days": lookback_days,
+                    "as_of_date": inferred_as_of.isoformat(),
+                    "warehouse": warehouse,
+                    "item": item,
+                    "limit": effective_limit,
+                    "coverage_days": target_days,
+                },
+                "warnings": warnings + ["За указанный период не найдено недавних продаж для расчета закупа."],
+                "source_explanation": {
+                    "inventory_source": "Document_ВводНачальныхОстатков_Запасы",
+                    "sales_source": sales_entity,
+                    "sales_row_source": sales_row_entity,
+                    "basis": "no_recent_sales_in_window",
+                },
+                "note": "Быстрый закуп не рассчитан, потому что за выбранный период нет продаж в хвосте live-публикации.",
+            }
+
+        row_select = ["Ref_Key", "LineNumber", "Номенклатура_Key", "Количество", "Сумма"]
+        try:
+            last_rows_skip = self._find_last_nonempty_skip(
+                sales_row_entity,
+                select=row_select,
+                page_size=100,
+                max_probe_skip=min(self.settings.max_top * 300, 100000),
+            )
+        except ODataError:
+            warnings.append(
+                "Быстрый row-source продаж недоступен или не опубликован отдельно. "
+                "Используйте обычный get_procurement_recommendations для полного пути."
+            )
+            return self.get_procurement_recommendations(
+                days=lookback_days,
+                as_of_date=inferred_as_of.isoformat(),
+                warehouse=warehouse,
+                item=item,
+                limit=effective_limit,
+                coverage_days=target_days,
+            )
+
+        sold_by_key: dict[str, dict[str, Any]] = {}
+        matched_document_refs: set[str] = set()
+        zero_match_streak = 0
+        max_row_pages = max(6, min(20, (len(recent_refs) // 5) + 6))
+        for page_index in range(max_row_pages):
+            skip = max(0, last_rows_skip - (page_index * 100))
+            payload = self.query_entity(sales_row_entity, top=100, select=row_select, skip=skip)
+            batch = payload.get("data") or []
+            if not batch:
+                zero_match_streak += 1
+                if zero_match_streak >= 2:
+                    break
+                continue
+            batch_match_count = 0
+            for row in batch:
+                ref_key = str(row.get("Ref_Key") or "")
+                item_key = str(row.get("Номенклатура_Key") or "")
+                if ref_key not in recent_refs or not item_key:
+                    continue
+                header = recent_refs.get(ref_key) or {}
+                item_display = self._resolve_reference_value("Номенклатура_Key", item_key) or item_key
+                if item and not self._text_match(item_display, item):
+                    continue
+                quantity = self._to_decimal(row.get("Количество"), default=None)
+                line_amount = self._to_decimal(row.get("Сумма"), default=Decimal("0")) or Decimal("0")
+                if quantity is None or quantity <= 0:
+                    continue
+                bucket = sold_by_key.setdefault(
+                    item_key,
+                    {
+                        "item_key": item_key,
+                        "item": item_display,
+                        "sold_quantity": Decimal("0"),
+                        "sales_amount": Decimal("0"),
+                        "sales_document_refs": set(),
+                        "last_sale_date": None,
+                    },
+                )
+                bucket["sold_quantity"] += quantity
+                bucket["sales_amount"] += line_amount
+                bucket["sales_document_refs"].add(ref_key)
+                matched_document_refs.add(ref_key)
+                row_date = self._parse_datetime_like(header.get("date"))
+                if row_date and (bucket["last_sale_date"] is None or row_date > bucket["last_sale_date"]):
+                    bucket["last_sale_date"] = row_date
+                batch_match_count += 1
+            if batch_match_count == 0:
+                zero_match_streak += 1
+                if zero_match_streak >= 4 and matched_document_refs:
+                    break
+            else:
+                zero_match_streak = 0
+            if len(matched_document_refs) >= len(recent_refs):
+                break
+
+        stock_by_key: dict[str, Decimal] = {}
+        warehouse_by_key: dict[str, str | None] = {}
+        if sold_by_key:
+            stock_entity = "Document_ВводНачальныхОстатков_Запасы"
+            stock_select = ["Номенклатура_Key", "КоличествоБУ", "Склад_Key"]
+            try:
+                for skip in range(0, min(self.settings.max_top * 10, 5000), 200):
+                    payload = self.query_entity(stock_entity, top=200, select=stock_select, skip=skip)
+                    batch = payload.get("data") or []
+                    if not batch:
+                        break
+                    for row in batch:
+                        item_key = str(row.get("Номенклатура_Key") or "")
+                        if item_key not in sold_by_key:
+                            continue
+                        stock_by_key[item_key] = stock_by_key.get(item_key, Decimal("0")) + (
+                            self._to_decimal(row.get("КоличествоБУ"), default=Decimal("0")) or Decimal("0")
+                        )
+                        if warehouse is None and item_key not in warehouse_by_key:
+                            warehouse_by_key[item_key] = self._resolve_reference_value("Склад_Key", row.get("Склад_Key"))
+                    if len(batch) < 200:
+                        break
+            except ODataError as exc:
+                warnings.append(
+                    f"Прямой stock-source недоступен для быстрого пути: {str(exc)[:160]}. "
+                    "Используется нулевой остаток только как fallback для витрины."
+                )
+                stock_entity = None
+        else:
+            stock_entity = "Document_ВводНачальныхОстатков_Запасы"
+
+        rows: list[dict[str, Any]] = []
+        day_divisor = Decimal(str(lookback_days))
+        coverage_multiplier = Decimal(str(target_days))
+        for item_key, sales_info in sold_by_key.items():
+            sold_qty = sales_info["sold_quantity"]
+            current_stock = stock_by_key.get(item_key, Decimal("0"))
+            daily_rate = sold_qty / day_divisor if day_divisor else Decimal("0")
+            target_stock = daily_rate * coverage_multiplier
+            recommended_qty = target_stock - current_stock
+            if recommended_qty <= 0:
+                continue
+            stock_days_left = None
+            if daily_rate > 0:
+                stock_days_left = float((current_stock / daily_rate).quantize(Decimal("0.01")))
+            rows.append(
+                {
+                    "item": sales_info["item"],
+                    "warehouse": warehouse or warehouse_by_key.get(item_key),
+                    "sold_quantity_last_days": self._decimal_to_text(sold_qty),
+                    "sales_amount_last_days": self._decimal_to_text(sales_info["sales_amount"]),
+                    "daily_sales_rate": self._decimal_to_text(daily_rate.quantize(Decimal("0.01"))),
+                    "current_stock": self._decimal_to_text(current_stock),
+                    "target_stock_for_period": self._decimal_to_text(target_stock.quantize(Decimal("0.01"))),
+                    "recommended_purchase_qty": self._decimal_to_text(recommended_qty.quantize(Decimal("0.01"))),
+                    "stock_days_left": stock_days_left,
+                    "sales_document_count": len(sales_info["sales_document_refs"]),
+                    "inventory_source": stock_entity,
+                    "sales_source": sales_entity,
+                    "sales_row_source": sales_row_entity,
+                    "reason": f"fast_sales_rows_{lookback_days}_days_gt_current_stock_for_next_{target_days}_days",
+                    "last_sale_date": sales_info["last_sale_date"].isoformat() if sales_info["last_sale_date"] else None,
+                    "preferred_supplier": None,
+                    "supplier_last_purchase_date": None,
+                    "supplier_last_purchase_document_number": None,
+                    "supplier_match_method": None,
+                    "supplier_match_confidence": None,
+                    "supplier_candidates": [],
+                }
+            )
+
+        rows.sort(
+            key=lambda row: (
+                self._to_decimal(row.get("recommended_purchase_qty"), default=Decimal("0")) or Decimal("0"),
+                self._to_decimal(row.get("sold_quantity_last_days"), default=Decimal("0")) or Decimal("0"),
+            ),
+            reverse=True,
+        )
+
+        warnings.append(
+            "Это быстрый read-only управленческий расчет закупа: прямые строки продаж за период сопоставлены с текущим published stock source. Для официального MRP/плана закупа сверяйте с 1С."
+        )
+        return {
+            "count_returned": min(len(rows), effective_limit),
+            "data": rows[:effective_limit],
+            "filters_applied_in_python": {
+                "days": lookback_days,
+                "as_of_date": inferred_as_of.isoformat(),
+                "warehouse": warehouse,
+                "item": item,
+                "limit": effective_limit,
+                "coverage_days": target_days,
+            },
+            "source_explanation": {
+                "inventory_source": stock_entity,
+                "sales_source": sales_entity,
+                "sales_row_source": sales_row_entity,
+                "basis": "recent_sales_row_tail_and_current_stock",
+                "recent_sales_document_count": len(recent_refs),
+                "matched_sales_document_count": len(matched_document_refs),
+            },
+            "warnings": warnings,
+            "note": "Fast read-only procurement estimate for short live periods. Не выполняет запись в 1С и не раскрывает raw OData агенту.",
+        }
+
     def get_purchase_documents(
         self,
         date: str | None = None,
@@ -2187,6 +2486,125 @@ class OneCODataClient:
             "source": {"entity": "Document_СчетНаОплатуПокупателю"},
             "warnings": warnings,
             "note": "Read-only details view of one published customer invoice. Не выполняет запись в 1С и не раскрывает raw OData агенту.",
+        }
+
+    def get_sales_management_summary(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        item_name: str | None = None,
+        limit: int = 10,
+    ) -> dict[str, Any]:
+        """Return management summary of sales: totals, top items and top customers."""
+        effective_limit = min(max(int(limit), 1), 20)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        sales = self.get_sales_documents(
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty=counterparty_name,
+            limit=min(max(effective_limit * 20, 200), self.settings.max_top),
+            include_sections=True,
+        )
+        item_filter = str(item_name or "").strip()
+        top_items: dict[str, dict[str, Any]] = {}
+        top_customers: dict[str, dict[str, Any]] = {}
+        total_amount = Decimal("0")
+        total_documents = 0
+
+        for row in sales.get("data") or []:
+            total_documents += 1
+            counterparty = str(row.get("counterparty") or "").strip() or "<unknown>"
+            amount = self._to_decimal(row.get("amount"), default=Decimal("0")) or Decimal("0")
+            total_amount += amount
+            customer_bucket = top_customers.setdefault(
+                counterparty,
+                {
+                    "counterparty": counterparty,
+                    "sales_amount": Decimal("0"),
+                    "document_count": 0,
+                    "last_document_date": row.get("date"),
+                },
+            )
+            customer_bucket["sales_amount"] += amount
+            customer_bucket["document_count"] += 1
+            last_date = self._parse_datetime_like(customer_bucket.get("last_document_date"))
+            current_date = self._parse_datetime_like(row.get("date"))
+            if current_date and (last_date is None or current_date > last_date):
+                customer_bucket["last_document_date"] = row.get("date")
+
+            raw = row.get("raw") or {}
+            for line in self._extract_sales_line_items(raw):
+                item = str(line.get("name") or "").strip()
+                if not item:
+                    continue
+                if item_filter and not self._text_match(item, item_filter):
+                    continue
+                quantity = self._to_decimal(line.get("quantity"), default=None)
+                line_amount = self._to_decimal(line.get("amount"), default=Decimal("0")) or Decimal("0")
+                if quantity is None or quantity <= 0:
+                    continue
+                bucket = top_items.setdefault(
+                    item,
+                    {
+                        "item": item,
+                        "quantity": Decimal("0"),
+                        "amount": Decimal("0"),
+                        "document_count": 0,
+                    },
+                )
+                bucket["quantity"] += quantity
+                bucket["amount"] += line_amount
+                bucket["document_count"] += 1
+
+        top_items_rows = sorted(
+            top_items.values(),
+            key=lambda row: (row["quantity"], row["amount"]),
+            reverse=True,
+        )[:effective_limit]
+        top_customers_rows = sorted(
+            top_customers.values(),
+            key=lambda row: row["sales_amount"],
+            reverse=True,
+        )[:effective_limit]
+
+        return {
+            "count_returned": len(top_items_rows),
+            "period": {"date_from": validated_from, "date_to": validated_to},
+            "summary": {
+                "total_sales_amount": self._decimal_to_text(total_amount),
+                "total_documents": total_documents,
+                "top_items_count": len(top_items_rows),
+                "top_customers_count": len(top_customers_rows),
+            },
+            "top_items": [
+                {
+                    "item": row["item"],
+                    "quantity": self._decimal_to_text(row["quantity"]),
+                    "amount": self._decimal_to_text(row["amount"]),
+                    "document_count": row["document_count"],
+                }
+                for row in top_items_rows
+            ],
+            "top_customers": [
+                {
+                    "counterparty": row["counterparty"],
+                    "sales_amount": self._decimal_to_text(row["sales_amount"]),
+                    "document_count": row["document_count"],
+                    "last_document_date": row["last_document_date"],
+                }
+                for row in top_customers_rows
+            ],
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "item_name": item_name,
+                "limit": effective_limit,
+            },
+            "source": sales.get("source"),
+            "warnings": list(sales.get("warnings") or []),
+            "note": "Read-only management summary built from published sales documents. Это управленческая сводка, а не официальный бухгалтерский отчет 1С.",
         }
 
     def _get_recent_sales_documents(

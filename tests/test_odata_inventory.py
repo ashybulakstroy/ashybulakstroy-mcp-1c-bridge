@@ -188,6 +188,47 @@ class FakeOneCODataClient(OneCODataClient):
             if select:
                 rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
             return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Document_РеализацияТоваровУслуг_Товары":
+            rows = [
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000100",
+                    "LineNumber": "1",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000001",
+                    "Количество": 8,
+                    "Сумма": "80000",
+                },
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000100",
+                    "LineNumber": "2",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000002",
+                    "Количество": 2,
+                    "Сумма": "20000",
+                },
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000101",
+                    "LineNumber": "1",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000001",
+                    "Количество": 5,
+                    "Сумма": "50000",
+                },
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000101",
+                    "LineNumber": "2",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000003",
+                    "Количество": 3,
+                    "Сумма": "30000",
+                },
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000102",
+                    "LineNumber": "1",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000002",
+                    "Количество": 4,
+                    "Сумма": "40000",
+                },
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
         if entity_name == "Document_СчетНаОплатуПокупателю":
             rows = [
                 {
@@ -271,6 +312,42 @@ class FakeOneCODataClient(OneCODataClient):
                     ],
                     "Posted": False,
                 },
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Document_ВводНачальныхОстатков_Запасы":
+            rows = [
+                {
+                    "Ref_Key": "stock-ref-1",
+                    "LineNumber": "1",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000001",
+                    "Склад_Key": "wh-guid-1",
+                    "КоличествоБУ": 3,
+                },
+                {
+                    "Ref_Key": "stock-ref-1",
+                    "LineNumber": "2",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000002",
+                    "Склад_Key": "wh-guid-1",
+                    "КоличествоБУ": 20,
+                },
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Catalog_Номенклатура":
+            rows = [
+                {"Ref_Key": "10000000-0000-0000-0000-000000000001", "Description": "Цемент М400"},
+                {"Ref_Key": "10000000-0000-0000-0000-000000000002", "Description": "Песок"},
+                {"Ref_Key": "10000000-0000-0000-0000-000000000003", "Description": "Бокорез"},
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Catalog_Склады":
+            rows = [
+                {"Ref_Key": "wh-guid-1", "Description": "Основной склад"},
             ]
             if select:
                 rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
@@ -1346,6 +1423,19 @@ def test_get_customer_invoice_details_returns_header_and_lines():
     assert row["lines"][1]["name"] == "Доставка"
 
 
+def test_get_sales_management_summary_returns_totals_and_top_lists():
+    client = FakeOneCODataClient()
+
+    result = client.get_sales_management_summary(date_from="2026-04-20", date_to="2026-04-30", limit=5)
+
+    assert result["summary"]["total_documents"] == 3
+    assert result["summary"]["total_sales_amount"] == "490000"
+    assert result["top_items"][0]["item"] == "Цемент М400"
+    assert result["top_items"][0]["quantity"] == "13"
+    assert result["top_customers"][0]["counterparty"] == "ТОО Альфа Строй"
+    assert result["top_customers"][0]["sales_amount"] == "400000"
+
+
 def test_get_sales_document_details_formats_business_header_and_accounting_view():
     client = FakeOneCODataClient()
 
@@ -1965,6 +2055,31 @@ def test_get_procurement_recommendations_does_not_fabricate_supplier_when_purcha
     assert bokorez["supplier_match_method"] is None
     assert bokorez["supplier_match_confidence"] is None
     assert bokorez["supplier_candidates"] == []
+
+
+def test_get_procurement_recommendations_fast_uses_sales_rows_and_stock_snapshot():
+    client = FakeOneCODataClient()
+
+    result = client.get_procurement_recommendations_fast(days=5, as_of_date="2026-04-24", limit=10)
+
+    assert result["count_returned"] >= 2
+    top = result["data"][0]
+    assert top["item"] == "Цемент М400"
+    assert top["sold_quantity_last_days"] == "13"
+    assert top["current_stock"] == "3"
+    assert top["recommended_purchase_qty"] == "10"
+    assert top["sales_document_count"] == 2
+    assert top["sales_row_source"] == "Document_РеализацияТоваровУслуг_Товары"
+    assert result["source_explanation"]["basis"] == "recent_sales_row_tail_and_current_stock"
+
+
+def test_get_procurement_recommendations_fast_caps_limit_and_infers_as_of():
+    client = FakeOneCODataClient()
+
+    result = client.get_procurement_recommendations_fast(limit=100)
+
+    assert result["filters_applied_in_python"]["limit"] == 30
+    assert result["filters_applied_in_python"]["as_of_date"] == "2026-04-24"
 
 
 def test_get_cash_bank_movements_returns_safe_rows():

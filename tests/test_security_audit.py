@@ -509,6 +509,34 @@ def test_get_customer_invoice_journal_view_allowed_call_is_audited(monkeypatch, 
     assert record["risk"] == "L0"
 
 
+def test_get_sales_management_summary_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_sales_management_summary",
+        lambda **kwargs: {
+            "summary": {"total_sales_amount": "490000", "total_documents": 3},
+            "top_items": [{"item": "Цемент М400", "quantity": "13"}],
+            "top_customers": [{"counterparty": "ТОО Альфа Строй", "sales_amount": "400000"}],
+        },
+    )
+
+    result = core_server.get_sales_management_summary(date_from="2026-04-20", date_to="2026-04-30", project_id="project-sales-mgmt")
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_sales_management_summary"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-sales-mgmt"
+    assert record["risk"] == "L1"
+
+
 def test_get_supplier_reconciliation_documents_allowed_call_is_audited(monkeypatch, tmp_path):
     audit_path = tmp_path / "audit.jsonl"
     monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
@@ -574,4 +602,36 @@ def test_get_procurement_recommendations_allowed_call_is_audited(monkeypatch, tm
     assert record["tool"] == "get_procurement_recommendations"
     assert record["decision"] == "allow"
     assert record["project_id"] == "project-procurement"
+    assert record["risk"] == "L1"
+
+
+def test_get_procurement_recommendations_fast_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_procurement_recommendations_fast",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [
+                {
+                    "item": "Цемент М400",
+                    "recommended_purchase_qty": "10",
+                }
+            ],
+        },
+    )
+
+    result = core_server.get_procurement_recommendations_fast(days=5, project_id="project-procurement-fast")
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_procurement_recommendations_fast"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-procurement-fast"
     assert record["risk"] == "L1"

@@ -279,6 +279,8 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Низкие остатки рассчитаны детерминированно: сервер взял авто-остатки и отфильтровал позиции, где quantity меньше или равно заданному порогу.")
     elif tool == "get_procurement_recommendations":
         explanation["summary"].append("Рекомендации закупа рассчитаны из read-only данных: продажи за период сопоставлены с текущим остатком, после чего сервер оценил потребность на следующий период покрытия.")
+    elif tool == "get_procurement_recommendations_fast":
+        explanation["summary"].append("Быстрые рекомендации закупа рассчитаны по прямым строкам продаж и текущему stock source, чтобы не упираться в тяжелую агрегацию документов на медленной OData-публикации.")
     elif tool in {"get_outgoing_payments", "get_incoming_payments", "get_cash_bank_movements"}:
         explanation["summary"].append("Платежи получены адаптивно: сервер нашел платежную сущность по metadata, прочитал строки OData и нормализовал дату, контрагента и сумму.")
     elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty", "get_customer_settlements_summary", "get_supplier_settlements_summary", "get_supplier_debt_document_breakdown", "get_supplier_reconciliation_documents"}:
@@ -299,6 +301,8 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Детализация счета покупателю читает опубликованный Document_СчетНаОплатуПокупателю и возвращает безопасную шапку документа и строки товаров/услуг без raw OData.")
     elif tool == "get_customer_invoice_journal_view":
         explanation["summary"].append("Журнал счетов покупателям читает опубликованные документы Document_СчетНаОплатуПокупателю и возвращает строки, близкие к экрану списка счетов 1С.")
+    elif tool == "get_sales_management_summary":
+        explanation["summary"].append("Управленческая сводка продаж агрегирует опубликованные реализации за период и возвращает итоги по выручке, top товарам и top клиентам без raw OData.")
     elif tool == "validate_inventory_report_text":
         explanation["summary"].append("Сверка сравнила нормализованные строки MCP и строки отчета 1С по ключам item+warehouse с учетом допусков.")
     if not explanation["warnings"]:
@@ -610,6 +614,26 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
                 tool="get_customer_invoice_journal_view",
             )
 
+        if any(phrase in ql for phrase in ["сводка продаж", "отчет по продажам", "топ продажи", "топ товаров по продажам", "топ клиентов по продажам", "выручка за период"]):
+            date_from, date_to = _extract_date_range(q)
+            counterparty = _extract_counterparty_hint(q)
+            item_name = _extract_after_keywords(q, ["товар", "товары", "продажи", "выручка", "клиент", "клиенты"])
+            result = odata.get_sales_management_summary(
+                date_from=_normalize_relative_date(date_from),
+                date_to=_normalize_relative_date(date_to),
+                counterparty_name=counterparty,
+                item_name=item_name,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_sales_management_summary",
+                    "parsed": {"date_from": _normalize_relative_date(date_from), "date_to": _normalize_relative_date(date_to), "counterparty_name": counterparty, "item_name": item_name, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_sales_management_summary",
+            )
+
         if any(phrase in ql for phrase in ["что продавали", "какой товар продавали", "какие товары продавали", "реализации за период", "продажи за период", "отгрузки за период"]):
             date_from, date_to = _extract_date_range(q)
             counterparty = _extract_counterparty_hint(q)
@@ -637,20 +661,31 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
             days = int(days_match.group(1)) if days_match else 30
             date_from, date_to = _extract_date_range(q)
             as_of = _normalize_relative_date(date_to)
-            result = odata.get_procurement_recommendations(
-                days=days,
-                as_of_date=as_of,
-                warehouse=warehouse,
-                item=item,
-                limit=effective_limit,
-            )
+            if days <= 7:
+                result = odata.get_procurement_recommendations_fast(
+                    days=days,
+                    as_of_date=as_of,
+                    warehouse=warehouse,
+                    item=item,
+                    limit=effective_limit,
+                )
+                tool_name = "get_procurement_recommendations_fast"
+            else:
+                result = odata.get_procurement_recommendations(
+                    days=days,
+                    as_of_date=as_of,
+                    warehouse=warehouse,
+                    item=item,
+                    limit=effective_limit,
+                )
+                tool_name = "get_procurement_recommendations"
             return _ok(
                 {
-                    "intent": "get_procurement_recommendations",
+                    "intent": tool_name,
                     "parsed": {"days": days, "as_of_date": as_of, "warehouse": warehouse, "item": item, "limit": effective_limit},
                     "result": result,
                 },
-                tool="get_procurement_recommendations",
+                tool=tool_name,
             )
 
         if any(phrase in ql for phrase in ["не оплатил в течение 3", "не оплатил за 3 дня", "должники 3 дня", "должники старше 3 дней", "кто не оплатил в течение 3 календарных дней"]):
@@ -971,6 +1006,28 @@ def get_customer_invoice_journal_view(
 
 
 @secure_tool()
+def get_sales_management_summary(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    item_name: str | None = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Показать управленческую сводку продаж за период: выручка, top товары и top клиенты."""
+    try:
+        result = odata.get_sales_management_summary(
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            item_name=item_name,
+            limit=limit,
+        )
+        return _ok(result, tool="get_sales_management_summary")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
 def query_entity(
     entity_name: str,
     top: int = 50,
@@ -1146,6 +1203,34 @@ def get_procurement_recommendations(
             coverage_days=coverage_days,
         )
         return _ok(result, tool="get_procurement_recommendations")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_procurement_recommendations_fast(
+    days: int = 5,
+    as_of_date: str | None = None,
+    warehouse: str | None = None,
+    item: str | None = None,
+    limit: int = 20,
+    coverage_days: int | None = None,
+) -> dict[str, Any]:
+    """Показать быстрые рекомендации закупа на короткий период.
+
+    Использует прямые строки продаж и текущий stock source, чтобы быстрее отвечать на live-базах,
+    где полный procurement path слишком тяжелый для OData.
+    """
+    try:
+        result = odata.get_procurement_recommendations_fast(
+            days=days,
+            as_of_date=as_of_date,
+            warehouse=warehouse,
+            item=item,
+            limit=limit,
+            coverage_days=coverage_days,
+        )
+        return _ok(result, tool="get_procurement_recommendations_fast")
     except Exception as exc:
         return _err(exc)
 

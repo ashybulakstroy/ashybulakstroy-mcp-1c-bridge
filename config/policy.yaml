@@ -138,6 +138,13 @@ tools:
       - read_documents
     auto_approval: true
 
+  get_sales_management_summary:
+    risk: L1
+    capabilities:
+      - read_documents
+      - create_local_report
+    auto_approval: true
+
   search_metadata:
     risk: L0
     capabilities:
@@ -175,6 +182,14 @@ tools:
     auto_approval: true
 
   get_procurement_recommendations:
+    risk: L1
+    capabilities:
+      - read_inventory
+      - read_documents
+      - create_local_report
+    auto_approval: true
+
+  get_procurement_recommendations_fast:
     risk: L1
     capabilities:
       - read_inventory

@@ -176,6 +176,15 @@ def test_main_policy_covers_customer_invoice_journal_view():
     assert [cap.name for cap in tool.capabilities] == ["read_documents"]
 
 
+def test_main_policy_covers_sales_management_summary():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_sales_management_summary"]
+
+    assert tool.risk is RiskLevel.L1
+    assert [cap.name for cap in tool.capabilities] == ["read_documents", "create_local_report"]
+
+
 def test_main_policy_covers_supplier_reconciliation_documents():
     policy = load_policy(Path("config") / "policy.yaml")
 
@@ -189,6 +198,15 @@ def test_main_policy_covers_procurement_recommendations():
     policy = load_policy(Path("config") / "policy.yaml")
 
     tool = policy.tools["get_procurement_recommendations"]
+
+    assert tool.risk is RiskLevel.L1
+    assert [cap.name for cap in tool.capabilities] == ["read_inventory", "read_documents", "create_local_report"]
+
+
+def test_main_policy_covers_procurement_recommendations_fast():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_procurement_recommendations_fast"]
 
     assert tool.risk is RiskLevel.L1
     assert [cap.name for cap in tool.capabilities] == ["read_inventory", "read_documents", "create_local_report"]
