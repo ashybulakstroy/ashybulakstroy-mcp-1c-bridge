@@ -59,6 +59,7 @@ class OneCODataClient:
         self._reference_cache: dict[tuple[str, str, tuple[str, ...]], dict[str, Any] | None] = {}
         self._account_label_cache: dict[str, str | None] = {}
         self._virtual_stock_cache: dict[str, list[dict[str, Any]]] = {}
+        self._sales_picker_stock_cache: dict[str, dict[str, Decimal]] = {}
 
     def _require_url(self) -> None:
         if not self.settings.odata_url:
@@ -628,6 +629,133 @@ class OneCODataClient:
             "note": "Автоопределение основано на metadata и sample OData. Для бухгалтерской точности подтвердите источник и сохраните verified recipe.",
         }
 
+    def get_sales_item_picker_view(
+        self,
+        *,
+        as_of_date: str | None = None,
+        search_text: str | None = None,
+        only_with_stock: bool = False,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """Read a sales picker-like list with code, name and current stock."""
+        effective_limit = min(max(int(limit), 1), 500)
+        warnings: list[str] = []
+
+        cutoff_date: date
+        if as_of_date:
+            try:
+                cutoff_date = date.fromisoformat(as_of_date)
+            except ValueError as exc:
+                raise ODataError("Неверный формат as_of_date. Используйте YYYY-MM-DD.") from exc
+        else:
+            cutoff_date = datetime.now().date()
+
+        cache_key = cutoff_date.isoformat()
+        if cache_key not in self._sales_picker_stock_cache:
+            stock_by_item_ref: dict[str, Decimal] = {}
+            period_start = cutoff_date.replace(day=1)
+            try:
+                material_view = self.get_material_statement_view(
+                    date_from=period_start.isoformat(),
+                    date_to=cutoff_date.isoformat(),
+                    limit=5000,
+                    include_zero_rows=True,
+                )
+                for row in material_view.get("data") or []:
+                    item_ref = str(row.get("item_ref") or "").strip()
+                    if not item_ref:
+                        continue
+                    quantity = self._to_decimal(row.get("closing_qty"), default=Decimal("0"))
+                    stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + quantity
+            except Exception as exc:
+                warnings.append(
+                    f"Не удалось использовать бухгалтерский stock path 1330 для picker view, включен fallback на виртуальный склад: {str(exc)[:160]}"
+                )
+                stock_result = self._get_virtual_warehouse_current_stock_rows(
+                    as_of_date=cutoff_date,
+                    limit=None,
+                )
+                if stock_result is None:
+                    raise ODataError("Не найден published источник текущих остатков для подбора номенклатуры.")
+                for row in stock_result.get("data") or []:
+                    item_ref = str(row.get("item_ref") or "").strip()
+                    if not item_ref:
+                        continue
+                    quantity = self._to_decimal(row.get("quantity"), default=Decimal("0"))
+                    stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + quantity
+            self._sales_picker_stock_cache[cache_key] = stock_by_item_ref
+        stock_by_item_ref = dict(self._sales_picker_stock_cache.get(cache_key) or {})
+
+        entity_name = "Catalog_Номенклатура"
+        select = ["Ref_Key", "Code", "Description", "IsFolder", "Услуга"]
+        page_size = min(max(effective_limit * 4, 200), self.settings.max_top)
+        max_scan_rows = min(max(self.settings.max_top * 20, 2000), 10000)
+
+        rows: list[dict[str, Any]] = []
+        scanned = 0
+        seen_item_refs: set[str] = set()
+        for skip in range(0, max_scan_rows, page_size):
+            payload = self.query_entity(entity_name, top=page_size, select=select, skip=skip)
+            batch = payload.get("data") or []
+            if not batch:
+                break
+            scanned += len(batch)
+            for raw in batch:
+                if self._to_bool_like(raw.get("IsFolder")):
+                    continue
+                if self._to_bool_like(raw.get("Услуга")):
+                    continue
+                item_ref = str(raw.get("Ref_Key") or "").strip()
+                code = str(raw.get("Code") or "").strip()
+                name = str(raw.get("Description") or "").strip()
+                if not item_ref or not name or item_ref in seen_item_refs:
+                    continue
+                seen_item_refs.add(item_ref)
+                stock_qty = stock_by_item_ref.get(item_ref, Decimal("0"))
+                if only_with_stock and stock_qty <= 0:
+                    continue
+                if search_text and not (self._text_match(code, search_text) or self._text_match(name, search_text)):
+                    continue
+                rows.append(
+                    {
+                        "code": code or None,
+                        "name": name,
+                        "stock": self._decimal_to_text(stock_qty),
+                    }
+                )
+                if len(rows) >= effective_limit:
+                    break
+            if len(rows) >= effective_limit or len(batch) < page_size:
+                break
+
+        rows.sort(key=lambda row: (str(row.get("code") or ""), str(row.get("name") or "")))
+        if len(rows) > effective_limit:
+            rows = rows[:effective_limit]
+        if scanned >= max_scan_rows:
+            warnings.append("Список номенклатуры был ограничен безопасным scan cap. Для точного поиска используйте search_text.")
+
+        return {
+            "source": {
+                "entity": entity_name,
+                "confidence": "high",
+                "reasons": [
+                    "catalog_nomenclature_for_code_and_name",
+                    "virtual_warehouse_register_for_current_stock",
+                    "services_and_folders_filtered_out",
+                ],
+            },
+            "filters": {
+                "as_of_date": cutoff_date.isoformat() if cutoff_date else None,
+                "search_text": search_text,
+                "only_with_stock": only_with_stock,
+                "limit": effective_limit,
+            },
+            "count_returned": len(rows),
+            "data": rows,
+            "warnings": warnings,
+            "note": "Это read-only business view экрана подбора номенклатуры: код, имя и текущий остаток без raw OData.",
+        }
+
     def _get_virtual_warehouse_current_stock_rows(
         self,
         *,
@@ -746,6 +874,590 @@ class OneCODataClient:
                 "Текущий остаток рассчитан из движений регистра виртуального склада. Для официального остатка сверяйте с отчетом 1С."
             ],
             "note": "Read-only current stock derived from published accumulation register movements. Не выполняет запись в 1С и не раскрывает raw OData агенту.",
+        }
+
+    def _scan_entity_rows_paged(
+        self,
+        entity_name: str,
+        *,
+        select: list[str] | None = None,
+        filter_expr: str | None = None,
+        orderby: str | None = None,
+        page_size: int = 200,
+        warnings: list[str] | None = None,
+        fallback_to_recent_tail: bool = False,
+        tail_pages: int = 20,
+        max_probe_skip: int = 50000,
+    ) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        skip = 0
+        while True:
+            try:
+                payload = self.query_entity(
+                    entity_name,
+                    top=page_size,
+                    select=select or None,
+                    filter_expr=filter_expr,
+                    orderby=orderby,
+                    skip=skip,
+                )
+            except ODataError as exc:
+                if skip == 0 and fallback_to_recent_tail and filter_expr:
+                    if warnings is not None:
+                        warnings.append(
+                            f"Pushdown filter for {entity_name} failed ({str(exc)[:160]}). "
+                            "Trying bounded recent-tail read with Python-side date filtering."
+                        )
+                    return self._read_recent_tail_rows(
+                        entity_name,
+                        select=select,
+                        page_size=page_size,
+                        tail_pages=tail_pages,
+                        max_probe_skip=max_probe_skip,
+                        warnings=warnings,
+                    )
+                if warnings is not None:
+                    warnings.append(f"Чтение {entity_name} остановлено на skip={skip}: {str(exc)[:180]}")
+                break
+            batch = payload.get("data") or []
+            if not batch:
+                break
+            rows.extend(batch)
+            if len(batch) < page_size:
+                break
+            skip += page_size
+        return rows
+
+    def _collect_material_opening_docs(
+        self,
+        *,
+        end_date: date,
+        account_stats: dict[str, dict[str, Decimal | int]],
+        warnings: list[str],
+    ) -> list[dict[str, Any]]:
+        events: list[dict[str, Any]] = []
+        headers = self._scan_entity_rows_paged("Document_ВводНачальныхОстатков", page_size=50, warnings=warnings)
+        for header in headers:
+            header_dt = self._parse_datetime_like(header.get("Date") or header.get("Дата"))
+            if header_dt is None or header_dt.date() > end_date:
+                continue
+            for row in header.get("Запасы") or []:
+                item_ref = str(row.get("Номенклатура_Key") or "").strip()
+                account_ref = str(row.get("СчетУчетаБУ_Key") or "").strip()
+                qty = self._to_decimal(row.get("КоличествоБУ"), default=None)
+                amount = self._to_decimal(row.get("СуммаБУ"), default=None)
+                if not item_ref or qty is None or amount is None:
+                    continue
+                if account_ref:
+                    stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
+                    stats["count"] = int(stats["count"]) + 1
+                    stats["amount"] = Decimal(stats["amount"]) + abs(amount)
+                events.append(
+                    {
+                        "type": "opening",
+                        "dt": header_dt,
+                        "account_ref": account_ref,
+                        "item_ref": item_ref,
+                        "warehouse_ref": str(row.get("Склад_Key") or header.get("Склад_Key") or "").strip() or None,
+                        "qty": qty,
+                        "amount": amount,
+                    }
+                )
+        return events
+
+    def _collect_material_purchase_docs(
+        self,
+        *,
+        start_date: date | None,
+        end_date: date,
+        account_stats: dict[str, dict[str, Decimal | int]],
+        warnings: list[str],
+    ) -> list[dict[str, Any]]:
+        events: list[dict[str, Any]] = []
+        filter_parts: list[str] = []
+        if start_date:
+            filter_parts.append(f"Date ge datetime'{start_date:%Y-%m-%d}T00:00:00'")
+        filter_parts.append(f"Date le datetime'{end_date:%Y-%m-%d}T23:59:59'")
+        headers = self._scan_entity_rows_paged(
+            "Document_ПоступлениеТоваровУслуг",
+            filter_expr=" and ".join(filter_parts),
+            orderby="Date asc",
+            page_size=100,
+            warnings=warnings,
+            fallback_to_recent_tail=True,
+            tail_pages=30,
+            max_probe_skip=min(self.settings.max_top * 250, 200000),
+        )
+        for header in headers:
+            header_dt = self._parse_datetime_like(header.get("Date") or header.get("Дата"))
+            if header_dt is None or header_dt.date() > end_date or (start_date and header_dt.date() < start_date):
+                continue
+            warehouse_ref = str(header.get("Склад_Key") or "").strip() or None
+            for row in header.get("Товары") or []:
+                item_ref = str(row.get("Номенклатура_Key") or "").strip()
+                account_ref = str(row.get("СчетУчетаБУ_Key") or "").strip()
+                qty = self._to_decimal(row.get("Количество"), default=None)
+                amount = self._to_decimal(row.get("Сумма"), default=None)
+                if not item_ref or qty is None or amount is None:
+                    continue
+                if account_ref:
+                    stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
+                    stats["count"] = int(stats["count"]) + 1
+                    stats["amount"] = Decimal(stats["amount"]) + abs(amount)
+                events.append(
+                    {
+                        "type": "purchase",
+                        "dt": header_dt,
+                        "account_ref": account_ref,
+                        "item_ref": item_ref,
+                        "warehouse_ref": warehouse_ref,
+                        "qty": qty,
+                        "amount": amount,
+                        "corr_account": "3310",
+                    }
+                )
+        return events
+
+    def _collect_material_sales_register_rows(
+        self,
+        *,
+        start_date: date | None,
+        end_date: date,
+        account_stats: dict[str, dict[str, Decimal | int]],
+        warnings: list[str],
+    ) -> list[dict[str, Any]]:
+        events: list[dict[str, Any]] = []
+        filter_parts: list[str] = []
+        if start_date:
+            filter_parts.append(f"Period ge datetime'{start_date:%Y-%m-%d}T00:00:00'")
+        filter_parts.append(f"Period le datetime'{end_date:%Y-%m-%d}T23:59:59'")
+        rows = self._scan_entity_rows_paged(
+            "AccumulationRegister_РеализацияТМЗ_RecordType",
+            select=["Period", "Recorder_Type", "Номенклатура_Key", "Склад_Key", "Количество", "Стоимость", "СчетУчета_Key"],
+            filter_expr=" and ".join(filter_parts),
+            orderby="Period asc",
+            page_size=min(self.settings.max_top, 500),
+            warnings=warnings,
+            fallback_to_recent_tail=True,
+            tail_pages=40,
+            max_probe_skip=min(self.settings.max_top * 400, 300000),
+        )
+        for row in rows:
+            row_dt = self._parse_datetime_like(row.get("Period"))
+            if row_dt is None or row_dt.date() > end_date or (start_date and row_dt.date() < start_date):
+                continue
+            recorder_type = str(row.get("Recorder_Type") or "")
+            if "РеализацияТоваровУслуг" not in recorder_type and "ВозвратТоваровОтПокупателя" not in recorder_type:
+                continue
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            account_ref = str(row.get("СчетУчета_Key") or "").strip()
+            qty = self._to_decimal(row.get("Количество"), default=None)
+            amount = self._to_decimal(row.get("Стоимость"), default=None)
+            if not item_ref or qty is None or amount is None:
+                continue
+            if account_ref:
+                stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
+                stats["count"] = int(stats["count"]) + 1
+                stats["amount"] = Decimal(stats["amount"]) + abs(amount)
+            events.append(
+                {
+                    "type": "customer_return" if "ВозвратТоваровОтПокупателя" in recorder_type else "sale_cost",
+                    "dt": row_dt,
+                    "account_ref": account_ref,
+                    "item_ref": item_ref,
+                    "warehouse_ref": str(row.get("Склад_Key") or "").strip() or None,
+                    "qty": qty,
+                    "amount": amount,
+                    "corr_account": "7000",
+                }
+            )
+        return events
+
+    def _collect_material_completion_docs(
+        self,
+        *,
+        start_date: date | None,
+        end_date: date,
+        account_stats: dict[str, dict[str, Decimal | int]],
+        warnings: list[str],
+    ) -> list[dict[str, Any]]:
+        events: list[dict[str, Any]] = []
+        filter_parts: list[str] = []
+        if start_date:
+            filter_parts.append(f"Date ge datetime'{start_date:%Y-%m-%d}T00:00:00'")
+        filter_parts.append(f"Date le datetime'{end_date:%Y-%m-%d}T23:59:59'")
+        headers = self._scan_entity_rows_paged(
+            "Document_КомплектацияНоменклатуры",
+            filter_expr=" and ".join(filter_parts),
+            orderby="Date asc",
+            page_size=100,
+            warnings=warnings,
+            fallback_to_recent_tail=True,
+            tail_pages=20,
+            max_probe_skip=min(self.settings.max_top * 250, 200000),
+        )
+        for header in headers:
+            header_dt = self._parse_datetime_like(header.get("Date") or header.get("Дата"))
+            if header_dt is None or header_dt.date() > end_date or (start_date and header_dt.date() < start_date):
+                continue
+            output_item_ref = str(header.get("Номенклатура_Key") or "").strip()
+            output_account_ref = str(header.get("СчетУчетаБУ_Key") or "").strip()
+            output_qty = self._to_decimal(header.get("Количество"), default=None)
+            if output_item_ref and output_account_ref:
+                stats = account_stats.setdefault(output_account_ref, {"count": 0, "amount": Decimal("0")})
+                stats["count"] = int(stats["count"]) + 1
+            component_rows: list[dict[str, Any]] = []
+            for row in header.get("Комплектующие") or []:
+                component_item_ref = str(row.get("Номенклатура_Key") or "").strip()
+                component_account_ref = str(row.get("СчетУчетаБУ_Key") or "").strip()
+                component_qty = self._to_decimal(row.get("Количество"), default=None)
+                if not component_item_ref or component_qty is None:
+                    continue
+                if component_account_ref:
+                    stats = account_stats.setdefault(component_account_ref, {"count": 0, "amount": Decimal("0")})
+                    stats["count"] = int(stats["count"]) + 1
+                component_rows.append({"item_ref": component_item_ref, "account_ref": component_account_ref, "qty": component_qty})
+            if not output_item_ref or output_qty is None or not component_rows:
+                continue
+            events.append(
+                {
+                    "type": "completion",
+                    "dt": header_dt,
+                    "output_item_ref": output_item_ref,
+                    "output_account_ref": output_account_ref,
+                    "output_qty": output_qty,
+                    "warehouse_ref": str(header.get("Склад_Key") or "").strip() or None,
+                    "components": component_rows,
+                    "corr_account": "1330",
+                }
+            )
+        return events
+
+    def _detect_material_account_ref(self, account_stats: dict[str, dict[str, Decimal | int]]) -> str | None:
+        best_ref: str | None = None
+        best_score: tuple[int, Decimal, int] | None = None
+        for ref_key, stats in account_stats.items():
+            if not ref_key:
+                continue
+            inferred = (self._infer_account_label(ref_key) or "").lower()
+            label_rank = 2 if inferred == "товары" else (1 if "товар" in inferred else 0)
+            score = (label_rank, Decimal(stats.get("amount") or Decimal("0")), int(stats.get("count") or 0))
+            if best_score is None or score > best_score:
+                best_score = score
+                best_ref = ref_key
+        return best_ref
+
+    def _apply_material_delta(
+        self,
+        rows_by_key: dict[tuple[str, str | None], dict[str, Any]],
+        state_by_key: dict[tuple[str, str | None], dict[str, Decimal]],
+        *,
+        item_ref: str,
+        warehouse_ref: str | None,
+        qty_delta: Decimal,
+        amount_delta: Decimal,
+        in_period: bool,
+        source_label: str | None = None,
+    ) -> None:
+        key = (item_ref, warehouse_ref or None)
+        state = state_by_key.setdefault(key, {"qty": Decimal("0"), "amount": Decimal("0")})
+        row = rows_by_key.setdefault(
+            key,
+            {
+                "item_ref": item_ref,
+                "warehouse_ref": warehouse_ref,
+                "item": self._resolve_reference_value("Номенклатура_Key", item_ref) or item_ref,
+                "warehouse": self._resolve_reference_value("Склад_Key", warehouse_ref) if warehouse_ref else None,
+                "opening_qty": Decimal("0"),
+                "opening_amount": Decimal("0"),
+                "incoming_qty": Decimal("0"),
+                "incoming_amount": Decimal("0"),
+                "outgoing_qty": Decimal("0"),
+                "outgoing_amount": Decimal("0"),
+                "closing_qty": Decimal("0"),
+                "closing_amount": Decimal("0"),
+                "sources": set(),
+            },
+        )
+        if source_label:
+            row["sources"].add(source_label)
+        state["qty"] += qty_delta
+        state["amount"] += amount_delta
+        if in_period:
+            if qty_delta >= 0:
+                row["incoming_qty"] += qty_delta
+                row["incoming_amount"] += amount_delta
+            else:
+                row["outgoing_qty"] += abs(qty_delta)
+                row["outgoing_amount"] += abs(amount_delta)
+        else:
+            row["opening_qty"] = state["qty"]
+            row["opening_amount"] = state["amount"]
+        row["closing_qty"] = state["qty"]
+        row["closing_amount"] = state["amount"]
+
+    @staticmethod
+    def _material_average_cost(state: dict[str, Decimal]) -> Decimal:
+        qty = state.get("qty") or Decimal("0")
+        amount = state.get("amount") or Decimal("0")
+        if qty == 0:
+            return Decimal("0")
+        return amount / qty
+
+    def get_material_statement_view(
+        self,
+        date_from: str,
+        date_to: str,
+        warehouse: str | None = None,
+        item: str | None = None,
+        limit: int = 200,
+        include_zero_rows: bool = False,
+    ) -> dict[str, Any]:
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        period_from = self._parse_date_like(validated_from)
+        period_to = self._parse_date_like(validated_to)
+        if period_from is None or period_to is None:
+            raise ODataError("Для material statement нужны корректные date_from и date_to в формате YYYY-MM-DD.")
+        effective_limit = min(max(int(limit), 1), 500)
+        warnings: list[str] = [
+            "Материальная ведомость рассчитывается по опубликованным read-only OData-источникам счета 1330. Для официальной сверки используйте стандартный отчет 1С."
+        ]
+        account_stats: dict[str, dict[str, Decimal | int]] = {}
+        events: list[dict[str, Any]] = []
+        events.extend(self._collect_material_opening_docs(end_date=period_to, account_stats=account_stats, warnings=warnings))
+        opening_dates = [event["dt"].date() for event in events if event.get("type") == "opening" and event.get("dt") is not None]
+        baseline_date = max(opening_dates) if opening_dates else None
+        events.extend(
+            self._collect_material_purchase_docs(
+                start_date=baseline_date,
+                end_date=period_to,
+                account_stats=account_stats,
+                warnings=warnings,
+            )
+        )
+        events.extend(
+            self._collect_material_sales_register_rows(
+                start_date=baseline_date,
+                end_date=period_to,
+                account_stats=account_stats,
+                warnings=warnings,
+            )
+        )
+        events.extend(
+            self._collect_material_completion_docs(
+                start_date=baseline_date,
+                end_date=period_to,
+                account_stats=account_stats,
+                warnings=warnings,
+            )
+        )
+
+        detected_account_ref = self._detect_material_account_ref(account_stats)
+        if not detected_account_ref:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "warnings": warnings + ["Не удалось определить published account reference для материальной ведомости счета 1330."],
+                "source_explanation": {
+                    "basis": "account_driven_1330_reconstruction",
+                    "opening_source": "Document_ВводНачальныхОстатков",
+                    "purchase_source": "Document_ПоступлениеТоваровУслуг",
+                    "sales_cost_source": "AccumulationRegister_РеализацияТМЗ_RecordType",
+                    "internal_move_source": "Document_КомплектацияНоменклатуры",
+                },
+                "note": "Материальная ведомость не построена, потому что OData не дала надежный reference счета товаров.",
+            }
+
+        rows_by_key: dict[tuple[str, str | None], dict[str, Any]] = {}
+        state_by_key: dict[tuple[str, str | None], dict[str, Decimal]] = {}
+        source_breakdown: dict[str, dict[str, Decimal]] = {
+            "3310": {"incoming_amount": Decimal("0"), "incoming_qty": Decimal("0")},
+            "7000": {"incoming_amount": Decimal("0"), "incoming_qty": Decimal("0"), "outgoing_amount": Decimal("0"), "outgoing_qty": Decimal("0")},
+            "1330": {"incoming_amount": Decimal("0"), "incoming_qty": Decimal("0"), "outgoing_amount": Decimal("0"), "outgoing_qty": Decimal("0")},
+        }
+
+        def _event_sort_key(event: dict[str, Any]) -> tuple[datetime, int]:
+            priority = {"opening": 0, "purchase": 1, "customer_return": 2, "completion": 3, "sale_cost": 4}
+            return (event["dt"], priority.get(str(event.get("type")), 9))
+
+        for event in sorted(events, key=_event_sort_key):
+            event_dt = event["dt"]
+            in_period = period_from <= event_dt.date() <= period_to
+            event_type = str(event.get("type") or "")
+
+            if event_type == "completion":
+                output_account_ref = str(event.get("output_account_ref") or "")
+                component_rows = event.get("components") or []
+                warehouse_ref = event.get("warehouse_ref")
+                if output_account_ref != detected_account_ref and not any(
+                    str(component.get("account_ref") or "") == detected_account_ref for component in component_rows
+                ):
+                    continue
+                total_output_amount = Decimal("0")
+                for component in component_rows:
+                    if str(component.get("account_ref") or "") != detected_account_ref:
+                        continue
+                    component_item_ref = str(component.get("item_ref") or "")
+                    component_qty = self._to_decimal(component.get("qty"), default=None)
+                    if not component_item_ref or component_qty is None or component_qty == 0:
+                        continue
+                    state = state_by_key.setdefault((component_item_ref, warehouse_ref or None), {"qty": Decimal("0"), "amount": Decimal("0")})
+                    component_amount = (self._material_average_cost(state) * component_qty).quantize(Decimal("0.01"))
+                    self._apply_material_delta(
+                        rows_by_key,
+                        state_by_key,
+                        item_ref=component_item_ref,
+                        warehouse_ref=warehouse_ref,
+                        qty_delta=-component_qty,
+                        amount_delta=-component_amount,
+                        in_period=in_period,
+                        source_label="Document_КомплектацияНоменклатуры",
+                    )
+                    if in_period:
+                        source_breakdown["1330"]["outgoing_qty"] += component_qty
+                        source_breakdown["1330"]["outgoing_amount"] += component_amount
+                    total_output_amount += component_amount
+                output_item_ref = str(event.get("output_item_ref") or "")
+                output_qty = self._to_decimal(event.get("output_qty"), default=None)
+                if output_item_ref and output_qty not in (None, Decimal("0")) and output_account_ref == detected_account_ref:
+                    self._apply_material_delta(
+                        rows_by_key,
+                        state_by_key,
+                        item_ref=output_item_ref,
+                        warehouse_ref=warehouse_ref,
+                        qty_delta=output_qty,
+                        amount_delta=total_output_amount,
+                        in_period=in_period,
+                        source_label="Document_КомплектацияНоменклатуры",
+                    )
+                    if in_period:
+                        source_breakdown["1330"]["incoming_qty"] += output_qty
+                        source_breakdown["1330"]["incoming_amount"] += total_output_amount
+                continue
+
+            if str(event.get("account_ref") or "") != detected_account_ref:
+                continue
+            item_ref = str(event.get("item_ref") or "")
+            warehouse_ref = event.get("warehouse_ref")
+            qty = self._to_decimal(event.get("qty"), default=None)
+            amount = self._to_decimal(event.get("amount"), default=None)
+            if not item_ref or qty is None or amount is None:
+                continue
+
+            if event_type in {"opening", "purchase", "customer_return"}:
+                self._apply_material_delta(
+                    rows_by_key,
+                    state_by_key,
+                    item_ref=item_ref,
+                    warehouse_ref=warehouse_ref,
+                    qty_delta=qty,
+                    amount_delta=amount,
+                    in_period=in_period,
+                    source_label={
+                        "opening": "Document_ВводНачальныхОстатков",
+                        "purchase": "Document_ПоступлениеТоваровУслуг",
+                        "customer_return": "AccumulationRegister_РеализацияТМЗ_RecordType",
+                    }[event_type],
+                )
+                if in_period and event_type == "purchase":
+                    source_breakdown["3310"]["incoming_qty"] += qty
+                    source_breakdown["3310"]["incoming_amount"] += amount
+                elif in_period and event_type == "customer_return":
+                    source_breakdown["7000"]["incoming_qty"] += qty
+                    source_breakdown["7000"]["incoming_amount"] += amount
+            elif event_type == "sale_cost":
+                self._apply_material_delta(
+                    rows_by_key,
+                    state_by_key,
+                    item_ref=item_ref,
+                    warehouse_ref=warehouse_ref,
+                    qty_delta=-qty,
+                    amount_delta=-amount,
+                    in_period=in_period,
+                    source_label="AccumulationRegister_РеализацияТМЗ_RecordType",
+                )
+                if in_period:
+                    source_breakdown["7000"]["outgoing_qty"] += qty
+                    source_breakdown["7000"]["outgoing_amount"] += amount
+
+        totals = {
+            "opening_qty": Decimal("0"),
+            "opening_amount": Decimal("0"),
+            "incoming_qty": Decimal("0"),
+            "incoming_amount": Decimal("0"),
+            "outgoing_qty": Decimal("0"),
+            "outgoing_amount": Decimal("0"),
+            "closing_qty": Decimal("0"),
+            "closing_amount": Decimal("0"),
+        }
+        data_rows: list[dict[str, Any]] = []
+        for row in rows_by_key.values():
+            if warehouse and not self._text_match(row.get("warehouse"), warehouse):
+                continue
+            if item and not self._text_match(row.get("item"), item):
+                continue
+            if not include_zero_rows and all(
+                row[field] == 0
+                for field in ("opening_qty", "opening_amount", "incoming_qty", "incoming_amount", "outgoing_qty", "outgoing_amount", "closing_qty", "closing_amount")
+            ):
+                continue
+            for field in totals:
+                totals[field] += row[field]
+            data_rows.append(
+                {
+                    "item": row["item"],
+                    "warehouse": row["warehouse"],
+                    "opening_qty": self._decimal_to_text(row["opening_qty"]),
+                    "opening_amount": self._decimal_to_text(row["opening_amount"]),
+                    "incoming_qty": self._decimal_to_text(row["incoming_qty"]),
+                    "incoming_amount": self._decimal_to_text(row["incoming_amount"]),
+                    "outgoing_qty": self._decimal_to_text(row["outgoing_qty"]),
+                    "outgoing_amount": self._decimal_to_text(row["outgoing_amount"]),
+                    "closing_qty": self._decimal_to_text(row["closing_qty"]),
+                    "closing_amount": self._decimal_to_text(row["closing_amount"]),
+                    "sources": sorted(row["sources"]),
+                    "item_ref": row["item_ref"],
+                    "warehouse_ref": row["warehouse_ref"],
+                }
+            )
+        data_rows.sort(key=lambda row: (str(row.get("item") or ""), str(row.get("warehouse") or "")))
+
+        inferred_label = self._infer_account_label(detected_account_ref)
+        if inferred_label:
+            warnings.append(
+                f"Счет 1330 определён по published reference {detected_account_ref[:8]} и business label '{inferred_label}'. Точный chart-of-accounts code не опубликован в OData."
+            )
+
+        return {
+            "count_returned": min(len(data_rows), effective_limit),
+            "data": data_rows[:effective_limit],
+            "period": {"date_from": validated_from, "date_to": validated_to},
+            "filters_applied_in_python": {
+                "warehouse": warehouse,
+                "item": item,
+                "limit": effective_limit,
+                "include_zero_rows": include_zero_rows,
+            },
+            "account": {
+                "requested": "1330",
+                "detected_ref": detected_account_ref,
+                "detected_label": inferred_label,
+            },
+            "totals": {key: self._decimal_to_text(value) for key, value in totals.items()},
+            "source_breakdown": {
+                account: {metric: self._decimal_to_text(value) for metric, value in metrics.items() if value != 0}
+                for account, metrics in source_breakdown.items()
+                if any(value != 0 for value in metrics.values())
+            },
+            "source_explanation": {
+                "basis": "account_driven_1330_reconstruction",
+                "opening_source": "Document_ВводНачальныхОстатков",
+                "purchase_source": "Document_ПоступлениеТоваровУслуг",
+                "sales_cost_source": "AccumulationRegister_РеализацияТМЗ_RecordType",
+                "internal_move_source": "Document_КомплектацияНоменклатуры",
+            },
+            "warnings": warnings,
+            "note": "Экранный read-only view материальной ведомости по счету 1330, восстановленный из опубликованных OData-источников без записи в 1С.",
         }
 
     @staticmethod

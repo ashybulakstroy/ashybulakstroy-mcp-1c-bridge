@@ -635,3 +635,66 @@ def test_get_procurement_recommendations_fast_allowed_call_is_audited(monkeypatc
     assert record["decision"] == "allow"
     assert record["project_id"] == "project-procurement-fast"
     assert record["risk"] == "L1"
+
+
+def test_get_material_statement_view_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_material_statement_view",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [{"item": "Цемент М400", "closing_qty": "8"}],
+            "totals": {"closing_amount": "1400"},
+        },
+    )
+
+    result = core_server.get_material_statement_view(
+        date_from="2026-05-01",
+        date_to="2026-05-31",
+        project_id="project-material-statement",
+    )
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_material_statement_view"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-material-statement"
+    assert record["risk"] == "L1"
+
+
+def test_get_sales_item_picker_view_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_sales_item_picker_view",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [{"code": "000000001", "name": "Цемент М400", "stock": "3"}],
+        },
+    )
+
+    result = core_server.get_sales_item_picker_view(
+        as_of_date="2026-05-19",
+        only_with_stock=True,
+        project_id="project-sales-picker",
+    )
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_sales_item_picker_view"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-sales-picker"
+    assert record["risk"] == "L0"

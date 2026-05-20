@@ -4,6 +4,7 @@ import logging
 import re
 import sys
 import inspect
+from datetime import date
 from functools import wraps
 from decimal import Decimal
 from typing import Any
@@ -281,6 +282,10 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Рекомендации закупа рассчитаны из read-only данных: продажи за период сопоставлены с текущим остатком, после чего сервер оценил потребность на следующий период покрытия.")
     elif tool == "get_procurement_recommendations_fast":
         explanation["summary"].append("Быстрые рекомендации закупа рассчитаны по прямым строкам продаж и текущему stock source, чтобы не упираться в тяжелую агрегацию документов на медленной OData-публикации.")
+    elif tool == "get_material_statement_view":
+        explanation["summary"].append("Материальная ведомость построена как read-only reconstruction по счету 1330: начальные остатки, поступления, списания себестоимости, возвраты от покупателей и внутренние комплектации.")
+    elif tool == "get_sales_item_picker_view":
+        explanation["summary"].append("Подбор номенклатуры собран как read-only view: код и имя берутся из каталога номенклатуры, а текущий остаток рассчитывается по регистру виртуального склада.")
     elif tool in {"get_outgoing_payments", "get_incoming_payments", "get_cash_bank_movements"}:
         explanation["summary"].append("Платежи получены адаптивно: сервер нашел платежную сущность по metadata, прочитал строки OData и нормализовал дату, контрагента и сумму.")
     elif tool in {"get_unpaid_customers_summary", "get_overdue_unpaid_customers", "get_customer_payment_behavior_summary", "payment_summary_by_counterparty", "get_customer_settlements_summary", "get_supplier_settlements_summary", "get_supplier_debt_document_breakdown", "get_supplier_reconciliation_documents"}:
@@ -342,7 +347,29 @@ def ask_1c(text: str, limit: int | None = None) -> dict[str, Any]:
         if any(word in ql for word in ["почему", "объясни", "explain", "как решил"]):
             return _ok({"intent": "explain_last_answer", "result": _build_explanation(LAST_ANSWER_TRACE)}, tool="explain_last_answer")
 
-        if any(word in ql for word in ["свер", "отчет", "отчёт", "материальная ведомость"]):
+        if any(phrase in ql for phrase in ["материальная ведомость", "осв 1330", "оборотно-сальдовая ведомость", "карточка счета 1330"]):
+            date_from, date_to = _extract_date_range(q)
+            warehouse = _extract_warehouse(q)
+            item_name = _extract_after_keywords(q, ["товар", "товары", "номенклатура", "материал", "материалы"])
+            normalized_from = _normalize_relative_date(date_from) or f"{date.today().replace(day=1):%Y-%m-%d}"
+            normalized_to = _normalize_relative_date(date_to) or f"{date.today():%Y-%m-%d}"
+            result = odata.get_material_statement_view(
+                date_from=normalized_from,
+                date_to=normalized_to,
+                warehouse=warehouse,
+                item=item_name,
+                limit=effective_limit,
+            )
+            return _ok(
+                {
+                    "intent": "get_material_statement_view",
+                    "parsed": {"date_from": normalized_from, "date_to": normalized_to, "warehouse": warehouse, "item": item_name, "limit": effective_limit},
+                    "result": result,
+                },
+                tool="get_material_statement_view",
+            )
+
+        if any(word in ql for word in ["свер", "отчет", "отчёт"]):
             return _ok({
                 "intent": "validation_help",
                 "message": "Для сверки вставьте скопированные строки отчета 1С в tool validate_inventory_report_text. Пример: Сверь остатки по складу Основной с этим отчетом: и ниже вставьте таблицу из 1С/Excel.",
@@ -1147,6 +1174,54 @@ def get_inventory_auto(
             )
             result["saved_candidate_recipe"] = "auto_inventory_candidate"
         return _ok(result, tool="get_inventory_auto")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_material_statement_view(
+    date_from: str,
+    date_to: str,
+    warehouse: str | None = None,
+    item: str | None = None,
+    limit: int = 200,
+    include_zero_rows: bool = False,
+) -> dict[str, Any]:
+    """Показать экранный read-only view материальной ведомости по счету 1330 за период.
+
+    Источник не складская эвристика, а бухгалтерская реконструкция published OData-движений:
+    начальные остатки, поступления, списания себестоимости, возвраты от покупателей и комплектация.
+    """
+    try:
+        result = odata.get_material_statement_view(
+            date_from=date_from,
+            date_to=date_to,
+            warehouse=warehouse,
+            item=item,
+            limit=limit,
+            include_zero_rows=include_zero_rows,
+        )
+        return _ok(result, tool="get_material_statement_view")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_sales_item_picker_view(
+    as_of_date: str | None = None,
+    search_text: str | None = None,
+    only_with_stock: bool = False,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Показать read-only подбор номенклатуры для продажи: код, имя и текущий остаток."""
+    try:
+        result = odata.get_sales_item_picker_view(
+            as_of_date=as_of_date,
+            search_text=search_text,
+            only_with_stock=only_with_stock,
+            limit=limit,
+        )
+        return _ok(result, tool="get_sales_item_picker_view")
     except Exception as exc:
         return _err(exc)
 

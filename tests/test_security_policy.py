@@ -212,6 +212,24 @@ def test_main_policy_covers_procurement_recommendations_fast():
     assert [cap.name for cap in tool.capabilities] == ["read_inventory", "read_documents", "create_local_report"]
 
 
+def test_main_policy_covers_material_statement_view():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_material_statement_view"]
+
+    assert tool.risk is RiskLevel.L1
+    assert [cap.name for cap in tool.capabilities] == ["read_inventory", "create_local_report"]
+
+
+def test_main_policy_covers_sales_item_picker_view():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_sales_item_picker_view"]
+
+    assert tool.risk is RiskLevel.L0
+    assert [cap.name for cap in tool.capabilities] == ["read_inventory"]
+
+
 def test_demo_docs_mark_cash_bank_movements_as_operational_view():
     demo_readme = Path("docs/DEMO_READONLY_SECURE_MODE.md").read_text(encoding="utf-8")
     demo_prompts = Path("docs/DEMO_PROMPTS.md").read_text(encoding="utf-8")

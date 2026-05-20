@@ -175,6 +175,19 @@ tools:
       - read_inventory
     auto_approval: true
 
+  get_material_statement_view:
+    risk: L1
+    capabilities:
+      - read_inventory
+      - create_local_report
+    auto_approval: true
+
+  get_sales_item_picker_view:
+    risk: L0
+    capabilities:
+      - read_inventory
+    auto_approval: true
+
   get_low_stock_items:
     risk: L0
     capabilities:

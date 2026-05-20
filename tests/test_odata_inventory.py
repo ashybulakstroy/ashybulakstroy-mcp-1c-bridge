@@ -20,6 +20,7 @@ class FakeOneCODataClient(OneCODataClient):
         super().__init__(settings)
         self._fake_xml = Path(__file__).parent.joinpath("fixtures", "fake_odata_metadata.xml").read_text(encoding="utf-8")
         self.captured_queries = []
+        self.material_account_ref = "13300000-0000-0000-0000-000000000001"
 
     def get_metadata_xml(self, refresh: bool = False) -> str:
         return self._fake_xml
@@ -316,8 +317,8 @@ class FakeOneCODataClient(OneCODataClient):
                     "Номер": "SUP-001",
                     "Валюта": "KZT",
                     "Товары": [
-                        {"Содержание": "Цемент М400", "Количество": 10, "Сумма": "90000"},
-                        {"Содержание": "Песок", "Количество": 5, "Сумма": "30000"},
+                        {"Содержание": "Цемент М400", "Номенклатура_Key": "10000000-0000-0000-0000-000000000001", "Количество": 10, "Сумма": "90000"},
+                        {"Содержание": "Песок", "Номенклатура_Key": "10000000-0000-0000-0000-000000000002", "Количество": 5, "Сумма": "30000"},
                     ],
                     "Posted": True,
                 },
@@ -343,7 +344,120 @@ class FakeOneCODataClient(OneCODataClient):
                     "Услуги": [
                         {"Содержание": "Сервисное обслуживание", "Количество": 1, "Сумма": "60000"},
                     ],
-                    "Posted": False,
+                    "Posted": True,
+                },
+                {
+                    "Ref_Key": "00000000-0000-0000-0000-000000000203",
+                    "Дата": "2026-05-05T13:00:00",
+                    "Контрагент": "ТОО Тестовый Поставщик",
+                    "СуммаДокумента": "200",
+                    "Номер": "MAT-001",
+                    "Валюта": "KZT",
+                    "Товары": [
+                        {"Содержание": "Цемент М400", "Номенклатура_Key": "10000000-0000-0000-0000-000000000001", "Количество": 2, "Сумма": "200", "СчетУчетаБУ_Key": self.material_account_ref},
+                    ],
+                    "Posted": True,
+                },
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Document_ВводНачальныхОстатков":
+            rows = [
+                {
+                    "Ref_Key": "opening-001",
+                    "Date": "2026-04-01T09:00:00",
+                    "Запасы": [
+                        {
+                            "Номенклатура_Key": "10000000-0000-0000-0000-000000000001",
+                            "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                            "КоличествоБУ": 10,
+                            "СуммаБУ": 1000,
+                            "СчетУчетаБУ_Key": self.material_account_ref,
+                        }
+                    ],
+                }
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "AccumulationRegister_РеализацияТМЗ_RecordType":
+            rows = [
+                {
+                    "Ref_Key": "sale-reg-1",
+                    "Period": "2026-04-22T10:00:00",
+                    "Recorder_Type": "StandardODATA.Document_РеализацияТоваровУслуг",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000001",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                    "Количество": 3,
+                    "Стоимость": 300,
+                    "СчетУчета_Key": self.material_account_ref,
+                },
+                {
+                    "Ref_Key": "sale-reg-2",
+                    "Period": "2026-04-23T11:00:00",
+                    "Recorder_Type": "StandardODATA.Document_ВозвратТоваровОтПокупателя",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000001",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                    "Количество": 1,
+                    "Стоимость": 100,
+                    "СчетУчета_Key": self.material_account_ref,
+                },
+                {
+                    "Ref_Key": "sale-reg-3",
+                    "Period": "2026-05-06T09:00:00",
+                    "Recorder_Type": "StandardODATA.Document_РеализацияТоваровУслуг",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000003",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                    "Количество": 1,
+                    "Стоимость": 200,
+                    "СчетУчета_Key": self.material_account_ref,
+                },
+                {
+                    "Ref_Key": "sale-reg-4",
+                    "Period": "2026-05-07T09:00:00",
+                    "Recorder_Type": "StandardODATA.Document_ВозвратТоваровОтПокупателя",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000003",
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                    "Количество": 1,
+                    "Стоимость": 200,
+                    "СчетУчета_Key": self.material_account_ref,
+                },
+            ]
+            if select:
+                rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
+            return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
+        if entity_name == "Document_КомплектацияНоменклатуры":
+            rows = [
+                {
+                    "Ref_Key": "comp-001",
+                    "Date": "2026-05-06T08:00:00",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000003",
+                    "Количество": 2,
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                    "СчетУчетаБУ_Key": self.material_account_ref,
+                    "Комплектующие": [
+                        {
+                            "Номенклатура_Key": "10000000-0000-0000-0000-000000000001",
+                            "Количество": 4,
+                            "СчетУчетаБУ_Key": self.material_account_ref,
+                        }
+                    ],
+                },
+                {
+                    "Ref_Key": "comp-002",
+                    "Date": "2026-05-08T10:00:00",
+                    "Номенклатура_Key": "10000000-0000-0000-0000-000000000002",
+                    "Количество": 1,
+                    "Склад_Key": "20000000-0000-0000-0000-000000000001",
+                    "СчетУчетаБУ_Key": self.material_account_ref,
+                    "Комплектующие": [
+                        {
+                            "Номенклатура_Key": "10000000-0000-0000-0000-000000000001",
+                            "Количество": 2,
+                            "СчетУчетаБУ_Key": self.material_account_ref,
+                        }
+                    ],
                 },
             ]
             if select:
@@ -371,9 +485,9 @@ class FakeOneCODataClient(OneCODataClient):
             return {"entity": entity_name, "count_returned": min(len(rows), top), "top_applied": top, "data": rows[:top]}
         if entity_name == "Catalog_Номенклатура":
             rows = [
-                {"Ref_Key": "10000000-0000-0000-0000-000000000001", "Description": "Цемент М400"},
-                {"Ref_Key": "10000000-0000-0000-0000-000000000002", "Description": "Песок"},
-                {"Ref_Key": "10000000-0000-0000-0000-000000000003", "Description": "Бокорез"},
+                {"Ref_Key": "10000000-0000-0000-0000-000000000001", "Code": "000000001", "Description": "Цемент М400", "IsFolder": False, "Услуга": False},
+                {"Ref_Key": "10000000-0000-0000-0000-000000000002", "Code": "000000002", "Description": "Песок", "IsFolder": False, "Услуга": False},
+                {"Ref_Key": "10000000-0000-0000-0000-000000000003", "Code": "000000003", "Description": "Бокорез", "IsFolder": False, "Услуга": False},
             ]
             if select:
                 rows = [{k: v for k, v in row.items() if k in set(select)} for row in rows]
@@ -917,6 +1031,33 @@ class FakeOneCODataClientPurchaseTailPaging(FakeOneCODataClient):
         return super().query_entity(entity_name, top=top, select=select, filter_expr=filter_expr, orderby=orderby, skip=skip)
 
 
+class FakeOneCODataClientMaterialFilterFallback(FakeOneCODataClient):
+    def query_entity(self, entity_name, top=50, select=None, filter_expr=None, orderby=None, skip=0):
+        if entity_name in {
+            "Document_ПоступлениеТоваровУслуг",
+            "AccumulationRegister_РеализацияТМЗ_RecordType",
+            "Document_КомплектацияНоменклатуры",
+        } and filter_expr:
+            raise ODataError("Ошибка OData запроса: HTTP 500: Internal Server Error")
+        if entity_name in {
+            "Document_ПоступлениеТоваровУслуг",
+            "AccumulationRegister_РеализацияТМЗ_RecordType",
+            "Document_КомплектацияНоменклатуры",
+        } and skip > 0:
+            self.captured_queries.append(
+                {
+                    "entity_name": entity_name,
+                    "top": top,
+                    "select": list(select) if select else None,
+                    "filter_expr": filter_expr,
+                    "orderby": orderby,
+                    "skip": skip,
+                }
+            )
+            return {"entity": entity_name, "count_returned": 0, "top_applied": top, "data": []}
+        return super().query_entity(entity_name, top=top, select=select, filter_expr=filter_expr, orderby=orderby, skip=skip)
+
+
 class FakeOneCODataClientAmbiguousReceiptNumber(FakeOneCODataClient):
     def _discover_document_search_candidates(self, document_type: str | None = None, limit: int | None = None):
         ranked = super()._discover_document_search_candidates(document_type=document_type, limit=None)
@@ -1071,6 +1212,26 @@ def test_get_inventory_auto_uses_virtual_register_stock_balance():
     quantities = {row["item"]: row["quantity"] for row in result["data"]}
     assert quantities["Цемент М400"] == "3"
     assert quantities["Песок"] == "20"
+
+
+def test_get_sales_item_picker_view_returns_code_name_and_stock():
+    client = FakeOneCODataClient()
+
+    result = client.get_sales_item_picker_view(as_of_date="2026-05-31", limit=10)
+
+    assert result["count_returned"] == 3
+    assert result["data"][0] == {"code": "000000001", "name": "Цемент М400", "stock": "4"}
+    assert result["data"][1] == {"code": "000000002", "name": "Песок", "stock": "1"}
+    assert result["data"][2] == {"code": "000000003", "name": "Бокорез", "stock": "2"}
+
+
+def test_get_sales_item_picker_view_only_with_stock_filters_zero_balances():
+    client = FakeOneCODataClient()
+
+    result = client.get_sales_item_picker_view(as_of_date="2026-05-31", only_with_stock=True, limit=10)
+
+    assert [row["name"] for row in result["data"]] == ["Цемент М400", "Песок", "Бокорез"]
+    assert all(row["stock"] != "0" for row in result["data"])
 
 
 def test_get_low_stock_items_uses_threshold():
@@ -2123,6 +2284,54 @@ def test_get_procurement_recommendations_fast_caps_limit_and_infers_as_of():
 
     assert result["filters_applied_in_python"]["limit"] == 30
     assert result["filters_applied_in_python"]["as_of_date"] == "2026-04-24"
+
+
+def test_get_material_statement_view_reconstructs_1330_opening_turnovers_and_closing():
+    client = FakeOneCODataClient()
+
+    result = client.get_material_statement_view(date_from="2026-05-01", date_to="2026-05-31", limit=50)
+
+    assert result["account"]["requested"] == "1330"
+    assert result["totals"]["opening_qty"] == "8"
+    assert result["totals"]["opening_amount"] == "800"
+    assert result["totals"]["incoming_qty"] == "6"
+    assert result["totals"]["incoming_amount"] == "1000"
+    assert result["totals"]["outgoing_qty"] == "7"
+    assert result["totals"]["outgoing_amount"] == "800"
+    assert result["totals"]["closing_qty"] == "7"
+    assert result["totals"]["closing_amount"] == "1000"
+    assert result["source_breakdown"]["3310"]["incoming_amount"] == "200"
+    assert result["source_breakdown"]["7000"]["incoming_amount"] == "200"
+    assert result["source_breakdown"]["7000"]["outgoing_amount"] == "200"
+    assert result["source_breakdown"]["1330"]["incoming_amount"] == "600"
+    assert result["source_breakdown"]["1330"]["outgoing_amount"] == "600"
+
+    rows = {(row["item_ref"], row["warehouse_ref"]): row for row in result["data"]}
+    assert rows[("10000000-0000-0000-0000-000000000001", "20000000-0000-0000-0000-000000000001")]["opening_qty"] == "8"
+    assert rows[("10000000-0000-0000-0000-000000000001", "20000000-0000-0000-0000-000000000001")]["outgoing_qty"] == "6"
+    assert rows[("10000000-0000-0000-0000-000000000001", "20000000-0000-0000-0000-000000000001")]["closing_qty"] == "2"
+    assert rows[("10000000-0000-0000-0000-000000000001", None)]["opening_qty"] == "0"
+    assert rows[("10000000-0000-0000-0000-000000000001", None)]["incoming_qty"] == "2"
+    assert rows[("10000000-0000-0000-0000-000000000001", None)]["closing_qty"] == "2"
+    assert rows[("10000000-0000-0000-0000-000000000002", "20000000-0000-0000-0000-000000000001")]["incoming_qty"] == "1"
+    assert rows[("10000000-0000-0000-0000-000000000002", "20000000-0000-0000-0000-000000000001")]["closing_amount"] == "200"
+    assert rows[("10000000-0000-0000-0000-000000000003", "20000000-0000-0000-0000-000000000001")]["opening_amount"] == "0"
+    assert rows[("10000000-0000-0000-0000-000000000003", "20000000-0000-0000-0000-000000000001")]["incoming_qty"] == "3"
+    assert rows[("10000000-0000-0000-0000-000000000003", "20000000-0000-0000-0000-000000000001")]["outgoing_qty"] == "1"
+    assert rows[("10000000-0000-0000-0000-000000000003", "20000000-0000-0000-0000-000000000001")]["closing_qty"] == "2"
+
+
+def test_get_material_statement_view_falls_back_when_material_filters_return_http_500():
+    client = FakeOneCODataClientMaterialFilterFallback()
+
+    result = client.get_material_statement_view(date_from="2026-05-01", date_to="2026-05-31", limit=50)
+
+    assert result["totals"]["opening_amount"] == "800"
+    assert result["totals"]["incoming_amount"] == "1000"
+    assert result["totals"]["outgoing_amount"] == "800"
+    assert any("Pushdown filter for Document_ПоступлениеТоваровУслуг failed" in warning for warning in result["warnings"])
+    assert any("Pushdown filter for AccumulationRegister_РеализацияТМЗ_RecordType failed" in warning for warning in result["warnings"])
+    assert any("Pushdown filter for Document_КомплектацияНоменклатуры failed" in warning for warning in result["warnings"])
 
 
 def test_get_cash_bank_movements_returns_safe_rows():

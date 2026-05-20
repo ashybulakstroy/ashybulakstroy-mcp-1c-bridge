@@ -122,6 +122,7 @@ def main() -> int:
         ("search_metadata", {"text": "контрагент", "limit": 10}, False),
         ("discover_inventory_sources", {"limit": 10, "check_data": True}, False),
         ("get_inventory_auto", {"limit": 10}, False),
+        ("get_material_statement_view", {"date_from": "2026-05-01", "date_to": "2026-05-31", "limit": 10}, False),
         ("get_low_stock_items", {"limit": 10, "threshold_quantity": "10"}, False),
         ("get_procurement_recommendations", {"days": 30, "limit": 10}, False),
         ("discover_payment_sources", {"limit": 10, "check_data": True}, False),
