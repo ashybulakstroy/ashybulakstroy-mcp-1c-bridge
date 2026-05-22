@@ -650,52 +650,37 @@ class OneCODataClient:
         else:
             cutoff_date = datetime.now().date()
 
-        cache_key = cutoff_date.isoformat()
-        if cache_key not in self._sales_picker_stock_cache:
-            stock_by_item_ref: dict[str, Decimal] = {}
-            period_start = cutoff_date.replace(day=1)
-            try:
-                material_view = self.get_material_statement_view(
-                    date_from=period_start.isoformat(),
-                    date_to=cutoff_date.isoformat(),
-                    limit=5000,
-                    include_zero_rows=True,
-                )
-                for row in material_view.get("data") or []:
-                    item_ref = str(row.get("item_ref") or "").strip()
-                    if not item_ref:
-                        continue
-                    quantity = self._to_decimal(row.get("closing_qty"), default=Decimal("0"))
-                    stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + quantity
-            except Exception as exc:
-                warnings.append(
-                    f"Не удалось использовать бухгалтерский stock path 1330 для picker view, включен fallback на виртуальный склад: {str(exc)[:160]}"
-                )
-                stock_result = self._get_virtual_warehouse_current_stock_rows(
-                    as_of_date=cutoff_date,
-                    limit=None,
-                )
-                if stock_result is None:
-                    raise ODataError("Не найден published источник текущих остатков для подбора номенклатуры.")
-                for row in stock_result.get("data") or []:
-                    item_ref = str(row.get("item_ref") or "").strip()
-                    if not item_ref:
-                        continue
-                    quantity = self._to_decimal(row.get("quantity"), default=Decimal("0"))
-                    stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + quantity
-            self._sales_picker_stock_cache[cache_key] = stock_by_item_ref
-        stock_by_item_ref = dict(self._sales_picker_stock_cache.get(cache_key) or {})
-
+        warehouse_name = "Основной склад"
+        warehouse_ref = self._resolve_sales_picker_warehouse_ref(warehouse_name)
         entity_name = "Catalog_Номенклатура"
         select = ["Ref_Key", "Code", "Description", "IsFolder", "Услуга"]
         page_size = min(max(effective_limit * 4, 200), self.settings.max_top)
-        max_scan_rows = min(max(self.settings.max_top * 20, 2000), 10000)
+        normalized_code_query = self._normalize_numeric_search(search_text)
+        orderby = "Code" if normalized_code_query else "Description"
+        if normalized_code_query:
+            try:
+                target_number = max(int(normalized_code_query), 0)
+            except ValueError:
+                target_number = 0
+            # In Isatay the ordered catalog is close to the numeric code sequence.
+            approx_skip = max(0, ((target_number - 2) // page_size) * page_size)
+            scan_starts = list(
+                range(
+                    max(0, approx_skip - page_size),
+                    approx_skip + page_size * 3,
+                    page_size,
+                )
+            )
+            max_scan_rows = page_size * max(len(scan_starts), 1)
+        else:
+            scan_starts = list(range(0, min(max(self.settings.max_top * 20, 2000), 8000), page_size))
+            max_scan_rows = page_size * max(len(scan_starts), 1)
 
-        rows: list[dict[str, Any]] = []
+        matched_items: list[dict[str, str]] = []
         scanned = 0
         seen_item_refs: set[str] = set()
-        for skip in range(0, max_scan_rows, page_size):
-            payload = self.query_entity(entity_name, top=page_size, select=select, skip=skip)
+        for skip in scan_starts:
+            payload = self.query_entity(entity_name, top=page_size, select=select, skip=skip, orderby=orderby)
             batch = payload.get("data") or []
             if not batch:
                 break
@@ -710,23 +695,42 @@ class OneCODataClient:
                 name = str(raw.get("Description") or "").strip()
                 if not item_ref or not name or item_ref in seen_item_refs:
                     continue
+                if search_text and not self._picker_item_matches(code=code, name=name, search_text=search_text):
+                    continue
                 seen_item_refs.add(item_ref)
-                stock_qty = stock_by_item_ref.get(item_ref, Decimal("0"))
-                if only_with_stock and stock_qty <= 0:
-                    continue
-                if search_text and not (self._text_match(code, search_text) or self._text_match(name, search_text)):
-                    continue
-                rows.append(
+                matched_items.append(
                     {
+                        "item_ref": item_ref,
                         "code": code or None,
                         "name": name,
-                        "stock": self._decimal_to_text(stock_qty),
                     }
                 )
-                if len(rows) >= effective_limit:
+                if len(matched_items) >= effective_limit:
                     break
-            if len(rows) >= effective_limit or len(batch) < page_size:
+            if len(matched_items) >= effective_limit or len(batch) < page_size:
                 break
+
+        target_item_refs = {str(item.get("item_ref") or "").strip() for item in matched_items if item.get("item_ref")}
+        stock_by_item_ref = self._get_sales_picker_stock_map(
+            cutoff_date=cutoff_date,
+            item_refs=target_item_refs,
+            warehouse_ref=warehouse_ref,
+            warnings=warnings,
+        )
+
+        rows: list[dict[str, Any]] = []
+        for item in matched_items:
+            item_ref = str(item.get("item_ref") or "").strip()
+            stock_qty = stock_by_item_ref.get(item_ref, Decimal("0"))
+            if only_with_stock and stock_qty <= 0:
+                continue
+            rows.append(
+                {
+                    "code": item.get("code"),
+                    "name": item.get("name"),
+                    "stock": self._decimal_to_text(stock_qty),
+                }
+            )
 
         rows.sort(key=lambda row: (str(row.get("code") or ""), str(row.get("name") or "")))
         if len(rows) > effective_limit:
@@ -740,7 +744,7 @@ class OneCODataClient:
                 "confidence": "high",
                 "reasons": [
                     "catalog_nomenclature_for_code_and_name",
-                    "virtual_warehouse_register_for_current_stock",
+                    "hybrid_stock_path_for_current_stock",
                     "services_and_folders_filtered_out",
                 ],
             },
@@ -748,13 +752,450 @@ class OneCODataClient:
                 "as_of_date": cutoff_date.isoformat() if cutoff_date else None,
                 "search_text": search_text,
                 "only_with_stock": only_with_stock,
+                "warehouse_name": warehouse_name if warehouse_ref else None,
                 "limit": effective_limit,
             },
             "count_returned": len(rows),
             "data": rows,
             "warnings": warnings,
-            "note": "Это read-only business view экрана подбора номенклатуры: код, имя и текущий остаток без raw OData.",
+            "note": "Это read-only business view экрана подбора номенклатуры: код, имя и текущий остаток без raw OData. Остаток строится безопасным гибридным путем из published OData.",
         }
+
+    def _resolve_sales_picker_warehouse_ref(self, warehouse_name: str) -> str | None:
+        cache_key = ("Catalog_Склады", warehouse_name.strip(), ("Ref_Key", "Description"))
+        cached = self._reference_cache.get(cache_key)
+        if cached is not None:
+            return str(cached.get("Ref_Key") or "").strip() or None
+
+        normalized_target = self._norm(warehouse_name)
+        for skip in range(0, 5000, 500):
+            payload = self.query_entity(
+                "Catalog_Склады",
+                top=500,
+                select=["Ref_Key", "Description"],
+                orderby="Description",
+                skip=skip,
+            )
+            batch = payload.get("data") or []
+            if not batch:
+                break
+            for row in batch:
+                description = str(row.get("Description") or "").strip()
+                if self._norm(description) == normalized_target:
+                    self._reference_cache[cache_key] = dict(row)
+                    return str(row.get("Ref_Key") or "").strip() or None
+            if len(batch) < 500:
+                break
+        self._reference_cache[cache_key] = {}
+        return None
+
+    def _normalize_numeric_search(self, value: str | None) -> str | None:
+        if value is None:
+            return None
+        raw = str(value).strip()
+        if not raw.isdigit():
+            return None
+        normalized = raw.lstrip("0")
+        return normalized or "0"
+
+    def _resolve_nomenclature_refs(self, search_text: str, *, limit: int = 20) -> set[str]:
+        text = str(search_text or "").strip()
+        if not text:
+            return set()
+        effective_limit = min(max(int(limit), 1), 100)
+        normalized_code_query = self._normalize_numeric_search(text)
+        orderby = "Code" if normalized_code_query else "Description"
+        page_size = min(max(effective_limit * 4, 200), self.settings.max_top)
+        if normalized_code_query:
+            try:
+                target_number = max(int(normalized_code_query), 0)
+            except ValueError:
+                target_number = 0
+            approx_skip = max(0, ((target_number - 2) // page_size) * page_size)
+            scan_starts = list(range(max(0, approx_skip - page_size), approx_skip + page_size * 3, page_size))
+        else:
+            scan_starts = list(range(0, min(max(self.settings.max_top * 20, 2000), 8000), page_size))
+
+        refs: set[str] = set()
+        for skip in scan_starts:
+            payload = self.query_entity(
+                "Catalog_Номенклатура",
+                top=page_size,
+                select=["Ref_Key", "Code", "Description", "IsFolder", "Услуга"],
+                skip=skip,
+                orderby=orderby,
+            )
+            batch = payload.get("data") or []
+            if not batch:
+                break
+            for raw in batch:
+                if self._to_bool_like(raw.get("IsFolder")) or self._to_bool_like(raw.get("Услуга")):
+                    continue
+                item_ref = str(raw.get("Ref_Key") or "").strip()
+                code = str(raw.get("Code") or "").strip()
+                name = str(raw.get("Description") or "").strip()
+                if not item_ref or not name:
+                    continue
+                if self._picker_item_matches(code=code, name=name, search_text=text):
+                    refs.add(item_ref)
+                    if len(refs) >= effective_limit:
+                        return refs
+            if len(batch) < page_size:
+                break
+        return refs
+
+    def _picker_item_matches(self, *, code: str, name: str, search_text: str) -> bool:
+        numeric_query = self._normalize_numeric_search(search_text)
+        if numeric_query is not None:
+            normalized_code = self._normalize_numeric_search(code)
+            return normalized_code == numeric_query
+        return self._text_match(code, search_text) or self._text_match(name, search_text)
+
+    def _get_sales_picker_stock_map(
+        self,
+        *,
+        cutoff_date: date,
+        item_refs: set[str],
+        warehouse_ref: str | None,
+        warnings: list[str],
+    ) -> dict[str, Decimal]:
+        if not item_refs:
+            return {}
+
+        cache_key = f"{cutoff_date.isoformat()}|{warehouse_ref or 'all'}|{','.join(sorted(item_refs))}"
+        if cache_key in self._sales_picker_stock_cache:
+            return dict(self._sales_picker_stock_cache[cache_key])
+
+        stock_by_item_ref: dict[str, Decimal] = {}
+        try:
+            stock_by_item_ref = self._get_sales_picker_stock_map_fast(
+                cutoff_date=cutoff_date,
+                item_refs=item_refs,
+                warehouse_ref=warehouse_ref,
+            )
+        except Exception as exc:
+            warnings.append(
+                f"Не удалось использовать быстрый quantity-only path для picker view, включен бухгалтерский fallback: {str(exc)[:160]}"
+            )
+
+        if len(item_refs) <= 10:
+            try:
+                precise_map = self._get_sales_picker_stock_map_precise(
+                    cutoff_date=cutoff_date,
+                    item_refs=item_refs,
+                )
+                if precise_map:
+                    merged: dict[str, Decimal] = {}
+                    all_refs = set(stock_by_item_ref.keys()) | set(precise_map.keys())
+                    for item_ref in all_refs:
+                        fast_qty = stock_by_item_ref.get(item_ref)
+                        precise_qty = precise_map.get(item_ref)
+                        if fast_qty is not None and precise_qty is not None:
+                            merged[item_ref] = min(fast_qty, precise_qty)
+                        elif fast_qty is not None:
+                            merged[item_ref] = fast_qty
+                        elif precise_qty is not None:
+                            merged[item_ref] = precise_qty
+                    stock_by_item_ref = merged
+            except Exception as exc:
+                warnings.append(
+                    f"Не удалось наложить точный бухгалтерский stock path 1330 для picker view: {str(exc)[:160]}"
+                )
+
+        if stock_by_item_ref:
+            self._sales_picker_stock_cache[cache_key] = dict(stock_by_item_ref)
+            return stock_by_item_ref
+
+        period_start = cutoff_date.replace(day=1)
+        try:
+            material_view = self.get_material_statement_view(
+                date_from=period_start.isoformat(),
+                date_to=cutoff_date.isoformat(),
+                limit=max(len(item_refs) * 5, 100),
+                include_zero_rows=True,
+                item_keys=item_refs,
+            )
+            for row in material_view.get("data") or []:
+                item_ref = str(row.get("item_ref") or "").strip()
+                if not item_ref:
+                    continue
+                quantity = self._to_decimal(row.get("closing_qty"), default=Decimal("0"))
+                stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + quantity
+        except Exception as exc:
+            warnings.append(
+                f"Не удалось использовать бухгалтерский stock path 1330 для picker view, включен fallback на виртуальный склад: {str(exc)[:160]}"
+            )
+            stock_result = self._get_virtual_warehouse_current_stock_rows(
+                as_of_date=cutoff_date,
+                item_keys=item_refs,
+                limit=None,
+            )
+            if stock_result is None:
+                raise ODataError("Не найден published источник текущих остатков для подбора номенклатуры.")
+            for row in stock_result.get("data") or []:
+                item_ref = str(row.get("item_ref") or "").strip()
+                if not item_ref:
+                    continue
+                quantity = self._to_decimal(row.get("quantity"), default=Decimal("0"))
+                stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + quantity
+        self._sales_picker_stock_cache[cache_key] = dict(stock_by_item_ref)
+        return stock_by_item_ref
+
+    def _get_sales_picker_stock_map_precise(
+        self,
+        *,
+        cutoff_date: date,
+        item_refs: set[str],
+    ) -> dict[str, Decimal]:
+        period_start = cutoff_date.replace(day=1)
+        material_view = self.get_material_statement_view(
+            date_from=period_start.isoformat(),
+            date_to=cutoff_date.isoformat(),
+            warehouse=None,
+            item=None,
+            limit=max(len(item_refs) * 5, 100),
+            include_zero_rows=True,
+            item_keys=item_refs,
+            _force_generic_path=True,
+        )
+        precise_map: dict[str, Decimal] = {}
+        for row in material_view.get("data") or []:
+            item_ref = str(row.get("item_ref") or "").strip()
+            if not item_ref or item_ref not in item_refs:
+                continue
+            quantity = self._to_decimal(row.get("closing_qty"), default=Decimal("0"))
+            precise_map[item_ref] = precise_map.get(item_ref, Decimal("0")) + quantity
+        return precise_map
+
+    def _get_sales_picker_stock_map_fast(
+        self,
+        *,
+        cutoff_date: date,
+        item_refs: set[str],
+        warehouse_ref: str | None,
+    ) -> dict[str, Decimal]:
+        stock_by_item_ref: dict[str, Decimal] = {item_ref: Decimal("0") for item_ref in item_refs}
+
+        def scan_rows(
+            entity_name: str,
+            *,
+            select: list[str] | None = None,
+            page_size: int = 500,
+            max_rows: int = 50000,
+        ) -> list[dict[str, Any]]:
+            rows: list[dict[str, Any]] = []
+            for skip in range(0, max_rows, page_size):
+                payload = self.query_entity(entity_name, top=page_size, select=select, skip=skip)
+                batch = payload.get("data") or []
+                if not batch:
+                    break
+                rows.extend(batch)
+                if len(batch) < page_size:
+                    break
+            return rows
+
+        def scan_header_dates(
+            entity_name: str,
+            *,
+            select: list[str] | None = None,
+            warehouse_field: str | None = "Склад_Key",
+            page_size: int = 500,
+            max_rows: int = 20000,
+        ) -> set[str]:
+            valid_refs: set[str] = set()
+            for skip in range(0, max_rows, page_size):
+                payload = self.query_entity(entity_name, top=page_size, select=select, skip=skip)
+                batch = payload.get("data") or []
+                if not batch:
+                    break
+                for row in batch:
+                    ref_key = str(row.get("Ref_Key") or "").strip()
+                    parsed = self._parse_datetime_like(row.get("Date") or row.get("Дата"))
+                    if not ref_key or parsed is None:
+                        continue
+                    if warehouse_ref and warehouse_field:
+                        row_warehouse_ref = str(row.get(warehouse_field) or "").strip()
+                        if row_warehouse_ref and row_warehouse_ref != warehouse_ref:
+                            continue
+                    if parsed.date() <= cutoff_date:
+                        valid_refs.add(ref_key)
+                if len(batch) < page_size:
+                    break
+            return valid_refs
+
+        goods_account_cache: dict[str, bool] = {}
+
+        def is_goods_account(account_ref: str) -> bool:
+            if not account_ref:
+                return True
+            if account_ref not in goods_account_cache:
+                goods_account_cache[account_ref] = self._norm(self._infer_account_label(account_ref) or "").find("товар") >= 0
+            return goods_account_cache[account_ref]
+
+        purchase_refs = scan_header_dates(
+            "Document_ПоступлениеТоваровУслуг",
+            select=["Ref_Key", "Date", "Склад_Key"],
+        )
+        sales_refs = scan_header_dates(
+            "Document_РеализацияТоваровУслуг",
+            select=["Ref_Key", "Date", "Склад_Key"],
+        )
+        customer_return_refs = scan_header_dates(
+            "Document_ВозвратТоваровОтПокупателя",
+            select=["Ref_Key", "Date", "Склад_Key"],
+        )
+        supplier_return_refs = scan_header_dates(
+            "Document_ВозвратТоваровПоставщику",
+            select=["Ref_Key", "Date", "Склад_Key"],
+        )
+        goods_receipt_refs = scan_header_dates(
+            "Document_ОприходованиеТоваров",
+            select=["Ref_Key", "Date", "Склад_Key"],
+        )
+        goods_writeoff_refs = scan_header_dates(
+            "Document_СписаниеТоваров",
+            select=["Ref_Key", "Date", "Склад_Key"],
+        )
+        completion_refs = scan_header_dates(
+            "Document_КомплектацияНоменклатуры",
+            select=["Ref_Key", "Date", "Склад_Key"],
+        )
+
+        for row in scan_rows(
+            "Document_ВводНачальныхОстатков_Запасы",
+            select=["Номенклатура_Key", "СчетУчетаБУ_Key", "КоличествоБУ", "Склад_Key"],
+            page_size=200,
+            max_rows=10000,
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            if item_ref not in item_refs:
+                continue
+            row_warehouse_ref = str(row.get("Склад_Key") or "").strip()
+            if warehouse_ref and row_warehouse_ref and row_warehouse_ref != warehouse_ref:
+                continue
+            if not is_goods_account(str(row.get("СчетУчетаБУ_Key") or "").strip()):
+                continue
+            qty = self._to_decimal(row.get("КоличествоБУ"), default=Decimal("0"))
+            stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + qty
+
+        for row in scan_rows(
+            "Document_ПоступлениеТоваровУслуг_Товары",
+            select=["Ref_Key", "Номенклатура_Key", "СчетУчетаБУ_Key", "Количество"],
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            if item_ref not in item_refs:
+                continue
+            if not is_goods_account(str(row.get("СчетУчетаБУ_Key") or "").strip()):
+                continue
+            ref_key = str(row.get("Ref_Key") or "").strip()
+            if ref_key not in purchase_refs:
+                continue
+            qty = self._to_decimal(row.get("Количество"), default=Decimal("0"))
+            stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + qty
+
+        for row in scan_rows(
+            "Document_РеализацияТоваровУслуг_Товары",
+            select=["Ref_Key", "Номенклатура_Key", "СчетУчетаБУ_Key", "Количество"],
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            if item_ref not in item_refs:
+                continue
+            if not is_goods_account(str(row.get("СчетУчетаБУ_Key") or "").strip()):
+                continue
+            ref_key = str(row.get("Ref_Key") or "").strip()
+            if ref_key not in sales_refs:
+                continue
+            qty = self._to_decimal(row.get("Количество"), default=Decimal("0"))
+            stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) - qty
+
+        for row in scan_rows(
+            "Document_ВозвратТоваровОтПокупателя_Товары",
+            select=["Ref_Key", "Номенклатура_Key", "СчетУчетаБУ_Key", "Количество"],
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            if item_ref not in item_refs:
+                continue
+            if not is_goods_account(str(row.get("СчетУчетаБУ_Key") or "").strip()):
+                continue
+            ref_key = str(row.get("Ref_Key") or "").strip()
+            if ref_key not in customer_return_refs:
+                continue
+            qty = self._to_decimal(row.get("Количество"), default=Decimal("0"))
+            stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + qty
+
+        for row in scan_rows(
+            "Document_ВозвратТоваровПоставщику_Товары",
+            select=["Ref_Key", "Номенклатура_Key", "СчетУчетаБУ_Key", "Количество"],
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            if item_ref not in item_refs:
+                continue
+            if not is_goods_account(str(row.get("СчетУчетаБУ_Key") or "").strip()):
+                continue
+            ref_key = str(row.get("Ref_Key") or "").strip()
+            if ref_key not in supplier_return_refs:
+                continue
+            qty = self._to_decimal(row.get("Количество"), default=Decimal("0"))
+            stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) - qty
+
+        for row in scan_rows(
+            "Document_ОприходованиеТоваров_Товары",
+            select=["Ref_Key", "Номенклатура_Key", "СчетУчетаБУ_Key", "Количество"],
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            if item_ref not in item_refs:
+                continue
+            if not is_goods_account(str(row.get("СчетУчетаБУ_Key") or "").strip()):
+                continue
+            if str(row.get("Ref_Key") or "").strip() not in goods_receipt_refs:
+                continue
+            qty = self._to_decimal(row.get("Количество"), default=Decimal("0"))
+            stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + qty
+
+        for row in scan_rows(
+            "Document_КомплектацияНоменклатуры_Комплектующие",
+            select=["Ref_Key", "Номенклатура_Key", "СчетУчетаБУ_Key", "Количество"],
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            if item_ref not in item_refs:
+                continue
+            if not is_goods_account(str(row.get("СчетУчетаБУ_Key") or "").strip()):
+                continue
+            ref_key = str(row.get("Ref_Key") or "").strip()
+            if ref_key not in completion_refs:
+                continue
+            qty = self._to_decimal(row.get("Количество"), default=Decimal("0"))
+            stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) - qty
+
+        for row in scan_rows(
+            "Document_КомплектацияНоменклатуры",
+            select=["Ref_Key", "Номенклатура_Key", "СчетУчетаБУ_Key", "Количество", "Date"],
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            if item_ref not in item_refs:
+                continue
+            if not is_goods_account(str(row.get("СчетУчетаБУ_Key") or "").strip()):
+                continue
+            if str(row.get("Ref_Key") or "").strip() not in completion_refs:
+                continue
+            qty = self._to_decimal(row.get("Количество"), default=Decimal("0"))
+            stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + qty
+
+        for row in scan_rows(
+            "Document_СписаниеТоваров_Товары",
+            select=["Ref_Key", "Номенклатура_Key", "СчетУчетаБУ_Key", "Количество"],
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            if item_ref not in item_refs:
+                continue
+            if not is_goods_account(str(row.get("СчетУчетаБУ_Key") or "").strip()):
+                continue
+            if str(row.get("Ref_Key") or "").strip() not in goods_writeoff_refs:
+                continue
+            qty = self._to_decimal(row.get("Количество"), default=Decimal("0"))
+            stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) - qty
+
+        return stock_by_item_ref
 
     def _get_virtual_warehouse_current_stock_rows(
         self,
@@ -932,6 +1373,7 @@ class OneCODataClient:
         self,
         *,
         end_date: date,
+        item_keys: set[str] | None,
         account_stats: dict[str, dict[str, Decimal | int]],
         warnings: list[str],
     ) -> list[dict[str, Any]]:
@@ -947,6 +1389,8 @@ class OneCODataClient:
                 qty = self._to_decimal(row.get("КоличествоБУ"), default=None)
                 amount = self._to_decimal(row.get("СуммаБУ"), default=None)
                 if not item_ref or qty is None or amount is None:
+                    continue
+                if item_keys and item_ref not in item_keys:
                     continue
                 if account_ref:
                     stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
@@ -970,6 +1414,7 @@ class OneCODataClient:
         *,
         start_date: date | None,
         end_date: date,
+        item_keys: set[str] | None,
         account_stats: dict[str, dict[str, Decimal | int]],
         warnings: list[str],
     ) -> list[dict[str, Any]]:
@@ -1000,6 +1445,8 @@ class OneCODataClient:
                 amount = self._to_decimal(row.get("Сумма"), default=None)
                 if not item_ref or qty is None or amount is None:
                     continue
+                if item_keys and item_ref not in item_keys:
+                    continue
                 if account_ref:
                     stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
                     stats["count"] = int(stats["count"]) + 1
@@ -1023,6 +1470,7 @@ class OneCODataClient:
         *,
         start_date: date | None,
         end_date: date,
+        item_keys: set[str] | None,
         account_stats: dict[str, dict[str, Decimal | int]],
         warnings: list[str],
     ) -> list[dict[str, Any]]:
@@ -1055,6 +1503,8 @@ class OneCODataClient:
             amount = self._to_decimal(row.get("Стоимость"), default=None)
             if not item_ref or qty is None or amount is None:
                 continue
+            if item_keys and item_ref not in item_keys:
+                continue
             if account_ref:
                 stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
                 stats["count"] = int(stats["count"]) + 1
@@ -1078,6 +1528,7 @@ class OneCODataClient:
         *,
         start_date: date | None,
         end_date: date,
+        item_keys: set[str] | None,
         account_stats: dict[str, dict[str, Decimal | int]],
         warnings: list[str],
     ) -> list[dict[str, Any]]:
@@ -1113,11 +1564,17 @@ class OneCODataClient:
                 component_qty = self._to_decimal(row.get("Количество"), default=None)
                 if not component_item_ref or component_qty is None:
                     continue
+                if item_keys and component_item_ref not in item_keys and output_item_ref not in item_keys:
+                    continue
                 if component_account_ref:
                     stats = account_stats.setdefault(component_account_ref, {"count": 0, "amount": Decimal("0")})
                     stats["count"] = int(stats["count"]) + 1
                 component_rows.append({"item_ref": component_item_ref, "account_ref": component_account_ref, "qty": component_qty})
             if not output_item_ref or output_qty is None or not component_rows:
+                continue
+            if item_keys and output_item_ref not in item_keys and not any(
+                str(component.get("item_ref") or "") in item_keys for component in component_rows
+            ):
                 continue
             events.append(
                 {
@@ -1132,6 +1589,569 @@ class OneCODataClient:
                 }
             )
         return events
+
+    def _build_guid_or_filter(self, field_name: str, refs: set[str]) -> str | None:
+        clean_refs = [str(ref).strip() for ref in refs if str(ref).strip()]
+        if not clean_refs:
+            return None
+        if len(clean_refs) == 1:
+            return f"{field_name} eq guid'{clean_refs[0]}'"
+        return "(" + " or ".join(f"{field_name} eq guid'{ref}'" for ref in clean_refs) + ")"
+
+    def _scan_entity_rows_targeted(
+        self,
+        entity_name: str,
+        *,
+        select: list[str] | None = None,
+        filter_expr: str | None = None,
+        orderby: str | None = None,
+        page_size: int = 500,
+        max_pages: int = 20,
+    ) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        effective_filter = filter_expr
+        for page in range(max_pages):
+            try:
+                payload = self.query_entity(
+                    entity_name,
+                    top=page_size,
+                    select=select,
+                    filter_expr=effective_filter,
+                    orderby=orderby,
+                    skip=page * page_size,
+                )
+            except ODataError:
+                if effective_filter is None:
+                    raise
+                effective_filter = None
+                payload = self.query_entity(
+                    entity_name,
+                    top=page_size,
+                    select=select,
+                    filter_expr=None,
+                    orderby=orderby,
+                    skip=page * page_size,
+                )
+            batch = payload.get("data") or []
+            if not batch:
+                break
+            rows.extend(batch)
+            if len(batch) < page_size:
+                break
+        return rows
+
+    def _get_material_statement_view_targeted(
+        self,
+        *,
+        period_from: date,
+        period_to: date,
+        item_keys: set[str],
+        warehouse: str | None,
+        item: str | None,
+        effective_limit: int,
+        include_zero_rows: bool,
+        warnings: list[str],
+    ) -> dict[str, Any]:
+        account_stats: dict[str, dict[str, Decimal | int]] = {}
+        events: list[dict[str, Any]] = []
+        processed_completion_refs: set[str] = set()
+        opening_ref_hits: set[str] = set()
+        purchase_ref_hits: set[str] = set()
+        completion_header_cache: dict[str, dict[str, Any]] = {}
+        baseline_date: date | None = None
+
+        def header_matches_date_and_warehouse(raw: dict[str, Any]) -> bool:
+            header_dt = self._parse_datetime_like(raw.get("Date") or raw.get("Дата"))
+            if header_dt is None or header_dt.date() > period_to:
+                return False
+            if baseline_date and header_dt.date() < baseline_date:
+                return False
+            if warehouse and not self._text_match(self._resolve_reference_value("Склад_Key", raw.get("Склад_Key")), warehouse):
+                return False
+            return True
+
+        opening_filter = self._build_guid_or_filter("Номенклатура_Key", item_keys)
+        for row in self._scan_entity_rows_targeted(
+            "Document_ВводНачальныхОстатков_Запасы",
+            select=["Ref_Key", "Номенклатура_Key", "Склад_Key", "КоличествоБУ", "СуммаБУ", "СчетУчетаБУ_Key"],
+            filter_expr=opening_filter,
+            orderby="Ref_Key",
+            page_size=200,
+            max_pages=10,
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            qty = self._to_decimal(row.get("КоличествоБУ"), default=None)
+            amount = self._to_decimal(row.get("СуммаБУ"), default=None)
+            if not item_ref or qty is None or amount is None or item_ref not in item_keys:
+                continue
+            raw = self._fetch_raw_entity_by_ref("Document_ВводНачальныхОстатков", str(row.get("Ref_Key") or ""))
+            if raw is None or not header_matches_date_and_warehouse(raw):
+                continue
+            opening_ref_hits.add(str(row.get("Ref_Key") or "").strip())
+            header_dt = self._parse_datetime_like(raw.get("Date") or raw.get("Дата"))
+            account_ref = str(row.get("СчетУчетаБУ_Key") or "").strip()
+            if account_ref:
+                stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
+                stats["count"] = int(stats["count"]) + 1
+                stats["amount"] = Decimal(stats["amount"]) + abs(amount)
+            events.append(
+                {
+                    "type": "opening",
+                    "dt": header_dt,
+                    "account_ref": account_ref,
+                    "item_ref": item_ref,
+                    "warehouse_ref": str(row.get("Склад_Key") or raw.get("Склад_Key") or "").strip() or None,
+                    "qty": qty,
+                    "amount": amount,
+                }
+            )
+
+        if not opening_ref_hits:
+            for header in self._scan_entity_rows_targeted(
+                "Document_ВводНачальныхОстатков",
+                select=None,
+                orderby="Date asc",
+                page_size=100,
+                max_pages=10,
+            ):
+                raw = header if isinstance(header, dict) else None
+                if raw is None or not header_matches_date_and_warehouse(raw):
+                    continue
+                header_dt = self._parse_datetime_like(raw.get("Date") or raw.get("Дата"))
+                for row in raw.get("Запасы") or []:
+                    item_ref = str(row.get("Номенклатура_Key") or "").strip()
+                    qty = self._to_decimal(row.get("КоличествоБУ"), default=None)
+                    amount = self._to_decimal(row.get("СуммаБУ"), default=None)
+                    if not item_ref or qty is None or amount is None or item_ref not in item_keys:
+                        continue
+                    account_ref = str(row.get("СчетУчетаБУ_Key") or "").strip()
+                    if account_ref:
+                        stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
+                        stats["count"] = int(stats["count"]) + 1
+                        stats["amount"] = Decimal(stats["amount"]) + abs(amount)
+                    events.append(
+                        {
+                            "type": "opening",
+                            "dt": header_dt,
+                            "account_ref": account_ref,
+                            "item_ref": item_ref,
+                            "warehouse_ref": str(row.get("Склад_Key") or raw.get("Склад_Key") or "").strip() or None,
+                            "qty": qty,
+                            "amount": amount,
+                        }
+                    )
+
+        opening_dates = [event["dt"].date() for event in events if event.get("type") == "opening" and event.get("dt") is not None]
+        baseline_date = max(opening_dates) if opening_dates else None
+
+        purchase_filter_parts: list[str] = []
+        guid_filter = self._build_guid_or_filter("Номенклатура_Key", item_keys)
+        if guid_filter:
+            purchase_filter_parts.append(guid_filter)
+        purchase_filter = " and ".join(purchase_filter_parts) if purchase_filter_parts else None
+        for row in self._scan_entity_rows_targeted(
+            "Document_ПоступлениеТоваровУслуг_Товары",
+            select=["Ref_Key", "Номенклатура_Key", "Количество", "Сумма", "СчетУчетаБУ_Key"],
+            filter_expr=purchase_filter,
+            orderby="Ref_Key",
+            page_size=200,
+            max_pages=20,
+        ):
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            qty = self._to_decimal(row.get("Количество"), default=None)
+            amount = self._to_decimal(row.get("Сумма"), default=None)
+            if not item_ref or qty is None or amount is None or item_ref not in item_keys:
+                continue
+            raw = self._fetch_raw_entity_by_ref("Document_ПоступлениеТоваровУслуг", str(row.get("Ref_Key") or ""))
+            if raw is None or not header_matches_date_and_warehouse(raw):
+                continue
+            purchase_ref_hits.add(str(row.get("Ref_Key") or "").strip())
+            header_dt = self._parse_datetime_like(raw.get("Date") or raw.get("Дата"))
+            account_ref = str(row.get("СчетУчетаБУ_Key") or "").strip()
+            if account_ref:
+                stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
+                stats["count"] = int(stats["count"]) + 1
+                stats["amount"] = Decimal(stats["amount"]) + abs(amount)
+            events.append(
+                {
+                    "type": "purchase",
+                    "dt": header_dt,
+                    "account_ref": account_ref,
+                    "item_ref": item_ref,
+                    "warehouse_ref": str(raw.get("Склад_Key") or row.get("Склад_Key") or "").strip() or None,
+                    "qty": qty,
+                    "amount": amount,
+                    "corr_account": "3310",
+                }
+            )
+
+        if not purchase_ref_hits:
+            header_filter_parts = [f"Date le datetime'{period_to:%Y-%m-%d}T23:59:59'"]
+            if baseline_date:
+                header_filter_parts.append(f"Date ge datetime'{baseline_date:%Y-%m-%d}T00:00:00'")
+            for raw in self._scan_entity_rows_targeted(
+                "Document_ПоступлениеТоваровУслуг",
+                select=None,
+                filter_expr=" and ".join(header_filter_parts),
+                orderby="Date asc",
+                page_size=100,
+                max_pages=20,
+            ):
+                if raw is None or not header_matches_date_and_warehouse(raw):
+                    continue
+                header_dt = self._parse_datetime_like(raw.get("Date") or raw.get("Дата"))
+                for row in raw.get("Товары") or []:
+                    item_ref = str(row.get("Номенклатура_Key") or "").strip()
+                    qty = self._to_decimal(row.get("Количество"), default=None)
+                    amount = self._to_decimal(row.get("Сумма"), default=None)
+                    if not item_ref or qty is None or amount is None or item_ref not in item_keys:
+                        continue
+                    account_ref = str(row.get("СчетУчетаБУ_Key") or "").strip()
+                    if account_ref:
+                        stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
+                        stats["count"] = int(stats["count"]) + 1
+                        stats["amount"] = Decimal(stats["amount"]) + abs(amount)
+                    events.append(
+                        {
+                            "type": "purchase",
+                            "dt": header_dt,
+                            "account_ref": account_ref,
+                            "item_ref": item_ref,
+                            "warehouse_ref": str(raw.get("Склад_Key") or row.get("Склад_Key") or "").strip() or None,
+                            "qty": qty,
+                            "amount": amount,
+                            "corr_account": "3310",
+                        }
+                    )
+
+        sales_filter_parts: list[str] = []
+        if guid_filter:
+            sales_filter_parts.append(guid_filter.replace("Номенклатура_Key", "Номенклатура_Key"))
+        if baseline_date:
+            sales_filter_parts.append(f"Period ge datetime'{baseline_date:%Y-%m-%d}T00:00:00'")
+        sales_filter_parts.append(f"Period le datetime'{period_to:%Y-%m-%d}T23:59:59'")
+        sales_filter = " and ".join(sales_filter_parts)
+        for row in self._scan_entity_rows_targeted(
+            "AccumulationRegister_РеализацияТМЗ_RecordType",
+            select=["Period", "Recorder_Type", "Номенклатура_Key", "Склад_Key", "Количество", "Стоимость", "СчетУчета_Key"],
+            filter_expr=sales_filter,
+            orderby="Period asc",
+            page_size=500,
+            max_pages=20,
+        ):
+            row_dt = self._parse_datetime_like(row.get("Period"))
+            recorder_type = str(row.get("Recorder_Type") or "")
+            item_ref = str(row.get("Номенклатура_Key") or "").strip()
+            account_ref = str(row.get("СчетУчета_Key") or "").strip()
+            qty = self._to_decimal(row.get("Количество"), default=None)
+            amount = self._to_decimal(row.get("Стоимость"), default=None)
+            if row_dt is None or not item_ref or qty is None or amount is None or item_ref not in item_keys:
+                continue
+            if baseline_date and row_dt.date() < baseline_date:
+                continue
+            if warehouse and not self._text_match(self._resolve_reference_value("Склад_Key", row.get("Склад_Key")), warehouse):
+                continue
+            if account_ref:
+                stats = account_stats.setdefault(account_ref, {"count": 0, "amount": Decimal("0")})
+                stats["count"] = int(stats["count"]) + 1
+                stats["amount"] = Decimal(stats["amount"]) + abs(amount)
+            events.append(
+                {
+                    "type": "customer_return" if "ВозвратТоваровОтПокупателя" in recorder_type else "sale_cost",
+                    "dt": row_dt,
+                    "account_ref": account_ref,
+                    "item_ref": item_ref,
+                    "warehouse_ref": str(row.get("Склад_Key") or "").strip() or None,
+                    "qty": qty,
+                    "amount": amount,
+                    "corr_account": "7000",
+                }
+            )
+
+        completion_header_filter_parts = [f"Date le datetime'{period_to:%Y-%m-%d}T23:59:59'"]
+        if baseline_date:
+            completion_header_filter_parts.append(f"Date ge datetime'{baseline_date:%Y-%m-%d}T00:00:00'")
+        output_filter = self._build_guid_or_filter("Номенклатура_Key", item_keys)
+        if output_filter:
+            completion_header_filter_parts.append(output_filter)
+        completion_headers = self._scan_entity_rows_targeted(
+            "Document_КомплектацияНоменклатуры",
+            select=["Ref_Key", "Date", "Номенклатура_Key", "Количество", "Склад_Key", "СчетУчетаБУ_Key", "Комплектующие"],
+            filter_expr=" and ".join(completion_header_filter_parts),
+            orderby="Date asc",
+            page_size=100,
+            max_pages=20,
+        )
+        for header in completion_headers:
+            ref_key = str(header.get("Ref_Key") or "").strip()
+            if not ref_key or ref_key in processed_completion_refs:
+                continue
+            completion_header_cache[ref_key] = header
+            raw = header if header.get("Комплектующие") is not None else self._fetch_raw_entity_by_ref("Document_КомплектацияНоменклатуры", ref_key)
+            if raw is None or not header_matches_date_and_warehouse(raw):
+                continue
+            processed_completion_refs.add(ref_key)
+            header_dt = self._parse_datetime_like(raw.get("Date") or raw.get("Дата"))
+            component_rows = []
+            for component in raw.get("Комплектующие") or []:
+                component_rows.append(
+                    {
+                        "item_ref": str(component.get("Номенклатура_Key") or "").strip(),
+                        "account_ref": str(component.get("СчетУчетаБУ_Key") or "").strip(),
+                        "qty": self._to_decimal(component.get("Количество"), default=None),
+                    }
+                )
+            events.append(
+                {
+                    "type": "completion",
+                    "dt": header_dt,
+                    "output_item_ref": str(raw.get("Номенклатура_Key") or "").strip(),
+                    "output_account_ref": str(raw.get("СчетУчетаБУ_Key") or "").strip(),
+                    "output_qty": self._to_decimal(raw.get("Количество"), default=None),
+                    "warehouse_ref": str(raw.get("Склад_Key") or "").strip() or None,
+                    "components": component_rows,
+                    "corr_account": "1330",
+                }
+            )
+
+        component_filter_parts: list[str] = []
+        component_filter = self._build_guid_or_filter("Номенклатура_Key", item_keys)
+        if component_filter:
+            component_filter_parts = []  # row entity has no Date, only item filter is safe here
+            component_filter_parts.append(component_filter)
+        for component in self._scan_entity_rows_targeted(
+            "Document_КомплектацияНоменклатуры_Комплектующие",
+            select=["Ref_Key", "Номенклатура_Key", "Количество", "СчетУчетаБУ_Key"],
+            filter_expr=" and ".join(component_filter_parts) if component_filter_parts else None,
+            orderby="Ref_Key",
+            page_size=200,
+            max_pages=20,
+        ):
+            ref_key = str(component.get("Ref_Key") or "").strip()
+            if not ref_key or ref_key in processed_completion_refs:
+                continue
+            raw = completion_header_cache.get(ref_key) or self._fetch_raw_entity_by_ref("Document_КомплектацияНоменклатуры", ref_key)
+            if raw is None or not header_matches_date_and_warehouse(raw):
+                continue
+            processed_completion_refs.add(ref_key)
+            header_dt = self._parse_datetime_like(raw.get("Date") or raw.get("Дата"))
+            component_rows = []
+            for row in raw.get("Комплектующие") or []:
+                component_rows.append(
+                    {
+                        "item_ref": str(row.get("Номенклатура_Key") or "").strip(),
+                        "account_ref": str(row.get("СчетУчетаБУ_Key") or "").strip(),
+                        "qty": self._to_decimal(row.get("Количество"), default=None),
+                    }
+                )
+            events.append(
+                {
+                    "type": "completion",
+                    "dt": header_dt,
+                    "output_item_ref": str(raw.get("Номенклатура_Key") or "").strip(),
+                    "output_account_ref": str(raw.get("СчетУчетаБУ_Key") or "").strip(),
+                    "output_qty": self._to_decimal(raw.get("Количество"), default=None),
+                    "warehouse_ref": str(raw.get("Склад_Key") or "").strip() or None,
+                    "components": component_rows,
+                    "corr_account": "1330",
+                }
+            )
+
+        detected_account_ref = self._detect_material_account_ref(account_stats)
+        if not detected_account_ref:
+            return {
+                "count_returned": 0,
+                "data": [],
+                "warnings": warnings + ["Не удалось определить published account reference для material statement targeted path."],
+                "source_explanation": {"basis": "targeted_account_driven_1330_reconstruction"},
+                "note": "Материальная ведомость не построена, потому что targeted OData path не определил счет товаров.",
+            }
+
+        rows_by_key: dict[tuple[str, str | None], dict[str, Any]] = {}
+        state_by_key: dict[tuple[str, str | None], dict[str, Decimal]] = {}
+        source_breakdown: dict[str, dict[str, Decimal]] = {
+            "3310": {"incoming_amount": Decimal("0"), "incoming_qty": Decimal("0")},
+            "7000": {"incoming_amount": Decimal("0"), "incoming_qty": Decimal("0"), "outgoing_amount": Decimal("0"), "outgoing_qty": Decimal("0")},
+            "1330": {"incoming_amount": Decimal("0"), "incoming_qty": Decimal("0"), "outgoing_amount": Decimal("0"), "outgoing_qty": Decimal("0")},
+        }
+
+        def _event_sort_key(event: dict[str, Any]) -> tuple[datetime, int]:
+            priority = {"opening": 0, "purchase": 1, "customer_return": 2, "completion": 3, "sale_cost": 4}
+            return (event["dt"], priority.get(str(event.get("type")), 9))
+
+        for event in sorted(events, key=_event_sort_key):
+            event_dt = event["dt"]
+            in_period = period_from <= event_dt.date() <= period_to
+            event_type = str(event.get("type") or "")
+
+            if event_type == "completion":
+                output_account_ref = str(event.get("output_account_ref") or "")
+                component_rows = event.get("components") or []
+                warehouse_ref = event.get("warehouse_ref")
+                if output_account_ref != detected_account_ref and not any(
+                    str(component.get("account_ref") or "") == detected_account_ref for component in component_rows
+                ):
+                    continue
+                total_output_amount = Decimal("0")
+                for component in component_rows:
+                    if str(component.get("account_ref") or "") != detected_account_ref:
+                        continue
+                    component_item_ref = str(component.get("item_ref") or "")
+                    component_qty = self._to_decimal(component.get("qty"), default=None)
+                    if not component_item_ref or component_qty is None or component_qty == 0:
+                        continue
+                    state = state_by_key.setdefault((component_item_ref, warehouse_ref or None), {"qty": Decimal("0"), "amount": Decimal("0")})
+                    component_amount = (self._material_average_cost(state) * component_qty).quantize(Decimal("0.01"))
+                    self._apply_material_delta(
+                        rows_by_key,
+                        state_by_key,
+                        item_ref=component_item_ref,
+                        warehouse_ref=warehouse_ref,
+                        qty_delta=-component_qty,
+                        amount_delta=-component_amount,
+                        in_period=in_period,
+                        source_label="Document_КомплектацияНоменклатуры",
+                    )
+                    if in_period:
+                        source_breakdown["1330"]["outgoing_qty"] += component_qty
+                        source_breakdown["1330"]["outgoing_amount"] += component_amount
+                    total_output_amount += component_amount
+                output_item_ref = str(event.get("output_item_ref") or "")
+                output_qty = self._to_decimal(event.get("output_qty"), default=None)
+                if output_item_ref and output_qty not in (None, Decimal("0")) and output_account_ref == detected_account_ref:
+                    self._apply_material_delta(
+                        rows_by_key,
+                        state_by_key,
+                        item_ref=output_item_ref,
+                        warehouse_ref=warehouse_ref,
+                        qty_delta=output_qty,
+                        amount_delta=total_output_amount,
+                        in_period=in_period,
+                        source_label="Document_КомплектацияНоменклатуры",
+                    )
+                    if in_period:
+                        source_breakdown["1330"]["incoming_qty"] += output_qty
+                        source_breakdown["1330"]["incoming_amount"] += total_output_amount
+                continue
+
+            if str(event.get("account_ref") or "") != detected_account_ref:
+                continue
+            item_ref = str(event.get("item_ref") or "")
+            warehouse_ref = event.get("warehouse_ref")
+            qty = self._to_decimal(event.get("qty"), default=None)
+            amount = self._to_decimal(event.get("amount"), default=None)
+            if not item_ref or qty is None or amount is None:
+                continue
+
+            if event_type in {"opening", "purchase", "customer_return"}:
+                self._apply_material_delta(
+                    rows_by_key,
+                    state_by_key,
+                    item_ref=item_ref,
+                    warehouse_ref=warehouse_ref,
+                    qty_delta=qty,
+                    amount_delta=amount,
+                    in_period=in_period,
+                    source_label={
+                        "opening": "Document_ВводНачальныхОстатков",
+                        "purchase": "Document_ПоступлениеТоваровУслуг",
+                        "customer_return": "AccumulationRegister_РеализацияТМЗ_RecordType",
+                    }[event_type],
+                )
+                if in_period and event_type == "purchase":
+                    source_breakdown["3310"]["incoming_qty"] += qty
+                    source_breakdown["3310"]["incoming_amount"] += amount
+                elif in_period and event_type == "customer_return":
+                    source_breakdown["7000"]["incoming_qty"] += qty
+                    source_breakdown["7000"]["incoming_amount"] += amount
+            elif event_type == "sale_cost":
+                self._apply_material_delta(
+                    rows_by_key,
+                    state_by_key,
+                    item_ref=item_ref,
+                    warehouse_ref=warehouse_ref,
+                    qty_delta=-qty,
+                    amount_delta=-amount,
+                    in_period=in_period,
+                    source_label="AccumulationRegister_РеализацияТМЗ_RecordType",
+                )
+                if in_period:
+                    source_breakdown["7000"]["outgoing_qty"] += qty
+                    source_breakdown["7000"]["outgoing_amount"] += amount
+
+        totals = {
+            "opening_qty": Decimal("0"),
+            "opening_amount": Decimal("0"),
+            "incoming_qty": Decimal("0"),
+            "incoming_amount": Decimal("0"),
+            "outgoing_qty": Decimal("0"),
+            "outgoing_amount": Decimal("0"),
+            "closing_qty": Decimal("0"),
+            "closing_amount": Decimal("0"),
+        }
+        data_rows: list[dict[str, Any]] = []
+        for row in rows_by_key.values():
+            if warehouse and not self._text_match(row.get("warehouse"), warehouse):
+                continue
+            if item and not self._text_match(row.get("item"), item):
+                continue
+            if not include_zero_rows and all(
+                row[field] == 0
+                for field in ("opening_qty", "opening_amount", "incoming_qty", "incoming_amount", "outgoing_qty", "outgoing_amount", "closing_qty", "closing_amount")
+            ):
+                continue
+            for field in totals:
+                totals[field] += row[field]
+            data_rows.append(
+                {
+                    "item": row["item"],
+                    "warehouse": row["warehouse"],
+                    "opening_qty": self._decimal_to_text(row["opening_qty"]),
+                    "opening_amount": self._decimal_to_text(row["opening_amount"]),
+                    "incoming_qty": self._decimal_to_text(row["incoming_qty"]),
+                    "incoming_amount": self._decimal_to_text(row["incoming_amount"]),
+                    "outgoing_qty": self._decimal_to_text(row["outgoing_qty"]),
+                    "outgoing_amount": self._decimal_to_text(row["outgoing_amount"]),
+                    "closing_qty": self._decimal_to_text(row["closing_qty"]),
+                    "closing_amount": self._decimal_to_text(row["closing_amount"]),
+                    "sources": sorted(row["sources"]),
+                    "item_ref": row["item_ref"],
+                    "warehouse_ref": row["warehouse_ref"],
+                }
+            )
+        data_rows.sort(key=lambda row: (str(row.get("item") or ""), str(row.get("warehouse") or "")))
+        inferred_label = self._infer_account_label(detected_account_ref)
+        return {
+            "count_returned": min(len(data_rows), effective_limit),
+            "data": data_rows[:effective_limit],
+            "period": {"date_from": period_from.isoformat(), "date_to": period_to.isoformat()},
+            "filters_applied_in_python": {
+                "warehouse": warehouse,
+                "item": item,
+                "limit": effective_limit,
+                "include_zero_rows": include_zero_rows,
+            },
+            "account": {
+                "requested": "1330",
+                "detected_ref": detected_account_ref,
+                "detected_label": inferred_label,
+            },
+            "totals": {key: self._decimal_to_text(value) for key, value in totals.items()},
+            "source_breakdown": {
+                account: {metric: self._decimal_to_text(value) for metric, value in metrics.items() if value != 0}
+                for account, metrics in source_breakdown.items()
+                if any(value != 0 for value in metrics.values())
+            },
+            "source_explanation": {
+                "basis": "targeted_account_driven_1330_reconstruction",
+                "opening_source": "Document_ВводНачальныхОстатков_Запасы",
+                "purchase_source": "Document_ПоступлениеТоваровУслуг_Товары",
+                "sales_cost_source": "AccumulationRegister_РеализацияТМЗ_RecordType",
+                "internal_move_source": "Document_КомплектацияНоменклатуры",
+            },
+            "warnings": warnings,
+            "note": "Targeted read-only material statement view по счету 1330, восстановленный из опубликованных OData-источников.",
+        }
 
     def _detect_material_account_ref(self, account_stats: dict[str, dict[str, Decimal | int]]) -> str | None:
         best_ref: str | None = None
@@ -1212,6 +2232,8 @@ class OneCODataClient:
         item: str | None = None,
         limit: int = 200,
         include_zero_rows: bool = False,
+        item_keys: set[str] | None = None,
+        _force_generic_path: bool = False,
     ) -> dict[str, Any]:
         validated_from, validated_to = self._validate_date_range(date_from, date_to)
         period_from = self._parse_date_like(validated_from)
@@ -1222,15 +2244,34 @@ class OneCODataClient:
         warnings: list[str] = [
             "Материальная ведомость рассчитывается по опубликованным read-only OData-источникам счета 1330. Для официальной сверки используйте стандартный отчет 1С."
         ]
+        if item_keys and len(item_keys) <= 20 and not _force_generic_path:
+            return self._get_material_statement_view_targeted(
+                period_from=period_from,
+                period_to=period_to,
+                item_keys=item_keys,
+                warehouse=warehouse,
+                item=item,
+                effective_limit=effective_limit,
+                include_zero_rows=include_zero_rows,
+                warnings=warnings,
+            )
         account_stats: dict[str, dict[str, Decimal | int]] = {}
         events: list[dict[str, Any]] = []
-        events.extend(self._collect_material_opening_docs(end_date=period_to, account_stats=account_stats, warnings=warnings))
+        events.extend(
+            self._collect_material_opening_docs(
+                end_date=period_to,
+                item_keys=item_keys,
+                account_stats=account_stats,
+                warnings=warnings,
+            )
+        )
         opening_dates = [event["dt"].date() for event in events if event.get("type") == "opening" and event.get("dt") is not None]
         baseline_date = max(opening_dates) if opening_dates else None
         events.extend(
             self._collect_material_purchase_docs(
                 start_date=baseline_date,
                 end_date=period_to,
+                item_keys=item_keys,
                 account_stats=account_stats,
                 warnings=warnings,
             )
@@ -1239,6 +2280,7 @@ class OneCODataClient:
             self._collect_material_sales_register_rows(
                 start_date=baseline_date,
                 end_date=period_to,
+                item_keys=item_keys,
                 account_stats=account_stats,
                 warnings=warnings,
             )
@@ -1247,6 +2289,7 @@ class OneCODataClient:
             self._collect_material_completion_docs(
                 start_date=baseline_date,
                 end_date=period_to,
+                item_keys=item_keys,
                 account_stats=account_stats,
                 warnings=warnings,
             )
@@ -3472,6 +4515,252 @@ class OneCODataClient:
             "source": sales.get("source"),
             "warnings": list(sales.get("warnings") or []),
             "note": "Read-only management summary built from published sales documents. Это управленческая сводка, а не официальный бухгалтерский отчет 1С.",
+        }
+
+    def get_top_selling_items_with_stock(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        counterparty_name: str | None = None,
+        item_name: str | None = None,
+        as_of_date: str | None = None,
+        limit: int = 20,
+        only_with_stock: bool = False,
+    ) -> dict[str, Any]:
+        """Return top selling items for a period with current stock in one business view."""
+        effective_limit = min(max(int(limit), 1), 50)
+        validated_from, validated_to = self._validate_date_range(date_from, date_to)
+        stock_date = self._parse_date_like(as_of_date) if as_of_date else None
+        if as_of_date and stock_date is None:
+            raise ODataError(f"Некорректная дата as_of_date: {as_of_date!r}. Используйте YYYY-MM-DD.")
+        stock_date = stock_date or (self._parse_date_like(validated_to) if validated_to else datetime.now().date())
+        sales_sources = self.discover_sales_sources(limit=1, check_data=True)
+        if not sales_sources:
+            return {
+                "count_returned": 0,
+                "period": {"date_from": validated_from, "date_to": validated_to},
+                "stock_as_of_date": stock_date.isoformat(),
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "item_name": item_name,
+                    "as_of_date": stock_date.isoformat(),
+                    "limit": effective_limit,
+                    "only_with_stock": only_with_stock,
+                },
+                "data": [],
+                "source": {"sales_source": None, "stock_basis": "sales_picker_stock_map_fast"},
+                "warnings": ["Не найден безопасный источник продаж/реализаций в OData."],
+                "note": "Read-only business view: top sold items for the period with current stock as of the selected date.",
+            }
+
+        sales_source = sales_sources[0]
+        sales_entity = str(sales_source.get("entity") or "Document_РеализацияТоваровУслуг")
+        sales_row_entity = f"{sales_entity}_Товары"
+        warnings: list[str] = []
+        recent_headers = self._get_recent_sales_headers(
+            entity_name=sales_entity,
+            mapped=sales_source.get("mapped_fields") or {},
+            date_from=validated_from,
+            date_to=validated_to,
+            counterparty_name=counterparty_name,
+            max_documents=min(max(effective_limit * 40, 240), 500),
+            warnings=warnings,
+        )
+        recent_refs = {
+            str(row.get("reference") or ""): row
+            for row in recent_headers
+            if str(row.get("reference") or "")
+        }
+        if not recent_refs:
+            return {
+                "count_returned": 0,
+                "period": {"date_from": validated_from, "date_to": validated_to},
+                "stock_as_of_date": stock_date.isoformat(),
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "item_name": item_name,
+                    "as_of_date": stock_date.isoformat(),
+                    "limit": effective_limit,
+                    "only_with_stock": only_with_stock,
+                },
+                "data": [],
+                "source": {"sales_source": sales_source, "stock_basis": "sales_picker_stock_map_fast"},
+                "warnings": warnings + ["За заданный период не найдено опубликованных реализаций для расчета top продаж."],
+                "note": "Read-only business view: top sold items for the period with current stock as of the selected date.",
+            }
+
+        row_select = ["Ref_Key", "LineNumber", "Номенклатура_Key", "Количество", "Сумма"]
+        try:
+            last_rows_skip = self._find_last_nonempty_skip(
+                sales_row_entity,
+                select=row_select,
+                page_size=100,
+                max_probe_skip=min(self.settings.max_top * 300, 100000),
+            )
+        except ODataError:
+            warnings.append("Прямой row-source продаж недоступен в опубликованной OData. Используйте get_sales_management_summary как fallback.")
+            return {
+                "count_returned": 0,
+                "period": {"date_from": validated_from, "date_to": validated_to},
+                "stock_as_of_date": stock_date.isoformat(),
+                "filters_applied_in_python": {
+                    "date_from": validated_from,
+                    "date_to": validated_to,
+                    "counterparty_name": counterparty_name,
+                    "item_name": item_name,
+                    "as_of_date": stock_date.isoformat(),
+                    "limit": effective_limit,
+                    "only_with_stock": only_with_stock,
+                },
+                "data": [],
+                "source": {"sales_source": sales_source, "sales_row_source": sales_row_entity, "stock_basis": "sales_picker_stock_map_fast"},
+                "warnings": warnings,
+                "note": "Read-only business view: top sold items for the period with current stock as of the selected date.",
+            }
+
+        item_filter = str(item_name or "").strip()
+        item_buckets: dict[str, dict[str, Any]] = {}
+        matched_document_refs: set[str] = set()
+        zero_match_streak = 0
+        max_row_pages = max(8, min(30, (len(recent_refs) // 5) + 8))
+        for page_index in range(max_row_pages):
+            skip = max(0, last_rows_skip - (page_index * 100))
+            payload = self.query_entity(sales_row_entity, top=100, select=row_select, skip=skip)
+            batch = payload.get("data") or []
+            if not batch:
+                zero_match_streak += 1
+                if zero_match_streak >= 2:
+                    break
+                continue
+            batch_match_count = 0
+            for row in batch:
+                ref_key = str(row.get("Ref_Key") or "")
+                item_ref = str(row.get("Номенклатура_Key") or "").strip()
+                if ref_key not in recent_refs or not item_ref:
+                    continue
+                item_display = self._resolve_reference_value("Номенклатура_Key", item_ref) or item_ref
+                if item_filter and not self._text_match(item_display, item_filter):
+                    continue
+                quantity = self._to_decimal(row.get("Количество"), default=None)
+                if quantity is None or quantity <= 0:
+                    continue
+                line_amount = self._to_decimal(row.get("Сумма"), default=Decimal("0")) or Decimal("0")
+                header = recent_refs.get(ref_key) or {}
+                bucket = item_buckets.setdefault(
+                    item_ref,
+                    {
+                        "item": item_display,
+                        "item_ref": item_ref,
+                        "quantity_sold": Decimal("0"),
+                        "sales_amount": Decimal("0"),
+                        "document_refs": set(),
+                        "last_sale_date": header.get("date"),
+                        "last_document_number": header.get("number"),
+                    },
+                )
+                bucket["quantity_sold"] += quantity
+                bucket["sales_amount"] += line_amount
+                bucket["document_refs"].add(ref_key)
+                current_dt = self._parse_datetime_like(header.get("date"))
+                last_dt = self._parse_datetime_like(bucket.get("last_sale_date"))
+                if current_dt and (last_dt is None or current_dt > last_dt):
+                    bucket["last_sale_date"] = header.get("date")
+                    bucket["last_document_number"] = header.get("number")
+                matched_document_refs.add(ref_key)
+                batch_match_count += 1
+            if batch_match_count == 0:
+                zero_match_streak += 1
+                if zero_match_streak >= 4 and matched_document_refs:
+                    break
+            else:
+                zero_match_streak = 0
+            if len(matched_document_refs) >= len(recent_refs):
+                break
+
+        rows_ordered = sorted(
+            item_buckets.values(),
+            key=lambda row: (row["quantity_sold"], row["sales_amount"]),
+            reverse=True,
+        )[:effective_limit]
+
+        top_item_refs = {str(row.get("item_ref") or "").strip() for row in rows_ordered if row.get("item_ref")}
+        warehouse_ref = self._resolve_sales_picker_warehouse_ref("Основной склад")
+        stock_by_item_ref: dict[str, Decimal] = {}
+        if top_item_refs:
+            try:
+                stock_by_item_ref = self._get_sales_picker_stock_map_fast(
+                    cutoff_date=stock_date,
+                    item_refs=top_item_refs,
+                    warehouse_ref=warehouse_ref,
+                )
+            except Exception as exc:
+                warnings.append(
+                    f"Не удалось использовать быстрый stock path для top продаж, включен fallback на published virtual stock rows: {str(exc)[:160]}"
+                )
+                stock_result = self._get_virtual_warehouse_current_stock_rows(
+                    as_of_date=stock_date,
+                    item_keys=top_item_refs,
+                    limit=max(len(top_item_refs), 1),
+                )
+                if stock_result is not None:
+                    for stock_row in stock_result.get("data") or []:
+                        item_ref = str(stock_row.get("item_ref") or "").strip()
+                        if not item_ref:
+                            continue
+                        quantity = self._to_decimal(stock_row.get("quantity"), default=Decimal("0")) or Decimal("0")
+                        stock_by_item_ref[item_ref] = stock_by_item_ref.get(item_ref, Decimal("0")) + quantity
+
+        resolved_meta: dict[str, dict[str, Any] | None] = {}
+        result_rows: list[dict[str, Any]] = []
+        for row in rows_ordered:
+            item_ref = str(row.get("item_ref") or "").strip()
+            meta: dict[str, Any] | None = None
+            if item_ref:
+                meta = resolved_meta.get(item_ref)
+                if meta is None:
+                    meta = self._fetch_entity_by_ref("Catalog_Номенклатура", item_ref, ("Code", "Description"))
+                    resolved_meta[item_ref] = meta
+            stock_qty = stock_by_item_ref.get(item_ref, Decimal("0")) if item_ref else Decimal("0")
+            if only_with_stock and stock_qty <= 0:
+                continue
+            result_rows.append(
+                {
+                    "code": (meta or {}).get("Code"),
+                    "item": row["item"],
+                    "stock": self._decimal_to_text(stock_qty),
+                    "quantity_sold": self._decimal_to_text(row["quantity_sold"]),
+                    "sales_amount": self._decimal_to_text(row["sales_amount"]),
+                    "document_count": len(row.get("document_refs") or []),
+                    "last_sale_date": row.get("last_sale_date"),
+                    "last_document_number": row.get("last_document_number"),
+                }
+            )
+
+        return {
+            "count_returned": len(result_rows),
+            "period": {"date_from": validated_from, "date_to": validated_to},
+            "stock_as_of_date": stock_date.isoformat(),
+            "filters_applied_in_python": {
+                "date_from": validated_from,
+                "date_to": validated_to,
+                "counterparty_name": counterparty_name,
+                "item_name": item_name,
+                "as_of_date": stock_date.isoformat(),
+                "limit": effective_limit,
+                "only_with_stock": only_with_stock,
+            },
+            "data": result_rows,
+            "source": {
+                "sales_source": sales_source,
+                "sales_row_source": sales_row_entity,
+                "stock_basis": "sales_picker_stock_map_fast",
+            },
+            "warnings": warnings,
+            "note": "Read-only business view: top sold items for the period with current stock as of the selected date.",
         }
 
     def _get_recent_sales_documents(

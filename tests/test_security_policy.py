@@ -230,6 +230,15 @@ def test_main_policy_covers_sales_item_picker_view():
     assert [cap.name for cap in tool.capabilities] == ["read_inventory"]
 
 
+def test_main_policy_covers_top_selling_items_with_stock():
+    policy = load_policy(Path("config") / "policy.yaml")
+
+    tool = policy.tools["get_top_selling_items_with_stock"]
+
+    assert tool.risk is RiskLevel.L1
+    assert [cap.name for cap in tool.capabilities] == ["read_documents", "read_inventory", "create_local_report"]
+
+
 def test_demo_docs_mark_cash_bank_movements_as_operational_view():
     demo_readme = Path("docs/DEMO_READONLY_SECURE_MODE.md").read_text(encoding="utf-8")
     demo_prompts = Path("docs/DEMO_PROMPTS.md").read_text(encoding="utf-8")

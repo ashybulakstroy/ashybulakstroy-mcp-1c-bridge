@@ -308,6 +308,8 @@ def _build_explanation(trace: dict[str, Any]) -> dict[str, Any]:
         explanation["summary"].append("Журнал счетов покупателям читает опубликованные документы Document_СчетНаОплатуПокупателю и возвращает строки, близкие к экрану списка счетов 1С.")
     elif tool == "get_sales_management_summary":
         explanation["summary"].append("Управленческая сводка продаж агрегирует опубликованные реализации за период и возвращает итоги по выручке, top товарам и top клиентам без raw OData.")
+    elif tool == "get_top_selling_items_with_stock":
+        explanation["summary"].append("Отчет top продаж с остатками агрегирует опубликованные строки реализаций за период и затем накладывает текущий остаток по тем же товарам без raw OData.")
     elif tool == "validate_inventory_report_text":
         explanation["summary"].append("Сверка сравнила нормализованные строки MCP и строки отчета 1С по ключам item+warehouse с учетом допусков.")
     if not explanation["warnings"]:
@@ -1050,6 +1052,32 @@ def get_sales_management_summary(
             limit=limit,
         )
         return _ok(result, tool="get_sales_management_summary")
+    except Exception as exc:
+        return _err(exc)
+
+
+@secure_tool()
+def get_top_selling_items_with_stock(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    counterparty_name: str | None = None,
+    item_name: str | None = None,
+    as_of_date: str | None = None,
+    limit: int = 20,
+    only_with_stock: bool = False,
+) -> dict[str, Any]:
+    """Показать top продаваемых товаров за период и их текущие остатки."""
+    try:
+        result = odata.get_top_selling_items_with_stock(
+            date_from=date_from,
+            date_to=date_to,
+            counterparty_name=counterparty_name,
+            item_name=item_name,
+            as_of_date=as_of_date,
+            limit=limit,
+            only_with_stock=only_with_stock,
+        )
+        return _ok(result, tool="get_top_selling_items_with_stock")
     except Exception as exc:
         return _err(exc)
 

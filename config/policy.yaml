@@ -145,6 +145,14 @@ tools:
       - create_local_report
     auto_approval: true
 
+  get_top_selling_items_with_stock:
+    risk: L1
+    capabilities:
+      - read_documents
+      - read_inventory
+      - create_local_report
+    auto_approval: true
+
   search_metadata:
     risk: L0
     capabilities:

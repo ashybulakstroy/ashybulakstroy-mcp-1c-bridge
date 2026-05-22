@@ -1220,9 +1220,9 @@ def test_get_sales_item_picker_view_returns_code_name_and_stock():
     result = client.get_sales_item_picker_view(as_of_date="2026-05-31", limit=10)
 
     assert result["count_returned"] == 3
-    assert result["data"][0] == {"code": "000000001", "name": "Цемент М400", "stock": "4"}
+    assert result["data"][0] == {"code": "000000001", "name": "Цемент М400", "stock": "3"}
     assert result["data"][1] == {"code": "000000002", "name": "Песок", "stock": "1"}
-    assert result["data"][2] == {"code": "000000003", "name": "Бокорез", "stock": "2"}
+    assert result["data"][2] == {"code": "000000003", "name": "Бокорез", "stock": "0"}
 
 
 def test_get_sales_item_picker_view_only_with_stock_filters_zero_balances():
@@ -1230,7 +1230,54 @@ def test_get_sales_item_picker_view_only_with_stock_filters_zero_balances():
 
     result = client.get_sales_item_picker_view(as_of_date="2026-05-31", only_with_stock=True, limit=10)
 
-    assert [row["name"] for row in result["data"]] == ["Цемент М400", "Песок", "Бокорез"]
+    assert [row["name"] for row in result["data"]] == ["Цемент М400", "Песок"]
+    assert all(row["stock"] != "0" for row in result["data"])
+
+
+def test_get_sales_item_picker_view_matches_numeric_code_without_leading_zeros():
+    client = FakeOneCODataClient()
+
+    result = client.get_sales_item_picker_view(as_of_date="2026-05-31", search_text="1", limit=10)
+
+    assert result["count_returned"] == 1
+    assert result["data"][0] == {"code": "000000001", "name": "Цемент М400", "stock": "3"}
+
+
+def test_get_top_selling_items_with_stock_returns_top_rows_with_stock():
+    client = FakeOneCODataClient()
+
+    result = client.get_top_selling_items_with_stock(
+        date_from="2026-04-20",
+        date_to="2026-04-24",
+        limit=10,
+    )
+
+    assert result["count_returned"] == 3
+    assert result["data"][0]["code"] == "000000001"
+    assert result["data"][0]["item"] == "Цемент М400"
+    assert result["data"][0]["quantity_sold"] == "13"
+    assert result["data"][0]["stock"] == "3"
+    assert result["data"][1]["code"] == "000000002"
+    assert result["data"][1]["item"] == "Песок"
+    assert result["data"][1]["quantity_sold"] == "6"
+    assert result["data"][1]["stock"] == "20"
+    assert result["data"][2]["code"] == "000000003"
+    assert result["data"][2]["item"] == "Бокорез"
+    assert result["data"][2]["quantity_sold"] == "3"
+    assert result["data"][2]["stock"] == "0"
+
+
+def test_get_top_selling_items_with_stock_only_with_stock_filters_zero_rows():
+    client = FakeOneCODataClient()
+
+    result = client.get_top_selling_items_with_stock(
+        date_from="2026-04-20",
+        date_to="2026-04-24",
+        limit=10,
+        only_with_stock=True,
+    )
+
+    assert [row["item"] for row in result["data"]] == ["Цемент М400", "Песок"]
     assert all(row["stock"] != "0" for row in result["data"])
 
 

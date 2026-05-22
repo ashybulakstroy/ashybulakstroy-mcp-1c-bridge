@@ -698,3 +698,34 @@ def test_get_sales_item_picker_view_allowed_call_is_audited(monkeypatch, tmp_pat
     assert record["decision"] == "allow"
     assert record["project_id"] == "project-sales-picker"
     assert record["risk"] == "L0"
+
+
+def test_get_top_selling_items_with_stock_allowed_call_is_audited(monkeypatch, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    monkeypatch.setenv("BRIDGE_AUDIT_LOG_PATH", str(audit_path))
+
+    import ashybulakstroy_mcp_1c_bridge.core_server as core_server
+
+    core_server = importlib.reload(core_server)
+    monkeypatch.setattr(
+        core_server.odata,
+        "get_top_selling_items_with_stock",
+        lambda **kwargs: {
+            "count_returned": 1,
+            "data": [{"code": "000000001", "item": "Цемент М400", "quantity_sold": "13", "stock": "3"}],
+        },
+    )
+
+    result = core_server.get_top_selling_items_with_stock(
+        date_from="2026-04-20",
+        date_to="2026-04-24",
+        project_id="project-top-sales-stock",
+    )
+
+    assert result["ok"] is True
+
+    record = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["tool"] == "get_top_selling_items_with_stock"
+    assert record["decision"] == "allow"
+    assert record["project_id"] == "project-top-sales-stock"
+    assert record["risk"] == "L1"
