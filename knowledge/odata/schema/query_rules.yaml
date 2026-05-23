@@ -1,0 +1,9 @@
+defaults:
+  page_size: 200
+  prefer_python_filters_when_odata_is_unstable: true
+  prefer_recent_tail_for_documents: true
+
+safety:
+  max_limit: 500
+  require_allowlisted_entities: false
+  no_raw_odata_to_agent: true

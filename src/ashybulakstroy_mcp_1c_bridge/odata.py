@@ -7,11 +7,13 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable
 from urllib.parse import urlparse
 
 import httpx
+import yaml
 
 from .config import Settings
 from .security.audit import AuditLogger
@@ -60,6 +62,7 @@ class OneCODataClient:
         self._account_label_cache: dict[str, str | None] = {}
         self._virtual_stock_cache: dict[str, list[dict[str, Any]]] = {}
         self._sales_picker_stock_cache: dict[str, dict[str, Decimal]] = {}
+        self._knowledge_cache: dict[str, Any] | None = None
 
     def _require_url(self) -> None:
         if not self.settings.odata_url:
@@ -68,6 +71,90 @@ class OneCODataClient:
     def _url(self, path: str) -> str:
         self._require_url()
         return f"{self.settings.odata_url}/{path.lstrip('/')}"
+
+    def _knowledge_root(self) -> Path:
+        return Path(__file__).resolve().parents[2] / "knowledge" / "odata"
+
+    def _load_yaml_file(self, path: Path) -> dict[str, Any]:
+        if not path.exists():
+            return {}
+        loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        return loaded if isinstance(loaded, dict) else {}
+
+    def _deep_merge_dicts(self, base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        merged = dict(base)
+        for key, value in override.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = self._deep_merge_dicts(merged[key], value)
+            else:
+                merged[key] = value
+        return merged
+
+    def _detect_knowledge_profile_id(self) -> str:
+        raw_url = str(self.settings.odata_url or "").strip()
+        if not raw_url:
+            return "default"
+        try:
+            parsed = urlparse(raw_url)
+        except Exception:
+            return "default"
+        segments = [segment.strip() for segment in parsed.path.split("/") if segment.strip()]
+        if not segments:
+            return "default"
+        for index, segment in enumerate(segments):
+            if segment.lower() == "odata":
+                if index > 0:
+                    return segments[index - 1].lower()
+                return "default"
+        first_segment = segments[0].lower()
+        if first_segment in {"odata", "standard.odata"}:
+            return "default"
+        return first_segment
+
+    def _load_knowledge_bundle(self) -> dict[str, Any]:
+        if self._knowledge_cache is not None:
+            return self._knowledge_cache
+
+        root = self._knowledge_root()
+        schema: dict[str, Any] = {}
+        schema_root = root / "schema"
+        if schema_root.exists():
+            for path in sorted(schema_root.glob("*.yaml")):
+                schema[path.stem] = self._load_yaml_file(path)
+
+        business: dict[str, Any] = {}
+        business_root = root / "business"
+        if business_root.exists():
+            for path in sorted(business_root.glob("*.yaml")):
+                business[path.stem] = self._load_yaml_file(path)
+
+        profiles_root = root / "profiles"
+        default_profile = self._load_yaml_file(profiles_root / "default.yaml")
+        profile_id = self._detect_knowledge_profile_id()
+        active_profile = default_profile
+        profile_path = profiles_root / f"{profile_id}.yaml"
+        if profile_id != "default" and profile_path.exists():
+            active_profile = self._deep_merge_dicts(default_profile, self._load_yaml_file(profile_path))
+
+        bundle = {
+            "root": str(root),
+            "profile_id": profile_id,
+            "schema": schema,
+            "business": business,
+            "profile": active_profile,
+        }
+        self._knowledge_cache = bundle
+        return bundle
+
+    def _get_business_knowledge(self, section: str) -> dict[str, Any]:
+        bundle = self._load_knowledge_bundle()
+        base = bundle.get("business", {}).get(section, {})
+        overrides = bundle.get("profile", {}).get("business_overrides", {}).get(section, {})
+        if isinstance(base, dict) and isinstance(overrides, dict):
+            return self._deep_merge_dicts(base, overrides)
+        if isinstance(base, dict):
+            return dict(base)
+        return {}
 
     def check_endpoint_health(self, *, check_metadata: bool = False) -> dict[str, Any]:
         self._require_url()
@@ -518,11 +605,20 @@ class OneCODataClient:
 
     def discover_inventory_sources(self, limit: int = 10, check_data: bool = True) -> list[dict[str, Any]]:
         """Find likely inventory/stock OData entities using metadata heuristics."""
+        inventory_knowledge = self._get_business_knowledge("inventory")
+        preferred_entities = {
+            str(entity_name).strip()
+            for entity_name in ((inventory_knowledge.get("discovery") or {}).get("preferred_entities") or [])
+            if str(entity_name).strip()
+        }
         candidates: list[dict[str, Any]] = []
         for entity in self.list_entities():
             score, reasons = self._score_inventory_entity(entity)
             if score <= 0:
                 continue
+            if entity.name in preferred_entities:
+                score += 25
+                reasons = list(reasons) + ["knowledge_preferred_entity"]
             fields = entity.fields or []
             field_names = [f.name for f in fields]
             mapped = self._map_inventory_fields(field_names)
@@ -650,9 +746,11 @@ class OneCODataClient:
         else:
             cutoff_date = datetime.now().date()
 
-        warehouse_name = "Основной склад"
+        inventory_knowledge = self._get_business_knowledge("inventory")
+        picker_knowledge = inventory_knowledge.get("picker") or {}
+        warehouse_name = str(picker_knowledge.get("warehouse_name") or "Основной склад")
         warehouse_ref = self._resolve_sales_picker_warehouse_ref(warehouse_name)
-        entity_name = "Catalog_Номенклатура"
+        entity_name = str(picker_knowledge.get("catalog_entity") or "Catalog_Номенклатура")
         select = ["Ref_Key", "Code", "Description", "IsFolder", "Услуга"]
         page_size = min(max(effective_limit * 4, 200), self.settings.max_top)
         normalized_code_query = self._normalize_numeric_search(search_text)
@@ -753,6 +851,7 @@ class OneCODataClient:
                 "search_text": search_text,
                 "only_with_stock": only_with_stock,
                 "warehouse_name": warehouse_name if warehouse_ref else None,
+                "knowledge_profile_id": self._load_knowledge_bundle().get("profile_id"),
                 "limit": effective_limit,
             },
             "count_returned": len(rows),
@@ -2241,10 +2340,13 @@ class OneCODataClient:
         if period_from is None or period_to is None:
             raise ODataError("Для material statement нужны корректные date_from и date_to в формате YYYY-MM-DD.")
         effective_limit = min(max(int(limit), 1), 500)
+        material_knowledge = self._get_business_knowledge("material_statement")
+        account_code = str(material_knowledge.get("account_code") or "1330")
+        targeted_item_key_limit = int(material_knowledge.get("targeted_item_key_limit") or 20)
         warnings: list[str] = [
-            "Материальная ведомость рассчитывается по опубликованным read-only OData-источникам счета 1330. Для официальной сверки используйте стандартный отчет 1С."
+            f"Материальная ведомость рассчитывается по опубликованным read-only OData-источникам счета {account_code}. Для официальной сверки используйте стандартный отчет 1С."
         ]
-        if item_keys and len(item_keys) <= 20 and not _force_generic_path:
+        if item_keys and len(item_keys) <= targeted_item_key_limit and not _force_generic_path:
             return self._get_material_statement_view_targeted(
                 period_from=period_from,
                 period_to=period_to,
@@ -2300,13 +2402,14 @@ class OneCODataClient:
             return {
                 "count_returned": 0,
                 "data": [],
-                "warnings": warnings + ["Не удалось определить published account reference для материальной ведомости счета 1330."],
+                "warnings": warnings + [f"Не удалось определить published account reference для материальной ведомости счета {account_code}."],
                 "source_explanation": {
                     "basis": "account_driven_1330_reconstruction",
-                    "opening_source": "Document_ВводНачальныхОстатков",
-                    "purchase_source": "Document_ПоступлениеТоваровУслуг",
-                    "sales_cost_source": "AccumulationRegister_РеализацияТМЗ_RecordType",
-                    "internal_move_source": "Document_КомплектацияНоменклатуры",
+                    "account_code": account_code,
+                    "opening_source": (material_knowledge.get("sources") or {}).get("opening_document", "Document_ВводНачальныхОстатков"),
+                    "purchase_source": (material_knowledge.get("sources") or {}).get("purchase_document", "Document_ПоступлениеТоваровУслуг"),
+                    "sales_cost_source": (material_knowledge.get("sources") or {}).get("sales_register", "AccumulationRegister_РеализацияТМЗ_RecordType"),
+                    "internal_move_source": (material_knowledge.get("sources") or {}).get("completion_document", "Document_КомплектацияНоменклатуры"),
                 },
                 "note": "Материальная ведомость не построена, потому что OData не дала надежный reference счета товаров.",
             }
@@ -2577,6 +2680,12 @@ class OneCODataClient:
     ) -> list[dict[str, Any]]:
         """Find likely incoming/outgoing payment entities using metadata heuristics."""
         normalized_direction = self._normalize_payment_direction(direction)
+        payments_knowledge = self._get_business_knowledge("payments")
+        preferred_entities = {
+            str(entity_name).strip()
+            for entity_name in ((payments_knowledge.get("discovery") or {}).get("preferred_entities") or [])
+            if str(entity_name).strip()
+        }
         candidates: list[dict[str, Any]] = []
         for entity in self.list_entities():
             score, reasons, entity_direction = self._score_payment_entity(entity)
@@ -2584,6 +2693,9 @@ class OneCODataClient:
                 continue
             if normalized_direction and entity_direction != normalized_direction:
                 continue
+            if entity.name in preferred_entities:
+                score += 25
+                reasons = list(reasons) + ["knowledge_preferred_entity"]
             fields = entity.fields or []
             field_names = [f.name for f in fields]
             mapped = self._map_payment_fields(field_names)
@@ -2643,11 +2755,20 @@ class OneCODataClient:
         check_data: bool = True,
     ) -> list[dict[str, Any]]:
         """Find likely sales/invoice entities using metadata heuristics."""
+        sales_knowledge = self._get_business_knowledge("sales")
+        preferred_entities = {
+            str(entity_name).strip()
+            for entity_name in ((sales_knowledge.get("discovery") or {}).get("preferred_entities") or [])
+            if str(entity_name).strip()
+        }
         candidates: list[dict[str, Any]] = []
         for entity in self.list_entities():
             score, reasons = self._score_sales_entity(entity)
             if score <= 0:
                 continue
+            if entity.name in preferred_entities:
+                score += 25
+                reasons = list(reasons) + ["knowledge_preferred_entity"]
             fields = entity.fields or []
             field_names = [f.name for f in fields]
             mapped = self._map_sales_fields(field_names)
@@ -2692,11 +2813,20 @@ class OneCODataClient:
         check_data: bool = True,
     ) -> list[dict[str, Any]]:
         """Find likely purchase/supplier invoice entities using metadata heuristics."""
+        purchase_knowledge = self._get_business_knowledge("purchases")
+        preferred_entities = {
+            str(entity_name).strip()
+            for entity_name in ((purchase_knowledge.get("discovery") or {}).get("preferred_entities") or [])
+            if str(entity_name).strip()
+        }
         candidates: list[dict[str, Any]] = []
         for entity in self.list_entities():
             score, reasons = self._score_purchase_entity(entity)
             if score <= 0:
                 continue
+            if entity.name in preferred_entities:
+                score += 25
+                reasons = list(reasons) + ["knowledge_preferred_entity"]
             fields = entity.fields or []
             field_names = [f.name for f in fields]
             mapped = self._map_purchase_fields(field_names)
@@ -7258,6 +7388,14 @@ class OneCODataClient:
 
     def _is_preferred_payment_source_entity(self, entity_name: Any) -> bool:
         text = str(entity_name or "")
+        payments_knowledge = self._get_business_knowledge("payments")
+        preferred_entities = {
+            str(entity).strip()
+            for entity in ((payments_knowledge.get("discovery") or {}).get("preferred_entities") or [])
+            if str(entity).strip()
+        }
+        if text in preferred_entities:
+            return True
         if not self._is_top_level_document_entity(text):
             return False
         haystack = self._norm(text)

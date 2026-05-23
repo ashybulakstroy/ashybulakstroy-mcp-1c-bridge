@@ -1,0 +1,15 @@
+profile_id: isatay
+extends: default
+
+business_overrides:
+  inventory:
+    picker:
+      warehouse_name: Основной склад
+      stock_mode: hybrid
+  sales:
+    discovery:
+      preferred_entities:
+        - Document_РеализацияТоваровУслуг
+        - Document_СчетНаОплатуПокупателю
+  material_statement:
+    account_code: "1330"

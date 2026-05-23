@@ -1,0 +1,9 @@
+customer:
+  sales_source: Document_РеализацияТоваровУслуг
+  payment_source: Document_ПоступлениеНаБанковскийСчет
+  reconciliation_source: Document_АктСверкиВзаиморасчетов
+
+supplier:
+  purchase_source: Document_ПоступлениеТоваровУслуг
+  payment_source: Document_СписаниеСБанковскогоСчета
+  reconciliation_source: Document_АктСверкиВзаиморасчетов

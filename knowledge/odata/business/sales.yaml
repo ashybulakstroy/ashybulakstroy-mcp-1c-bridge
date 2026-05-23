@@ -1,0 +1,12 @@
+discovery:
+  preferred_entities:
+    - Document_РеализацияТоваровУслуг
+    - Document_СчетНаОплатуПокупателю
+
+journal:
+  primary_entity: Document_РеализацияТоваровУслуг
+  preferred_row_suffix: _Товары
+
+top_selling:
+  primary_entity: Document_РеализацияТоваровУслуг
+  preferred_row_entity: Document_РеализацияТоваровУслуг_Товары

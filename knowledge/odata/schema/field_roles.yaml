@@ -1,0 +1,23 @@
+date_fields:
+  - Date
+  - Дата
+  - Period
+
+amount_fields:
+  - Amount
+  - Сумма
+  - СуммаДокумента
+  - Стоимость
+
+quantity_fields:
+  - Quantity
+  - Количество
+  - КоличествоОстаток
+
+reference_fields:
+  item:
+    - Номенклатура_Key
+  warehouse:
+    - Склад_Key
+  counterparty:
+    - Контрагент_Key

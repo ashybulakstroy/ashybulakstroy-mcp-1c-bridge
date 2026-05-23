@@ -1,0 +1,13 @@
+document_prefixes:
+  - Document_
+catalog_prefixes:
+  - Catalog_
+register_prefixes:
+  - AccumulationRegister_
+  - InformationRegister_
+
+roles:
+  sales_document: document
+  purchase_document: document
+  inventory_register: register
+  material_statement_source: register

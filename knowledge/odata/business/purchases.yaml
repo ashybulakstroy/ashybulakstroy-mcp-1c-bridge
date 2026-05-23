@@ -1,0 +1,13 @@
+discovery:
+  preferred_entities:
+    - Document_ПоступлениеТоваровУслуг
+    - Document_СчетФактураПолученный
+
+journal:
+  primary_entity: Document_ПоступлениеТоваровУслуг
+  secondary_entities:
+    - Document_СчетФактураПолученный
+
+receipt_details:
+  primary_entity: Document_ПоступлениеТоваровУслуг
+  preferred_row_suffix: _Товары

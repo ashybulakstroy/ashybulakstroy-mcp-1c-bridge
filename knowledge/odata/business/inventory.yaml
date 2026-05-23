@@ -1,0 +1,13 @@
+discovery:
+  preferred_entities:
+    - AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType
+    - AccumulationRegister_ТоварыНаСкладах
+    - Document_ВводНачальныхОстатков_Запасы
+
+picker:
+  catalog_entity: Catalog_Номенклатура
+  warehouse_name: Основной склад
+  stock_mode: hybrid
+
+current_stock:
+  primary_entity: AccumulationRegister_ТоварыНаВиртуальныхСкладах_RecordType

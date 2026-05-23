@@ -620,6 +620,37 @@ class FakeOneCODataClient(OneCODataClient):
         return {"entity": entity_name, "count_returned": 0, "top_applied": top, "data": []}
 
 
+class FakeIsatayKnowledgeClient(FakeOneCODataClient):
+    def __init__(self):
+        settings = Settings(
+            odata_url="http://fake/Isatay/odata/standard.odata",
+            username=None,
+            password=None,
+            timeout_seconds=1,
+            verify_ssl=False,
+            db_path=Path(":memory:"),
+            max_top=500,
+        )
+        OneCODataClient.__init__(self, settings)
+        self._fake_xml = Path(__file__).parent.joinpath("fixtures", "fake_odata_metadata.xml").read_text(encoding="utf-8")
+        self.captured_queries = []
+        self.material_account_ref = "13300000-0000-0000-0000-000000000001"
+
+    def get_metadata_xml(self, refresh: bool = False) -> str:
+        return self._fake_xml
+
+    def query_entity(self, entity_name, top=50, select=None, filter_expr=None, orderby=None, skip=0):
+        return FakeOneCODataClient.query_entity(
+            self,
+            entity_name,
+            top=top,
+            select=select,
+            filter_expr=filter_expr,
+            orderby=orderby,
+            skip=skip,
+        )
+
+
 class TimeoutDiagnosticsClient(FakeOneCODataClient):
     def __init__(self, *, host_resolved: bool, tcp_reachable: bool):
         super().__init__()
@@ -1241,6 +1272,50 @@ def test_get_sales_item_picker_view_matches_numeric_code_without_leading_zeros()
 
     assert result["count_returned"] == 1
     assert result["data"][0] == {"code": "000000001", "name": "Цемент М400", "stock": "3"}
+
+
+def test_knowledge_default_profile_is_loaded_for_fake_client():
+    client = FakeOneCODataClient()
+
+    bundle = client._load_knowledge_bundle()
+    sales_knowledge = client._get_business_knowledge("sales")
+    inventory_knowledge = client._get_business_knowledge("inventory")
+    material_knowledge = client._get_business_knowledge("material_statement")
+
+    assert bundle["profile_id"] == "default"
+    assert "Document_РеализацияТоваровУслуг" in sales_knowledge["discovery"]["preferred_entities"]
+    assert inventory_knowledge["picker"]["catalog_entity"] == "Catalog_Номенклатура"
+    assert material_knowledge["account_code"] == "1330"
+
+
+def test_knowledge_isatay_profile_override_is_loaded():
+    client = FakeIsatayKnowledgeClient()
+
+    bundle = client._load_knowledge_bundle()
+    inventory_knowledge = client._get_business_knowledge("inventory")
+
+    assert bundle["profile_id"] == "isatay"
+    assert inventory_knowledge["picker"]["warehouse_name"] == "Основной склад"
+    assert inventory_knowledge["picker"]["stock_mode"] == "hybrid"
+
+
+def test_discover_payment_sources_uses_knowledge_preferred_entities():
+    client = FakeOneCODataClient()
+
+    result = client.discover_payment_sources(limit=5, check_data=False)
+
+    entities = [row["entity"] for row in result]
+    assert "Document_ПоступлениеНаБанковскийСчет" in entities
+    assert "Document_СписаниеСБанковскогоСчета" in entities
+
+
+def test_discover_purchase_sources_uses_knowledge_preferred_entities():
+    client = FakeOneCODataClient()
+
+    result = client.discover_purchase_sources(limit=5, check_data=False)
+
+    entities = [row["entity"] for row in result]
+    assert "Document_ПоступлениеТоваровУслуг" in entities
 
 
 def test_get_top_selling_items_with_stock_returns_top_rows_with_stock():

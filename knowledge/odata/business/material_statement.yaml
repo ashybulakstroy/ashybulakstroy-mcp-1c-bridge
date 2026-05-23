@@ -1,0 +1,10 @@
+account_code: "1330"
+targeted_item_key_limit: 20
+
+sources:
+  opening_document: Document_ВводНачальныхОстатков
+  purchase_document: Document_ПоступлениеТоваровУслуг
+  sales_register: AccumulationRegister_РеализацияТМЗ_RecordType
+  completion_document: Document_КомплектацияНоменклатуры
+
+basis: account_driven_material_statement
